@@ -74,6 +74,13 @@ jobs:
           touch site/.nojekyll
           du -sh site/unity
 
+      - uses: actions/upload-artifact@v4
+        if: steps.chk.outputs.ok == 'true'
+        with:
+          name: fm27-unity-webgl
+          path: site/unity
+          retention-days: 14
+
       - uses: actions/configure-pages@v5
         if: steps.chk.outputs.ok == 'true'
 
