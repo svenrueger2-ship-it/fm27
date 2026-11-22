@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.0.0', date: '22.11.2026', title: 'Version 3.0 – Test-Update',
+    neu: ['Test des Live-Updates: Wenn du das hier siehst, funktionieren Updates ohne Neuinstallation'],
+    verbessert: [],
+    behoben: [],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '2.9.0', date: '22.11.2026', title: 'Version 2.9 – Android-App',
     neu: ['Kalender mit Tag-für-Tag-Simulation (Auto, Stopp, 1x/2x/4x)', 'Android-App (APK), optimiert für Xiaomi 15T Pro', 'Beträge mit Tausenderpunkten eingeben (auch „1,5 Mio“)'],
     verbessert: ['Weniger Ereignis-Popups, Häufigkeit einstellbar', 'Mehr Tore im 3D-Spiel und in der Sofortsimulation', 'Genaue Beträge in Vertragsverhandlungen'],
