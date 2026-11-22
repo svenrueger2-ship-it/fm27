@@ -11,12 +11,12 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
       - run: npm ci
       - run: node build.mjs
-      - run: copy dist\index.html desktop\app\index.html
+      - run: copy dist\index.html desktop\app\index.html && copy dist\launcher.html desktop\app\launcher.html
         shell: cmd
       - run: npm ci
         working-directory: desktop

@@ -130,7 +130,7 @@ export function startScreen(app, el) {
     credits: () => modal(`<h3>Credits</h3><p><b>FUSSBALL MANAGER 2027 © BAKUSA</b></p>
       <p>Spielidee & Leitung: BAKUSA</p><p>Entwicklung: BAKUSA mit Claude (Anthropic)</p>
       <p class="muted">3D-Grafik: three.js · Desktop: Electron · Schriften: Barlow Condensed, Inter<br>Ligen, Kader und Wappen: Stand Saison 2026/27. Ratings und Alter sind Schätzungen des Spiels.</p>`),
-    quit: () => { if (window.bakusa?.quit) window.bakusa.quit(); else { try { window.close(); } catch {} toast('Im Browser bitte einfach den Tab schließen.'); } },
+    quit: () => { if (window.bakusa?.close) window.bakusa.close(); else if (window.bakusa?.quit) window.bakusa.quit(); else { try { window.close(); } catch {} toast('Im Browser bitte einfach den Tab schließen.'); } },
   };
   el.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => actions[b.dataset.go]?.()));
   center.addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g && center.contains(g)) actions[g.dataset.go]?.(); });

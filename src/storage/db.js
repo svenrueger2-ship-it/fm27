@@ -30,7 +30,10 @@ function tx(db, mode, fn) {
 
 export async function saveGame(slot, world, label) {
   const club = world.clubs[world.userClubId];
-  const record = { slot, label: label || club.name, club: club.name, season: world.season, week: world.week, savedAt: Date.now(), data: JSON.stringify(world) };
+  const lg = world.leagues?.find((l) => l.id === club.leagueId);
+  // small summary for the launcher / save list (v2.6)
+  const meta = { short: club.short, colors: club.colors, league: lg?.name, level: world.mgr?.level || 1, scenario: world.scenario?.name || null, crest: club.custom?.crest || null };
+  const record = { slot, label: label || club.name, club: club.name, season: world.season, week: world.week, savedAt: Date.now(), meta, data: JSON.stringify(world) };
   const db = await openDB();
   if (!db) { memory.set(slot, record); return; }
   await tx(db, 'readwrite', (s) => s.put(record));

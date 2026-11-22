@@ -5,8 +5,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 const watch = process.argv.includes('--serve');
 const opts = { entryPoints: ['src/main.js'], bundle: true, format: 'iife', minify: !watch, target: ['es2020'], write: false, legalComments: 'none' };
 
-function html(js) {
-  const css = readFileSync('src/styles.css', 'utf8');
+function html(js, cssFile = 'src/styles.css', title = 'FUSSBALL MANAGER 2027 © BAKUSA') {
+  const css = readFileSync(cssFile, 'utf8');
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -15,7 +15,7 @@ function html(js) {
 <meta name="theme-color" content="#07060f">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;0,900;1,900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-<title>FUSSBALL MANAGER 2027 © BAKUSA</title>
+<title>${title}</title>
 <style>${css}</style>
 </head>
 <body>
@@ -29,3 +29,7 @@ const result = await esbuild.build(opts);
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/index.html', html(result.outputFiles[0].text));
 console.log('dist/index.html', (readFileSync('dist/index.html').length / 1024).toFixed(0) + ' KB');
+// v2.6: the desktop launcher
+const lr = await esbuild.build({ ...opts, entryPoints: ['src/launcher/main.js'] });
+writeFileSync('dist/launcher.html', html(lr.outputFiles[0].text, 'src/launcher/launcher.css', 'FUSSBALL MANAGER 2027 – Launcher').replace('<div id="app"></div>', ''));
+console.log('dist/launcher.html', (readFileSync('dist/launcher.html').length / 1024).toFixed(0) + ' KB');

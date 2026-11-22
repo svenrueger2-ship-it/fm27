@@ -2,6 +2,28 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '2.6.0', date: '22.11.2026', title: 'Version 2.6 – der neue Launcher',
+    neu: [
+      'Neuer Launcher für die Windows-Version: eigenes Startfenster vor dem Spiel',
+      'Live gerendertes Nachtstadion im Hintergrund: schwenkende Flutlichtkegel mit Staub im Licht, Fans mit Handylichtern und Blitzlichtern, Rasen mit Mähstreifen, Bokeh in deinen Vereinsfarben, Parallax mit der Maus',
+      'Der Launcher übernimmt die Farben deines zuletzt gespielten Vereins',
+      'Großer Spielen-Knopf mit Anpfiff: Schiedsrichterpfiff, anschwellender Jubel und Kamerafahrt ins Stadion',
+      'Weiterspielen mit einem Klick: letzter Spielstand mit Wappen, Saison, Spieltag und Zeitpunkt – startet direkt in deinen Verein',
+      'Neuigkeiten: das aktuelle Update als Titelkarte, frühere Updates zum Aufklappen, Laufband mit den Neuerungen',
+      'Spielstände-Übersicht: alle Speicherplätze mit Liga, Saison und Datum – jeder startet direkt',
+      'Einstellungen im Launcher: Grafikqualität, Lautstärke, Vollbild beim Start, Launcher-Sounds, animierter Hintergrund, Rückkehr zum Launcher nach dem Spiel',
+      'Update-Anzeige: Suche, Download mit Fortschritt im Spielen-Knopf und „Update installieren“, sobald es bereit ist',
+      'Info-Seite mit Tastenkürzeln, Technik und Link zu den Releases; Statistik-Leiste mit Spielständen, Erfolgen und Manager-Level',
+    ],
+    verbessert: [
+      '„Beenden“ im Spiel bringt dich zurück zum Launcher (abschaltbar)',
+      'Spielstände speichern jetzt Vereinsfarben, Kürzel, Liga und Manager-Level für die Übersicht',
+      'Der Hintergrund senkt bei schwachen Grafikkarten automatisch die Auflösung',
+    ],
+    behoben: [],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '2.5.0', date: '22.11.2026', title: 'Version 2.5 – Modern Update',
     neu: [
       'Saison-Story: animierter Saisonrückblick im Story-Format (Platzierung mit Punkteverlauf, Torjäger, Spieler der Saison, höchster Sieg, Transfers, Titel, Trainer-Ruf) – antippen zum Weiterblättern, halten zum Pausieren',
