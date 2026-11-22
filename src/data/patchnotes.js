@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.0.2', date: '22.11.2026', title: 'Lebendiger Kalender',
+    neu: ['Die Welt läuft Tag für Tag weiter: Transfermarkt (Di), Pokal- und Europapokalspiele (Mi), Scoutberichte & Marktwerte (Do), Ligaspiele aller Länder (Sa)', 'Der Spieltag öffnet erst am Spieltag selbst – vorher geht es über den Kalender'],
+    verbessert: ['Android: 3D-Spiel deutlich schärfer (höhere Auflösung, Kantenglättung, Schatten, Leuchteffekte ab „hoch“)'],
+    behoben: [],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '3.0.1', date: '22.11.2026', title: 'Handy-Optimierung',
     neu: ['Alle Beträge als Dezimalzahlen (z. B. 1,50 Mio. € oder 12.500,00 €)'],
     verbessert: ['Querformat-Zwang auf dem Handy (dreht automatisch)', 'Android/Handy: deutlich flüssiger (weniger Effekte, niedrigere Auflösung, kein 3D-Hintergrund im Menü)', 'Aufgeräumtere Menüs auf kleinen Bildschirmen'],

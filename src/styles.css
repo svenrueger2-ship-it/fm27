@@ -1038,3 +1038,8 @@ html.mobile .pp-face .pface { width: 96px !important; height: 96px !important; }
   html.mobile .rotate-hint b { display: block; font-size: 1.4rem; margin: .8rem 0 .3rem; } html.mobile .rotate-hint small { opacity: .7; }
   html.mobile .rotate-hint .rh-ico { font-size: 3.2rem; animation: rhTurn 1.6s ease-in-out infinite; } }
 @keyframes rhTurn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+/* v3.0.2 matchday gate */
+.md-gate { max-width: 620px; margin: 2rem auto; text-align: center; padding: 1.6rem; }
+.md-gate .cal-vs { display: flex; align-items: center; justify-content: center; gap: 1.4rem; margin: 1rem 0; }
+.md-gate .cal-vs b { font-family: var(--display); font-size: 1.6rem; color: var(--acc); }
+.md-gate h3 { font-size: 1.5rem; margin: .2rem 0 .3rem; }

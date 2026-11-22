@@ -1,3 +1,4 @@
+import { isMatchToday } from '../manager/calendar.js';
 import { GAME_VERSION } from '../data/patchnotes.js';
 // Application shell: routing, layout, autosave. Screens live in ./screens/*.
 import { loadSettings, saveSettings, saveGame } from '../storage/db.js';
@@ -98,7 +99,7 @@ export class App {
           <div class="brand"><span class="logo">FM<b>2027</b><small class="by">© BAKUSA</small></span></div>
           <div class="club-chip">${crest(club, 30)}<div><strong>${esc(club.name)}</strong><small>${esc(league.name)} · ${isUserSeasonOver(w) ? 'Saisonende' : `Spieltag ${md}`} · <button class="linkish date-chip" id="top-date">📅 ${esc(fmtDate(dateOf(w)))}</button></small></div></div>
           <button class="top-search" id="top-search">${icon('search', 16)}<span>Suchen …</span><kbd>Strg K</kbd></button>
-          <div class="top-stats"><span class="win ${win.open ? 'open' : ''}">${win.open ? `🔓 Transferfenster · noch ${win.closesIn} Wo.` : '🔒 Transferfenster zu'}</span><span>Kontostand <b>${money(club.budget)}</b></span><button class="btn primary sm" id="top-next">${isUserSeasonOver(w) ? 'Saison abschließen' : 'Zum Spieltag ▶'}</button></div>
+          <div class="top-stats"><span class="win ${win.open ? 'open' : ''}">${win.open ? `🔓 Transferfenster · noch ${win.closesIn} Wo.` : '🔒 Transferfenster zu'}</span><span>Kontostand <b>${money(club.budget)}</b></span><button class="btn primary sm" id="top-next">${isUserSeasonOver(w) && !isMatchToday(w) ? 'Saison abschließen' : isMatchToday(w) ? 'Zum Spieltag ▶' : 'Weiter ▶'}</button></div>
         </header>
         ${navHtml(this.screen, { transfers: offers, kabine: (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '!' : 0, profile: openTasks(w) + (w.mgr?.points || 0), staff: inbox, career: (w.career?.offers?.length || 0) + (w.career?.natOffer ? 1 : 0) }, this.settings.navPinned, w.mgr?.level || 1)}
         <main class="content" id="content"></main>
@@ -110,7 +111,7 @@ export class App {
     this.world.eventRate = this.settings.events || 'normal';
     document.body.classList.toggle('nav-pinned', !!this.settings.navPinned);
     requestAnimationFrame(() => placeInk(r));
-    r.querySelector('#top-next').addEventListener('click', () => this.go(isUserSeasonOver(w) ? 'seasonEnd' : 'matchday'));
+    r.querySelector('#top-next').addEventListener('click', () => this.go(isMatchToday(w) ? 'matchday' : isUserSeasonOver(w) ? 'seasonEnd' : 'calendar'));
     const fn = SCREENS[this.screen] || dashboardScreen;
     this.cleanup = fn(this, r.querySelector('#content'), this.params) || null;
   }

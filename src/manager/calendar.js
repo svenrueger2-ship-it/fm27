@@ -45,3 +45,8 @@ export function trainingOfDay(world, day) {
   return key || null;
 }
 export { DAYS };
+
+/** v3.0.2: true when today is the day of your next match (only then the matchday can be opened). */
+export function isMatchToday(world) { const md = nextUserMatchDay(world); return md != null && (world.day || 0) >= md; }
+/** Days until your next match this week (null if none this week). */
+export function daysToMatch(world) { const md = nextUserMatchDay(world); return md == null ? null : Math.max(0, md - (world.day || 0)); }

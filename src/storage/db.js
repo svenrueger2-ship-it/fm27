@@ -69,9 +69,14 @@ export async function deleteGame(slot) {
 
 // Android app (v2.9): strong phones like the Xiaomi 15T Pro get high quality by default
 import { IS_MOBILE } from '../core/device.js';
-const DEFAULT_SETTINGS = { quality: IS_MOBILE ? 'niedrig' : 'mittel', speed: 1, camera: 'tv', autosave: true, matchMode: '3d' };
+const DEFAULT_SETTINGS = { quality: IS_MOBILE ? 'hoch' : 'mittel', speed: 1, camera: 'tv', autosave: true, matchMode: '3d' };
 export function loadSettings() {
-  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('ufm3d-settings') || '{}') }; }
+  try {
+    const s = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('ufm3d-settings') || '{}') };
+    // v3.0.2: phones were throttled too hard in 3.0.1 – lift them to 'hoch' once
+    if (IS_MOBILE && !s.gfx302) { s.gfx302 = true; if (s.quality === 'niedrig' || s.quality === 'mittel') s.quality = 'hoch'; try { localStorage.setItem('ufm3d-settings', JSON.stringify(s)); } catch { /* ignore */ } }
+    return s;
+  }
   catch { return { ...DEFAULT_SETTINGS }; }
 }
 export function saveSettings(s) {

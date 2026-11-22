@@ -1,3 +1,4 @@
+import { isMatchToday, daysToMatch } from '../../manager/calendar.js';
 // Club HQ dashboard, squad (cards & table), player profile, league tables & fixtures.
 import { projectPlayer, projectionSvg } from '../../manager/projection.js';
 import { computeTable, userLeague, userFixture, isUserSeasonOver } from '../../manager/season.js';
@@ -60,7 +61,7 @@ export function dashboardScreen(app, el) {
         <h3>⚽ Nächstes Spiel</h3>
         ${fx ? `<div class="vs"><div>${crest(H, 64)}<strong>${esc(H.short)}</strong><small>${esc(H.name)}</small></div><div class="mid">VS</div><div>${crest(A, 64)}<strong>${esc(A.short)}</strong><small>${esc(A.name)}</small></div></div>
           <div class="chips"><span class="chip">${fx.cup ? `🏆 ${esc(cupById(w, fx.cup).name)} · ${esc(fx.group ? `Gruppe ${fx.group}` : cupById(w, fx.cup).rounds[fx.round].name)}` : `${esc(L.name)} · Spieltag ${w.week + 1}`}</span><span class="chip">${fx.h === club.id ? '🏠 Heimspiel' : '✈️ Auswärts'}</span><span class="chip">${table.some((r) => r.id === opp.id) ? `Gegner Platz ${table.findIndex((r) => r.id === opp.id) + 1}` : `Gegner aus ${esc(w.leagues.find((l) => l.id === opp.leagueId)?.name || '')}`} · Stärke ${Math.round(teamStrength(opp, w.players))}</span></div>
-          <div class="row-actions center"><button class="btn primary lg" id="go-md">Zum Spieltag ▶</button></div>`
+          <div class="row-actions center"><button class="btn primary lg" id="go-md">${isMatchToday(w) ? 'Zum Spieltag ▶' : `📅 Noch ${daysToMatch(w) ?? '–'} Tag(e) · Kalender ▶`}</button></div>`
           : isUserSeasonOver(w) ? `<p>Alle Saisonspiele sind absolviert.</p><button class="btn primary" id="go-end">Saison abschließen</button>` : '<p>Spielfrei an diesem Spieltag.</p><button class="btn primary" id="go-md">Spieltag simulieren</button>'}
       </div>
     </div>
@@ -96,7 +97,7 @@ export function dashboardScreen(app, el) {
       <div class="card"><h3>🏋️ Trainingsbericht</h3>${(w.trainingReport?.items || []).slice(0, 8).map((r) => `<p>${r.type === 'up' ? '📈' : '🩹'} ${esc(r.text)}</p>`).join('') || '<p class="muted">Der erste Bericht kommt nach dem nächsten Spieltag.</p>'}
         <button class="btn ghost sm" data-nav2="training">Training →</button></div>
     </div></div>`;
-  el.querySelector('#go-md')?.addEventListener('click', () => app.go('matchday'));
+  el.querySelector('#go-md')?.addEventListener('click', () => app.go(isMatchToday(w) ? 'matchday' : 'calendar'));
   const showEvent = () => {
     const ev = w.pendingEvent; if (!ev) return;
     const m = modal(`<div class="event"><h3>${esc(ev.title)}</h3><p>${esc(ev.text)}</p><div class="sim-opts">${ev.options.map(([l], k) => `<button class="btn" data-ev="${k}"><b>${esc(l)}</b></button>`).join('')}</div></div>`);

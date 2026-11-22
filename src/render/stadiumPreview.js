@@ -7,7 +7,7 @@ export function createStadiumPreview(container, { club, quality = 'mittel' }) {
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
   catch { container.innerHTML = '<p class="muted" style="padding:1rem">3D-Vorschau nicht verfügbar (WebGL).</p>'; return { rebuild() {}, dispose() {} }; }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_MOBILE ? 0.8 : 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_MOBILE ? 2 : 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = false;

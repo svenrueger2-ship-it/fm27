@@ -14,7 +14,7 @@ import { SIM_DT, BALL_R, HALF_L } from '../match/constants.js';
 
 import { IS_MOBILE } from '../core/device.js';
 // phones have a ~3x screen: render at a fraction of it, the HUD stays sharp anyway
-const PIXEL_RATIO = IS_MOBILE ? { niedrig: 0.55, mittel: 0.75, hoch: 0.95, ultra: 1.2 } : { niedrig: 0.75, mittel: 1, hoch: 1.5, ultra: 2 };
+const PIXEL_RATIO = IS_MOBILE ? { niedrig: 1.25, mittel: 1.75, hoch: 2.25, ultra: 3 } : { niedrig: 0.75, mittel: 1, hoch: 1.5, ultra: 2 };
 const REC_DT = 1 / 30;
 const REC_LEN = 300; // 10 s of simulated play
 
@@ -29,11 +29,11 @@ export class MatchView {
     this.onFrame = onFrame;
     this.onReplay = onReplay;
     const msaa = quality === 'hoch' || quality === 'ultra';
-    this.renderer = new THREE.WebGLRenderer({ antialias: quality === 'mittel' && !IS_MOBILE, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ antialias: quality === 'mittel' || (IS_MOBILE && quality !== 'niedrig'), powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, PIXEL_RATIO[quality] ?? 1));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    if (quality !== 'niedrig' && !(IS_MOBILE && quality === 'mittel')) { this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = quality === 'mittel' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; }
+    if (quality !== 'niedrig') { this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = quality === 'mittel' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; }
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.className = 'match-canvas';
 
@@ -56,7 +56,7 @@ export class MatchView {
     if (this.pyroMode !== 'aus' && (engine.bigMatch || Math.random() < 0.35)) setTimeout(() => this.pyro?.fire(this.stadium.fanSpots.home, quality === 'niedrig' ? 5 : 10), 600);
 
     // post-processing
-    if (quality !== 'niedrig' && (!IS_MOBILE || quality === 'ultra')) { // bloom post-processing is too expensive on phones
+    if (quality !== 'niedrig' && (!IS_MOBILE || quality !== 'mittel')) { // v3.0.2: bloom on phones from 'hoch' (Xiaomi 15T Pro handles it)
       const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: msaa ? 4 : 0 });
       this.composer = new EffectComposer(this.renderer, rt);
       this.composer.addPass(new RenderPass(this.scene, this.camera));

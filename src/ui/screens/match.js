@@ -17,6 +17,7 @@ const cupLabel = (w, fx) => { const c = cupById(w, fx.cup); const rd = c.rounds[
 import { userFixture, applyMatchResult, finishWeek, newRng, userLeague, isUserSeasonOver, quickSim, computeTable } from '../../manager/season.js';
 import { MatchView } from '../../render/matchView.js';
 import { CAMERA_MODES } from '../../render/camera.js';
+import { isMatchToday, daysToMatch, nextUserMatchDay, dateOf, fmtDate } from '../../manager/calendar.js';
 import { crest, esc, shortName, ratingClass, toast, bar, flag, modal, portrait } from '../dom.js';
 
 const TOD_NAME = { tag: '☀️ Nachmittag', abend: '🌇 Abendspiel', nacht: '🌙 Flutlicht' };
@@ -43,6 +44,19 @@ export function matchdayScreen(app, el, params = {}) {
   const w = app.world;
   if (isUserSeasonOver(w) && !userCupFixture(w)) { app.go('seasonEnd'); return; }
   if (isDirector(w)) { ensureCoach(w, newRng(w)); coachDecides(w); }
+  w.day ??= 0;
+  if (!isMatchToday(w)) { // v3.0.2: the matchday opens only on the day of the match – until then the calendar runs
+    const fx0 = currentFixture(w), d = daysToMatch(w), opp = fx0 && w.clubs[fx0.h === w.userClubId ? fx0.a : fx0.h];
+    el.innerHTML = `<div class="page"><div class="card md-gate">
+      <small class="muted">HEUTE · ${esc(fmtDate(dateOf(w), true))}</small>
+      ${fx0 && d != null ? `<div class="cal-vs">${crest(w.clubs[w.userClubId], 54)}<b>VS</b>${crest(opp, 54)}</div>
+        <h3>Noch ${d} Tag${d === 1 ? '' : 'e'} bis zum Spiel</h3><p class="muted">${fx0.h === w.userClubId ? 'Heimspiel' : 'Auswärtsspiel'} gegen <b>${esc(opp.name)}</b> am ${esc(fmtDate(dateOf(w, w.week, nextUserMatchDay(w)), true))}</p>`
+        : '<h3>Diese Woche spielfrei</h3><p class="muted">Lass die Tage im Kalender laufen – die Welt spielt im Hintergrund weiter.</p>'}
+      <div class="row-actions center"><button class="btn primary lg" id="gate-run">⏭ ${fx0 ? 'Bis zum Spieltag' : 'Woche durchlaufen'}</button><button class="btn lg" id="gate-cal">📅 Kalender</button></div></div></div>`;
+    el.querySelector('#gate-cal').onclick = () => app.go('calendar');
+    el.querySelector('#gate-run').onclick = () => { (app.cal ||= { auto: false, speed: 1, month: null, log: [] }).runToMatch = true; app.go('calendar'); };
+    return;
+  }
   const fx = currentFixture(w);
   if (!fx) {
     el.innerHTML = `<div class="page"><div class="card"><h3>Spielfrei</h3><button class="btn primary" id="sim">Spieltag simulieren</button></div>${simAheadButton()}</div>`;

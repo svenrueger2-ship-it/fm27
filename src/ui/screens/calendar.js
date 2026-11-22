@@ -1,7 +1,7 @@
 // Kalender (v2.9): month view with all matches, a day-by-day stepper with auto mode (1x/2x/4x), stop,
 // "to the next match" and a daily log. Match days stop the clock – you play the game, then it goes on.
 import { esc, crest, toast } from '../dom.js';
-import { finishWeek, newRng, isUserSeasonOver, userLeague } from '../../manager/season.js';
+import { finishWeek, newRng, isUserSeasonOver, userLeague, dailyTick } from '../../manager/season.js';
 import { dateOf, fmtDate, dayInfo, nextUserMatchDay, trainingOfDay, seasonStart, weekOfDate, WD, MONTHS, CUP_DAY, LEAGUE_DAY } from '../../manager/calendar.js';
 import { SESSIONS } from '../../manager/training.js';
 
@@ -29,6 +29,7 @@ export function calendarScreen(app, el) {
       log('🗓️', `Neue Woche · ${w.week + 1}. Spielwoche`);
       if (w.pendingEvent) { stop(); draw(); return false; }
     }
+    for (const line of dailyTick(w, newRng(w), w.day)) log(line.slice(0, 2).trim(), line.slice(2).trim()); // the world keeps turning in the background
     const key = trainingOfDay(w, w.day), S = key && SESSIONS[key];
     const ev = todayEvents().filter((e) => e.kind !== 'intl');
     if (ev.length) log(ev[0].kind === 'cup' ? '🏆' : '⚽', `Spieltag! ${ev[0].home ? 'Heim' : 'Auswärts'} gegen ${ev[0].opp?.name || ''}`);
@@ -93,6 +94,7 @@ export function calendarScreen(app, el) {
       </div></div>`;
     const $ = (q) => el.querySelector(q);
     const td = document.getElementById('top-date'); if (td) td.textContent = `📅 ${fmtDate(today)}`;
+    const tn = document.getElementById('top-next'); if (tn) tn.textContent = isMatch ? 'Zum Spieltag ▶' : isUserSeasonOver(w) ? 'Saison abschließen' : 'Weiter ▶';
     $('#cal-play')?.addEventListener('click', () => { stop(); app.go('matchday'); });
     $('#cal-ev')?.addEventListener('click', () => { stop(); app.go('home'); });
     $('#cal-step')?.addEventListener('click', () => { stop(); step(); });
@@ -105,6 +107,6 @@ export function calendarScreen(app, el) {
   };
   st.month = null;
   draw();
-  if (st.auto) auto();
+  if (st.runToMatch) { st.runToMatch = false; toNextMatch(); } else if (st.auto) auto();
   return () => stop();
 }

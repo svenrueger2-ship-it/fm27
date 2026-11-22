@@ -8,7 +8,7 @@ import { weeklyFinance, seasonFinanceClose } from './economy.js';
 import { weeklyTraining, recoverInjury } from './training.js';
 import { weeklyTransfers, seasonTransfers } from './transfers.js';
 import { rollEvent, moodAfterMatch, sponsorSeasonClose, ensureMood, moodChange } from './events.js';
-import { createCups, weeklyCups, catchUpCups } from './cups.js';
+import { createCups, weeklyCups, catchUpCups, cupFixturesOfWeek, resolveCupFixture, advanceCups } from './cups.js';
 import { ensureYouth, weeklyYouth, seasonYouth, updateValues } from './youth.js';
 import { weeklyStaff } from './staff.js';
 import { payBonuses } from './agents.js';
@@ -155,10 +155,44 @@ export function applyMatchResult(world, m, result, rng) {
   }
 }
 
+// ---- v3.0.2 daily background world: the calendar runs these on their weekday, finishWeek catches up the rest ----
+const involvesUser = (world, m) => m.h === world.userClubId || m.a === world.userClubId;
+const DAY_TASKS = [
+  { day: 1, id: 'market', run: (world, rng) => { weeklyTransfers(world, rng); return '📰 Transfermarkt & Gerüchte aktualisiert'; } },
+  { day: 2, id: 'cups', run: (world, rng) => { // the other cup / European games of the evening (yours you play yourself)
+    let n = 0;
+    for (const f of cupFixturesOfWeek(world)) { if (involvesUser(world, f)) continue; ensureLineup(world.clubs[f.h], world.players); ensureLineup(world.clubs[f.a], world.players); quickSim(world, f, rng, { cup: true }); resolveCupFixture(world, f, rng); n++; }
+    return n ? `🏆 ${n} Pokal-/Europapokalspiele gespielt` : null; } },
+  { day: 3, id: 'cupdraw', run: (world, rng) => { if (!cupFixturesOfWeek(world).length) advanceCups(world, rng); return null; } },
+  { day: 3, id: 'scouts', run: (world, rng) => { if (world.userClubId != null) weeklyNet(world, rng); updateValues(world); return '🔭 Scoutberichte & Marktwerte aktualisiert'; } },
+  { day: 5, id: 'saturday', run: (world, rng) => { // all league games without you are played on Saturday
+    let n = 0;
+    for (const league of world.leagues) for (const m of league.fixtures[world.week] || []) {
+      if (m.hg != null || involvesUser(world, m)) continue;
+      ensureLineup(world.clubs[m.h], world.players); ensureLineup(world.clubs[m.a], world.players); quickSim(world, m, rng); n++;
+    }
+    return n ? `⚽ Samstag: ${n} Ligaspiele in allen Ländern gespielt – Tabellen aktualisiert` : null; } },
+];
+/** Runs every background task due up to `day` of the current week (each once). Returns log lines. */
+export function dailyTick(world, rng, day = world.day || 0) {
+  ensureClubAI(world, rng);
+  if (!world.cups) { createCups(world, rng); catchUpCups(world, rng, quickSim); }
+  const key = `${world.season}-${world.week}`;
+  if (world.dayTasks?.key !== key) world.dayTasks = { key, done: [] };
+  const out = [];
+  for (const t of DAY_TASKS) {
+    if (t.day > day || world.dayTasks.done.includes(t.id)) continue;
+    world.dayTasks.done.push(t.id);
+    const line = t.run(world, rng); if (line) out.push(line);
+  }
+  return out;
+}
+
 // Plays every remaining fixture of the current week (except optionally the user's 3D match) and advances.
 export function finishWeek(world, rng) {
   ensureClubAI(world, rng);
   if (!world.cups) { createCups(world, rng); catchUpCups(world, rng, quickSim); }
+  dailyTick(world, rng, 1); dailyTick(world, rng, 3); // market + scouting if the calendar skipped them
   if (isDirector(world)) { ensureCoach(world, rng); coachDecides(world); world.clubs[world.userClubId].coachFactor = coachTrainingFactor(world, world.clubs[world.userClubId]); }
   weeklyCups(world, rng, quickSim);
   for (const league of world.leagues) {
@@ -189,9 +223,7 @@ export function finishWeek(world, rng) {
       if (id === world.userClubId) world.trainingReport = { season: world.season, week: world.week + 1, items: rep };
     }
   }
-  weeklyTransfers(world, rng);
   ensureIntl(world); intlBreak(world, rng);
-  if (world.userClubId != null) weeklyNet(world, rng);
   if (world.userClubId != null) {
     ensureYouth(world, rng); weeklyYouth(world, rng); rollEvent(world, rng);
     const fam = world.clubs[world.userClubId].stadium.layout?.family || 0; if (fam && rng.chance(fam * 0.3)) moodChange(world, 0, 1); // family stand wins young fans
