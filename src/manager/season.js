@@ -199,6 +199,7 @@ export function finishWeek(world, rng) {
   updateValues(world);
   weeklyCoaches(world, rng); tickBounce(world);
   world.week++;
+  world.day = 0; // calendar (v2.9): a new week starts on Monday
   for (const c of Object.values(world.clubs)) if (c.id !== world.userClubId) c.lineup = null; // AI re-picks
   weeklyStaff(world, rng);
   if (world.userClubId != null) { weeklyPlayers(world, rng); weeklyLoans(world); weeklyCareer(world, rng); weeklyBiz(world, rng); weeklyMedia(world, rng); weeklyKabine(world, rng); weeklySkills(world); checkAchievements(world); }

@@ -21,6 +21,8 @@ import { kabineScreen } from './screens/kabine.js';
 import { achievementsScreen } from './screens/achievements.js';
 import { analysisScreen } from './screens/analysis.js';
 import { profileScreen } from './screens/profile.js';
+import { calendarScreen } from './screens/calendar.js';
+import { dateOf, fmtDate } from '../manager/calendar.js';
 import { openTasks } from '../manager/progress.js';
 import { navHtml, placeInk, openPalette, icon } from './nav.js';
 import { openInbox } from '../manager/staff.js';
@@ -33,7 +35,7 @@ const NAV = [
   ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion bauen', '🏟️', 'Stadion'],
   ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
 ];
-const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen };
+const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen };
 
 export class App {
   constructor(root) {
@@ -94,7 +96,7 @@ export class App {
       <div class="shell">
         <header class="topbar">
           <div class="brand"><span class="logo">FM<b>2027</b><small class="by">© BAKUSA</small></span></div>
-          <div class="club-chip">${crest(club, 30)}<div><strong>${esc(club.name)}</strong><small>${esc(league.name)} · Saison ${w.season}/${String((w.season + 1) % 100).padStart(2, '0')} · ${isUserSeasonOver(w) ? 'Saisonende' : `Spieltag ${md}`}</small></div></div>
+          <div class="club-chip">${crest(club, 30)}<div><strong>${esc(club.name)}</strong><small>${esc(league.name)} · ${isUserSeasonOver(w) ? 'Saisonende' : `Spieltag ${md}`} · <button class="linkish date-chip" id="top-date">📅 ${esc(fmtDate(dateOf(w)))}</button></small></div></div>
           <button class="top-search" id="top-search">${icon('search', 16)}<span>Suchen …</span><kbd>Strg K</kbd></button>
           <div class="top-stats"><span class="win ${win.open ? 'open' : ''}">${win.open ? `🔓 Transferfenster · noch ${win.closesIn} Wo.` : '🔒 Transferfenster zu'}</span><span>Kontostand <b>${money(club.budget)}</b></span><button class="btn primary sm" id="top-next">${isUserSeasonOver(w) ? 'Saison abschließen' : 'Zum Spieltag ▶'}</button></div>
         </header>
@@ -104,6 +106,8 @@ export class App {
     r.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => this.go(b.dataset.nav)));
     r.querySelector('#rail-pin')?.addEventListener('click', () => { this.settings.navPinned = !this.settings.navPinned; saveSettings(this.settings); this.render(); });
     r.querySelector('#top-search')?.addEventListener('click', () => openPalette(this));
+    r.querySelector('#top-date')?.addEventListener('click', () => this.go('calendar'));
+    this.world.eventRate = this.settings.events || 'normal';
     document.body.classList.toggle('nav-pinned', !!this.settings.navPinned);
     requestAnimationFrame(() => placeInk(r));
     r.querySelector('#top-next').addEventListener('click', () => this.go(isUserSeasonOver(w) ? 'seasonEnd' : 'matchday'));

@@ -129,7 +129,10 @@ const EVENTS = [
 const natOf = (w, c) => ({ DE: 'GER', EN: 'ENG', ES: 'ESP', IT: 'ITA', FR: 'FRA' }[leagueOf(w, c).country] || 'GER');
 
 export function rollEvent(world, rng) {
-  if (world.pendingEvent || rng.next() > 0.3) return null;
+  const rate = { oft: 0.22, normal: 0.12, selten: 0.05, aus: 0 }[world.eventRate || 'normal'] ?? 0.12;
+  const stamp = world.season * 100 + world.week;
+  if (world.pendingEvent || stamp - (world.lastEventAt ?? -99) < 3 || rng.next() > rate) return null;
+  world.lastEventAt = stamp;
   const c = world.clubs[world.userClubId];
   const pool = EVENTS.filter((e) => e.when(world, c) && e.id !== world.lastEventId);
   if (!pool.length) return null;

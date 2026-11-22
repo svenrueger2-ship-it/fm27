@@ -33,9 +33,10 @@ export function threat(lx, lz) {
 export function shotXg(lx, lz) {
   const dx = Math.max(0.5, HALF_L - lx);
   const d = Math.hypot(dx, lz);
-  let xg = 0.9 / (1 + Math.exp((d - 6) / 5.2));
+  // v2.9: long-range shots were valued far too low (a 20 m shot ≈ 0.02) → players hardly ever shot
+  let xg = 0.9 / (1 + Math.exp((d - 6) / 5.2)) + 0.05 * Math.exp(-Math.max(0, d - 12) / 9);
   const ang = Math.abs(Math.atan2(GOAL_HW - lz, dx) - Math.atan2(-GOAL_HW - lz, dx));
-  xg *= clamp(ang / 0.55, 0.12, 1.25);
+  xg *= clamp(ang / 0.55, 0.3, 1.25);
   return xg;
 }
 
@@ -480,13 +481,14 @@ function carrierThink(E, T, p) {
       const ol = toLocal(E, T.idx, o.pos.x, o.pos.z);
       if (ol.x <= me.x) continue;
       const sd = segDist(ol.x, ol.z, me.x, me.z, HALF_L, 0).d;
-      if (!o.isGK && sd < 1.0) block += 0.25;
+      if (!o.isGK && sd < 1.0) block += 0.2;
     }
-    xg *= Math.max(0.15, 1 - block) * (pressure < 1.5 ? 0.7 : 1);
+    const rawXg = xg;
+    xg *= Math.max(0.35, 1 - block) * (pressure < 1.5 ? 0.8 : 1);
     const skill = 0.6 + a.abschluss / 160;
     const longShot = me.x < 30 ? a.schusskraft / 99 : 1;
-    const score = xg * skill * longShot * (4.0 + tac.mentality * 1.2) * (1 + gs.urgency * 0.45) * (p.roleDef?.shot || 1) + noise();
-    if (xg > 0.012 - gs.urgency * 0.004) options.push({ kind: 'shot', score });
+    const score = xg * skill * longShot * (8.0 + tac.mentality * 1.2) * (1 + gs.urgency * 0.45) * (p.roleDef?.shot || 1) + noise();
+    if (rawXg > 0.012 - gs.urgency * 0.004 && xg > 0.005) options.push({ kind: 'shot', score });
   }
 
   // --- passes

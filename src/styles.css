@@ -969,3 +969,33 @@ html.android { -webkit-user-select: none; user-select: none; } html.android inpu
   html.android .topbar { padding-top: .3rem; padding-bottom: .3rem; } html.android .topbar .club-chip small { display: none; }
   html.android .nv { min-height: 40px; } html.android .rail-ink { height: 40px; }
 }
+/* v2.9 calendar */
+.date-chip { font-size: inherit; color: inherit; opacity: .9; } .date-chip:hover { color: var(--acc); }
+.cal-top { display: grid; grid-template-columns: 1fr 1.3fr; gap: 1rem; }
+.cal-today h3 { margin: .2rem 0 .6rem; font-family: var(--display); font-size: 1.8rem; text-transform: none !important; }
+.cal-today.is-match { background: linear-gradient(140deg, rgba(var(--acc-rgb), .35), rgba(18,15,34,.9)); }
+.cal-vs { display: flex; align-items: center; gap: 1rem; margin: .4rem 0; } .cal-vs b { font-family: var(--display); font-size: 2rem; color: var(--acc); }
+.cal-agenda { font-size: 1.1rem; }
+.cal-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; margin-bottom: .7rem; } .cal-btns .btn { padding: .7rem .4rem; font-size: .95rem; }
+.cal-log { margin-top: .7rem; max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.cal-log div { display: grid; grid-template-columns: 26px 1fr auto; gap: .5rem; align-items: center; padding: .35rem .5rem; border-radius: 9px; background: rgba(255,255,255,.03); font-size: .88rem; animation: cardIn .3s both; }
+.cal-log i { font-style: normal; } .cal-log small { color: var(--muted); font-size: .72rem; }
+.cal-main { display: grid; grid-template-columns: 1.8fr 1fr; gap: 1rem; margin-top: 1rem; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: .6rem; }
+.cd-h { text-align: center; font-size: .7rem; font-weight: 800; letter-spacing: .12em; color: var(--muted); padding: .2rem 0; }
+.cd { min-height: 78px; border-radius: 10px; padding: .3rem .35rem; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); display: flex; flex-direction: column; gap: 2px; font-size: .75rem; }
+.cd.empty { background: none; border: 0; } .cd.past { opacity: .55; }
+.cd.today { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc) inset, 0 0 18px rgba(var(--acc-rgb), .35); }
+.cd.has-league { background: linear-gradient(160deg, rgba(var(--acc-rgb), .2), rgba(255,255,255,.03)); } .cd.has-cup { background: linear-gradient(160deg, rgba(255,207,74,.22), rgba(255,255,255,.03)); }
+.cd-n { font-weight: 800; } .cd-m { display: flex; align-items: center; gap: .3rem; } .cd-m small { color: var(--muted); }
+.cd-res { margin-left: auto; padding: 0 .3rem; border-radius: 5px; font-size: .72rem; } .cd-res.w { background: #2bb673; } .cd-res.d { background: #c9a227; } .cd-res.l { background: #d44; }
+.cd-tag, .cd-tr { color: var(--muted); font-size: .66rem; line-height: 1.2; }
+.cu { display: flex; align-items: center; gap: .7rem; padding: .55rem 0; border-bottom: 1px solid rgba(255,255,255,.05); } .cu div { display: flex; flex-direction: column; } .cu small { color: var(--muted); } .cu em { font-style: normal; font-size: .72rem; color: var(--acc); }
+@media (max-width: 1000px) { .cal-top, .cal-main { grid-template-columns: 1fr; } .cal-btns { grid-template-columns: 1fr 1fr; } .cd { min-height: 56px; } }
+/* v2.9 money inputs */
+.minput { display: flex; align-items: stretch; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); background: rgba(10,8,22,.65); }
+.minput:focus-within { border-color: rgba(var(--acc-rgb), .7); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), .2); }
+.minput input { flex: 1; min-width: 0; border: 0 !important; background: none !important; box-shadow: none !important; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: .02em; }
+.minput i { font-style: normal; display: grid; place-items: center; padding: 0 .5rem 0 .2rem; color: var(--muted); font-weight: 700; }
+.mi-b { border: 0; background: rgba(255,255,255,.06); color: var(--text); width: 34px; font-size: 1.1rem; cursor: pointer; } .mi-b:hover { background: rgba(var(--acc-rgb), .3); }
+body.light .minput { background: #fff; }

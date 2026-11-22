@@ -11,6 +11,7 @@ export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+export const moneyExact = (v) => (v == null ? '–' : `${Math.round(v).toLocaleString('de-DE')} €`);
 export function money(v) {
   if (v == null) return '–';
   const a = Math.abs(v);
@@ -175,5 +176,45 @@ export function confirmDialog(text, okLabel = 'OK') {
     const m = modal(`<p style="margin:.4rem 1.6rem 1rem 0">${esc(text)}</p><div class="row-actions end"><button class="btn ghost" data-c="0">Abbrechen</button><button class="btn primary" data-c="1">${esc(okLabel)}</button></div>`,
       { onClose: () => { if (!done) resolve(false); } });
     m.el.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { done = true; resolve(b.dataset.c === '1'); m.close(); }));
+  });
+}
+
+// ------------------------------------------------------------------ money inputs (v2.9)
+// Commercial formatting while typing: "1.500.000 €". Accepts "1,5 Mio", "750 Tsd", "2m", "300k" too.
+export const fmtMoneyInput = (v) => (v == null || v === '' ? '' : Math.round(+v).toLocaleString('de-DE'));
+export function parseMoney(str) {
+  if (str == null) return 0;
+  const t = String(str).trim().toLowerCase().replace(/€/g, '').replace(/\s+/g, '');
+  if (!t) return 0;
+  const m = t.match(/^([\d.,]+)(mio|mrd|m|tsd|k|t)?\.?$/);
+  if (!m) return Math.round(+t.replace(/\D/g, '') || 0);
+  let num = m[1];
+  const unit = m[2];
+  if (unit) num = +num.replace(/\./g, '').replace(',', '.'); else num = +num.replace(/[.,]/g, '');
+  const mul = unit === 'mrd' ? 1e9 : unit === 'mio' || unit === 'm' ? 1e6 : unit === 'tsd' || unit === 'k' || unit === 't' ? 1e3 : 1;
+  return Math.round((num || 0) * mul);
+}
+export function moneyInput(id, value, { step = 10000, placeholder = '' } = {}) {
+  return `<span class="minput"><button type="button" class="mi-b" data-mstep="-${step}" data-for="${id}" aria-label="weniger">−</button><input class="input" id="${id}" type="text" inputmode="numeric" autocomplete="off" data-money value="${value === '' || value == null ? '' : fmtMoneyInput(value)}" placeholder="${placeholder}"><i>€</i><button type="button" class="mi-b" data-mstep="${step}" data-for="${id}" aria-label="mehr">+</button></span>`;
+}
+export const readMoney = (el) => parseMoney(el?.value);
+if (typeof document !== 'undefined' && !window.__moneyBound) {
+  window.__moneyBound = true;
+  // live formatting with thousands separators; keep the caret at the same digit position
+  document.addEventListener('input', (e) => {
+    const el = e.target; if (!el.matches?.('input[data-money]')) return;
+    if (/[a-zA-Z,]/.test(el.value)) return; // user types "1,5 Mio" – format on blur
+    const digitsBefore = el.value.slice(0, el.selectionStart).replace(/\D/g, '').length;
+    const n = el.value.replace(/\D/g, '');
+    el.value = n ? (+n).toLocaleString('de-DE') : '';
+    let pos = 0, seen = 0; while (pos < el.value.length && seen < digitsBefore) { if (/\d/.test(el.value[pos])) seen++; pos++; }
+    el.setSelectionRange(pos, pos);
+  });
+  document.addEventListener('focusout', (e) => { const el = e.target; if (el.matches?.('input[data-money]') && el.value.trim()) el.value = fmtMoneyInput(parseMoney(el.value)); });
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-mstep]'); if (!b) return;
+    const el = document.getElementById(b.dataset.for); if (!el) return;
+    el.value = fmtMoneyInput(Math.max(0, parseMoney(el.value) + +b.dataset.mstep));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
   });
 }

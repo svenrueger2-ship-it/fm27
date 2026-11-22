@@ -3,9 +3,9 @@
 export const PATCHNOTES = [
   {
     version: '2.9.0', date: '22.11.2026', title: 'Version 2.9 – Android-App',
-    neu: ['Android-App (APK), optimiert für Xiaomi 15T Pro', 'Live-Updates und Update-Zwang auch auf dem Handy'],
-    verbessert: ['Handy: 120 Hz, Vollbild bis in die Kamera-Aussparung, hohe Grafik als Standard'],
-    behoben: [],
+    neu: ['Kalender mit Tag-für-Tag-Simulation (Auto, Stopp, 1x/2x/4x)', 'Android-App (APK), optimiert für Xiaomi 15T Pro', 'Beträge mit Tausenderpunkten eingeben (auch „1,5 Mio“)'],
+    verbessert: ['Weniger Ereignis-Popups, Häufigkeit einstellbar', 'Mehr Tore im 3D-Spiel und in der Sofortsimulation', 'Genaue Beträge in Vertragsverhandlungen'],
+    behoben: ['Vertragspoker: Beträge mit Punkten wurden als 0 gelesen', 'Kader nach Saisonwechsel nicht mehr zu klein'],
     geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
   },
   {

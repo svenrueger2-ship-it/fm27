@@ -10,7 +10,7 @@ import { projectPlayer, projectionSvg } from '../../manager/projection.js';
 import { weeklyWages } from '../../manager/economy.js';
 import { newRng } from '../../manager/season.js';
 import { POSITIONS, POS_ORDER } from '../../data/attributes.js';
-import { crest, esc, money, flag, pname, ratingClass, portrait, modal, toast } from '../dom.js';
+import { crest, esc, money, flag, pname, ratingClass, portrait, modal, toast, moneyInput, readMoney, fmtMoneyInput, moneyExact } from '../dom.js';
 import { playerModal } from './manager.js';
 import { REGIONS, ensureNet, maxNetScouts, scoutMarket, hireNetScout, fireNetScout, sendScout } from '../../manager/scoutnet.js';
 import { demandPackage, pokerRound, applyPackage, agentOf, canPreContract, signPreContract } from '../../manager/agents.js';
@@ -192,17 +192,18 @@ function bidDialog(app, p, onChange) {
   const w = app.world, ask = askingPrice(w, p), c = p.clubId ? w.clubs[p.clubId] : null;
   if (!c) { makeBid(w, p.id, 0); negotiate(app, p, 'buy', onChange); return; }
   const m = modal(`<h3>Angebot für ${esc(pname(p))}</h3><p>${crest(c, 22)} ${esc(c.name)} · Marktwert ${money(p.value)} · Forderung ca. <b>${money(ask)}</b></p>
-    <label class="field">Ablösesumme (€)<input class="input" id="fee" type="number" step="50000" min="0" value="${ask}"></label>
+    <label class="field">Ablösesumme${moneyInput('fee', ask, { step: 250000 })}</label>
     <input type="range" id="feeR" min="${Math.round(ask * 0.5)}" max="${Math.round(ask * 1.5)}" step="10000" value="${ask}" style="width:100%">
     <p class="muted">Dein Budget: ${money(app.club.budget)}${p.releaseClause ? ` · Ausstiegsklausel: ${money(p.releaseClause)} (wird immer akzeptiert)` : ''}</p>
     <div id="msg"></div><div class="row-actions end"><button class="btn primary" id="send">Angebot senden</button></div>`);
   const fee = m.el.querySelector('#fee'), feeR = m.el.querySelector('#feeR');
-  feeR.oninput = () => (fee.value = feeR.value);
+  feeR.oninput = () => (fee.value = fmtMoneyInput(feeR.value));
+  fee.addEventListener('change', () => { feeR.value = readMoney(fee); });
   m.el.querySelector('#send').onclick = () => {
-    const r = makeBid(w, p.id, Math.round(+fee.value));
+    const r = makeBid(w, p.id, readMoney(fee));
     const msg = m.el.querySelector('#msg');
     if (r.result === 'accepted') { m.close(); toast(`${c.short} akzeptiert ${money(r.fee)}${r.clause ? ' (Klausel)' : ''}! Jetzt Vertrag verhandeln.`); negotiate(app, p, 'buy', onChange); }
-    else if (r.result === 'countered') { msg.innerHTML = `<p class="tag y" style="display:block;padding:.5rem">↩ ${esc(r.reason)}</p><button class="btn sm" id="acc">Gegenangebot (${money(r.counter)}) annehmen</button>`; msg.querySelector('#acc').onclick = () => { fee.value = r.counter; m.el.querySelector('#send').click(); }; }
+    else if (r.result === 'countered') { msg.innerHTML = `<p class="tag y" style="display:block;padding:.5rem">↩ ${esc(r.reason)}</p><button class="btn sm" id="acc">Gegenangebot (${moneyExact(r.counter)}) annehmen</button>`; msg.querySelector('#acc').onclick = () => { fee.value = fmtMoneyInput(r.counter); m.el.querySelector('#send').click(); }; }
     else msg.innerHTML = `<p class="tag r" style="display:block;padding:.5rem">✕ ${esc(r.reason)}</p>`;
   };
 }
@@ -213,22 +214,22 @@ function negotiate(app, p, mode, onChange) {
   const state = {};
   const years0 = Math.min(D.maxY, Math.max(D.minY, 3));
   const m = modal(`<h3>✍️ Vertragspoker · ${esc(pname(p))}</h3>
-    <div class="pp-head" style="margin:0 0 .6rem;padding:0;background:none">${portrait(p, club, 60)}<div><p>${p.age} Jahre · ${POSITIONS[p.pos].name} · aktuelles Gehalt ${money(p.wage)}/Jahr${mode === 'pre' ? ' · <b>Vorvertrag: kommt im Sommer ablösefrei</b>' : ''}</p>
+    <div class="pp-head" style="margin:0 0 .6rem;padding:0;background:none">${portrait(p, club, 60)}<div><p>${p.age} Jahre · ${POSITIONS[p.pos].name} · aktuelles Gehalt ${moneyExact(p.wage)}/Jahr${mode === 'pre' ? ' · <b>Vorvertrag: kommt im Sommer ablösefrei</b>' : ''}</p>
     <p>Berater: <b>${esc(D.agent.name)}</b> · ${D.agent.greed > 1.15 ? 'gilt als knallharter Verhandler' : D.agent.greed < 1 ? 'gilt als fair' : 'verhandelt zäh'} · Geduld ${D.agent.patience + 1} Runden</p>
-    <p class="muted">Erwartet grob ${money(D.target)}/Jahr im Gesamtpaket · Laufzeit ${D.minY}–${D.maxY} Jahre · Honorar ca. ${money(D.agentFee)}</p>${D.willing ? '' : `<p class="tag r" style="display:block;padding:.4rem">${esc(D.reason)}</p>`}</div></div>
+    <p class="muted">Erwartet grob ${moneyExact(Math.ceil(D.target / 1e4) * 1e4)}/Jahr im Gesamtpaket · Laufzeit ${D.minY}–${D.maxY} Jahre · Honorar ca. ${moneyExact(D.agentFee)}</p>${D.willing ? '' : `<p class="tag r" style="display:block;padding:.4rem">${esc(D.reason)}</p>`}</div></div>
     <div class="poker">
-      <label class="field">Gehalt pro Jahr (€)<input class="input" id="wage" type="number" step="10000" value="${Math.round((D.target * 0.85) / 1e4) * 1e4}"></label>
+      <label class="field">Gehalt pro Jahr${moneyInput('wage', Math.round((D.target * 0.85) / 1e4) * 1e4, { step: 50000 })}</label>
       <label class="field">Laufzeit<select id="yrs">${[1, 2, 3, 4, 5].filter((y) => y >= D.minY && y <= D.maxY).map((y) => `<option ${y === years0 ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
-      <label class="field">Handgeld (einmalig)<input class="input" id="sign" type="number" step="50000" value="0"></label>
-      <label class="field">Beraterhonorar (einmalig)<input class="input" id="afee" type="number" step="10000" value="${Math.round((D.agentFee * 0.7) / 1e4) * 1e4}"></label>
-      <label class="field">Torprämie (€ pro Tor)<input class="input" id="gb" type="number" step="5000" value="0"></label>
-      <label class="field">Einsatzprämie (€ pro Spiel)<input class="input" id="ab" type="number" step="2500" value="0"></label>
-      <label class="field">Ausstiegsklausel (€, leer = keine)<input class="input" id="cl" type="number" step="1000000" placeholder="keine" value="${p.releaseClause || ''}"></label>
+      <label class="field">Handgeld (einmalig)${moneyInput('sign', 0, { step: 100000 })}</label>
+      <label class="field">Beraterhonorar (einmalig)${moneyInput('afee', Math.round((D.agentFee * 0.8) / 1e4) * 1e4, { step: 50000 })}</label>
+      <label class="field">Torprämie pro Tor${moneyInput('gb', 0, { step: 5000 })}</label>
+      <label class="field">Einsatzprämie pro Spiel${moneyInput('ab', 0, { step: 2500 })}</label>
+      <label class="field">Ausstiegsklausel (leer = keine)${moneyInput('cl', p.releaseClause || '', { step: 5000000, placeholder: 'keine' })}</label>
     </div>
     <p class="muted small">Handgeld, Prämien und eine Ausstiegsklausel machen das Paket attraktiver als reines Gehalt. Eine niedrige Ausstiegsklausel mögen Spieler – aber reiche Klubs können sie ziehen.</p>
     <p class="muted">Gehaltsbudget: ${money(weeklyWages(w, club))} von ${money(club.wageBudget)} verplant.</p>
     <div id="msg"></div><div class="row-actions end"><button class="btn ghost" id="cancel">Abbrechen</button><button class="btn primary" id="ok">Angebot machen</button></div>`, { onClose: () => { if (mode === 'buy' && w.transfer.pending) w.transfer.pending = null; } });
-  const val = (id) => Math.max(0, Math.round(+m.el.querySelector(id).value || 0));
+  const val = (id) => Math.max(0, readMoney(m.el.querySelector(id)));
   m.el.querySelector('#cancel').onclick = () => m.close();
   m.el.querySelector('#ok').onclick = () => {
     const offer = { wage: val('#wage'), years: +m.el.querySelector('#yrs').value, signing: val('#sign'), agentFee: val('#afee'), goalBonus: val('#gb'), appBonus: val('#ab'), clause: val('#cl') || null };

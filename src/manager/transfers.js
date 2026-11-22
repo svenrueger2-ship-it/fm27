@@ -389,6 +389,25 @@ export function seasonTransfers(world, rng) {
       executeTransfer(world, fa, null, club, 0, d.wage, rng.int(d.minY, d.maxY));
     }
   }
+  // v2.9: the user's squad must never be unplayable after expiring contracts / retirements:
+  // below 16 players the U19 talents move up first, then cheap free agents are signed as cover
+  const me = world.clubs[world.userClubId];
+  if (me && me.squad.length < 16) {
+    const before = me.squad.length;
+    const youth = (world.youth || []).map((id) => world.players[id]).filter((p) => p && p.age >= 16).sort((a, b) => b.ovr - a.ovr);
+    for (const y of youth) { if (me.squad.length >= 16) break; world.youth = world.youth.filter((x) => x !== y.id); y.youthOf = null; y.clubId = me.id; y.contract = 3; y.wage = Math.round((18000 + y.ovr * 900) / 1000) * 1000; me.squad.push(y.id); }
+    let guard = 0;
+    while (me.squad.length < 16 && guard++ < 20) {
+      const need = weakestSlot(world, me);
+      const pool = world.freeAgents.map((id) => world.players[id]).filter((p) => p && p.ovr <= me.rep * 0.45 + 52);
+      const fa = pool.filter((p) => !need || POS_COMPAT[need.pos]?.includes(p.pos)).sort((a, b) => b.ovr - a.ovr)[0] || pool.sort((a, b) => b.ovr - a.ovr)[0];
+      if (!fa) break;
+      const d = contractDemand(world, fa, me);
+      executeTransfer(world, fa, null, me, 0, Math.round(d.wage * 0.8), 1);
+    }
+    me.lineup = null;
+    if (me.squad.length > before) news(world, `⚠️ Notkader: Nur noch ${before} Spieler unter Vertrag – ${me.squad.length - before} Spieler (U19 und vereinslose Profis) wurden aufgefüllt. Verstärke dich auf dem Transfermarkt!`);
+  }
   world.transfer.listed = world.transfer.listed.filter((id) => world.players[id]?.clubId === world.userClubId);
   world.transfer.offers = [];
 }

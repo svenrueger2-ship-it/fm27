@@ -6,7 +6,7 @@ import { clamp } from '../core/rng.js';
 import { contractDemand, news, ensureTransferState, executeTransfer } from './transfers.js';
 import { ensureStats } from './achievements.js';
 
-const eur = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace('.', ',')} Mio. €` : `${Math.round(n / 1e3)} Tsd. €`);
+const eur = (n) => `${Math.round(n).toLocaleString('de-DE')} €`; // exact amounts in negotiations (v2.9)
 const AGENTS = [
   ['Jorge Mendoza', 1.3, 2, 0.1], ['Pini Zahavsky', 1.25, 2, 0.12], ['Volker Struth', 1.12, 3, 0.08], ['Rafaela Pimenta', 1.22, 2, 0.1],
   ['Kia Joorab', 1.15, 3, 0.09], ['Marc Kosicke', 1.05, 4, 0.06], ['Giuliano Bertolucci', 1.1, 3, 0.07], ['Sascha Breese', 1.0, 4, 0.05],

@@ -24,12 +24,13 @@ const P = {
   saves: '<path d="M5 3h11l3 3v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 3v5h7V3M8 21v-7h8v7"/>',
   settings: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="8" cy="14.5" r=".9" fill="currentColor"/><circle cx="12" cy="14.5" r=".9" fill="currentColor"/><circle cx="16" cy="14.5" r=".9" fill="currentColor"/>',
   pin: '<path d="M9 4h6l-1 5 3 3v2H7v-2l3-3zM12 14v7"/>',
 };
 export const icon = (k, s = 22) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k] || P.home}</svg>`;
 
 export const NAV_GROUPS = [
-  ['Übersicht', [['home', 'Vereinszentrale', 'Zentrale'], ['matchday', 'Spieltag', 'Spiel'], ['staff', 'Stab & Posteingang', 'Stab']]],
+  ['Übersicht', [['home', 'Vereinszentrale', 'Zentrale'], ['calendar', 'Kalender', 'Kalender'], ['matchday', 'Spieltag', 'Spiel'], ['staff', 'Stab & Posteingang', 'Stab']]],
   ['Mannschaft', [['squad', 'Kader', 'Kader'], ['tactics', 'Taktik', 'Taktik'], ['training', 'Training', 'Training'], ['kabine', 'Kabine', 'Kabine']]],
   ['Verein', [['transfers', 'Transfers & Scouting', 'Transfer'], ['finance', 'Finanzen & Ausbau', 'Finanzen'], ['stadium', 'Stadion bauen', 'Stadion']]],
   ['Wettbewerbe', [['league', 'Liga', 'Liga'], ['cups', 'Pokale & Europa', 'Pokale'], ['world', 'Fußballwelt', 'Welt'], ['analysis', 'Analyse-Hub', 'Analyse']]],

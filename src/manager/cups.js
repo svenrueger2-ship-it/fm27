@@ -114,7 +114,7 @@ export function groupTable(world, g) {
   return Object.values(rows).sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf || world.clubs[b.id].rep - world.clubs[a.id].rep);
 }
 
-const roundFixtures = (rd) => (rd.group ? rd.groups.flatMap((g) => g.fixtures) : rd.ties.flatMap((t) => t.fixtures));
+export const roundFixtures = (rd) => (rd.group ? rd.groups.flatMap((g) => g.fixtures) : rd.ties.flatMap((t) => t.fixtures));
 
 // European draw: avoid same-country pairings in the first round where possible
 function seededPairs(ids, rng) {

@@ -316,6 +316,7 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
       ${tog('s-ann', 'Stadionsprecher', 'Computerstimme bei Toren und Wechseln', s.announcer === true)}
       ${tog('s-com', 'TV-Kommentar vorlesen', 'Der Kommentar wird zusätzlich gesprochen', !!s.commentary)}`,
     ablauf: () => `
+      ${sel('s-ev', 'Ereignisse & Entscheidungen', 'Wie oft Anfragen wie Spenden, Benefiz oder Sponsorendeals auftauchen', s.events || 'normal', [['oft', 'Oft'], ['normal', 'Normal'], ['selten', 'Selten'], ['aus', 'Aus']])}
       ${tog('s-auto', 'Automatisch speichern', 'Nach jedem Spieltag in den Autosave-Platz', !!s.autosave)}
       ${tog('s-subs', 'Automatische Auswechslungen', 'Der Co-Trainer wechselt bei Verletzungen und Müdigkeit', s.autoSubs !== false)}`,
     daten: () => `
@@ -332,7 +333,7 @@ function bindSettings(app, root, redraw) {
   root.querySelectorAll('[data-stab]').forEach((b) => (b.onclick = () => { app.setTab = b.dataset.stab; redraw(); }));
   const map = {
     's-q': (v) => (s.quality = v), 's-sp': (v) => (s.speed = v === 'highlights' ? v : +v), 's-cam': (v) => (s.camera = v), 's-ui': (v) => (s.uiScale = +v),
-    's-theme': (v) => (s.theme = v), 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v),
+    's-theme': (v) => (s.theme = v), 's-ev': (v) => { s.events = v; if (window.ufm?.world) window.ufm.world.eventRate = v; }, 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v),
   };
   const bools = { 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
   const commit = () => { saveSettings(s); applyTheme(s, window.ufm?.world ? window.ufm.club : null); toast('Einstellungen gespeichert', 1200); };

@@ -486,13 +486,14 @@ function liveMatch(app, el, params) {
         resolveCupFixture(w, m, rng);
         if (!userFixture(w) && !userCupFixture(w)) { finishWeek(w, rng); await app.autosave(); app.go('home'); return; }
         await app.autosave();
-        toast('Weiter geht es mit dem Ligaspiel dieser Woche');
-        app.go('matchday');
+        w.day = Math.max(w.day || 0, 3);
+        toast('Weiter geht es mit dem Ligaspiel am Sonntag');
+        app.go('calendar');
         return;
       }
       finishWeek(w, rng);
       await app.autosave();
-      app.go('home');
+      app.go('calendar');
     };
   }
 
