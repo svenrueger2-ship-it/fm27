@@ -11,3 +11,7 @@
 
 **Behoben**
 - Seitenleiste klappte auf Touch-Geräten nach einem Tipp auf und blieb offen.
+
+**Querformat**
+- Die Android-App läuft nur noch im Querformat und dreht sich automatisch (links/rechts je nach Haltung).
+- Im Handy-Browser: Querformat-Sperre im Vollbild, im Hochformat erscheint „Bitte Handy drehen“.

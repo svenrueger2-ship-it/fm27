@@ -1032,3 +1032,9 @@ html.mobile .pp-face .pface { width: 96px !important; height: 96px !important; }
   html.mobile .rail-foot { display: none !important; }
 }
 @media (max-width: 760px) { html.mobile .start3 { grid-template-columns: 1fr !important; } html.mobile .grid-3, html.mobile .grid-4 { grid-template-columns: 1fr 1fr; } }
+/* v3.0.1 landscape only on phones */
+.rotate-hint { display: none; }
+@media (orientation: portrait) { html.mobile .rotate-hint { display: grid; place-items: center; position: fixed; inset: 0; z-index: 99999; background: #0a0818; color: #fff; text-align: center; padding: 2rem; }
+  html.mobile .rotate-hint b { display: block; font-size: 1.4rem; margin: .8rem 0 .3rem; } html.mobile .rotate-hint small { opacity: .7; }
+  html.mobile .rotate-hint .rh-ico { font-size: 3.2rem; animation: rhTurn 1.6s ease-in-out infinite; } }
+@keyframes rhTurn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }

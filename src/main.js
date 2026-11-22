@@ -6,7 +6,17 @@ import { loadGame } from './storage/db.js';
 
 const root = document.getElementById('app');
 if (/FM27-Android/.test(navigator.userAgent)) document.documentElement.classList.add('android');
-if (IS_MOBILE) document.documentElement.classList.add('mobile');
+if (IS_MOBILE) {
+  document.documentElement.classList.add('mobile');
+  // v3.0.1 landscape lock: works in fullscreen / installed app; otherwise a "please rotate" hint is shown in portrait
+  const lock = () => { try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch { /* unsupported */ } };
+  lock(); document.addEventListener('fullscreenchange', lock);
+  document.addEventListener('pointerdown', function once() { document.removeEventListener('pointerdown', once);
+    if (!document.fullscreenElement && !/FM27-Android/.test(navigator.userAgent)) document.documentElement.requestFullscreen?.().then(lock).catch(() => {}); }, { once: true });
+  const hint = document.createElement('div'); hint.className = 'rotate-hint';
+  hint.innerHTML = '<div><div class="rh-ico">📱</div><b>Bitte Handy drehen</b><small>FUSSBALL MANAGER 2027 wird im Querformat gespielt</small></div>';
+  document.body.appendChild(hint);
+}
 const app = new App(root);
 window.ufm = app; // handy for debugging in the console
 preloadCrests().finally(async () => {
