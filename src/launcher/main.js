@@ -2,7 +2,7 @@
 import { startBackground } from './bg.js';
 import * as sfx from './sfx.js';
 import { PATCHNOTES, GAME_VERSION } from '../data/patchnotes.js';
-import { listSaves, loadSettings, saveSettings } from '../storage/db.js';
+import { listSaves, loadSettings, saveSettings, deleteGame } from '../storage/db.js';
 import { ACHIEVEMENTS, globalAchievements } from '../manager/achievements.js';
 
 const B = window.bakusa || null;                       // Electron bridge (absent in the browser preview)
@@ -100,9 +100,12 @@ function newsHtml() {
 }
 function savesHtml() {
   if (!state.saves.length) return `<div class="empty-state"><div class="es-ico">💾</div><p>Noch keine Spielstände.</p><small>Sie erscheinen hier, sobald du im Spiel speicherst.</small></div>`;
-  return `<div class="saves">${state.saves.map((s, i) => `<button class="save" data-slot="${esc(s.slot)}" style="--c1:${s.meta?.colors?.primary || '#6b5bd6'};--d:${i * 0.05}s">${badge(s, 40)}
+  return `<div class="saves">${state.saves.map((s, i) => `<div class="save-row ${state.confirmDel === s.slot ? 'confirm' : ''}" style="--d:${i * 0.05}s"><button class="save" data-slot="${esc(s.slot)}" style="--c1:${s.meta?.colors?.primary || '#6b5bd6'};--d:${i * 0.05}s">${badge(s, 40)}
     <span class="sv-txt"><b>${esc(s.label || s.club)}</b><em>${esc(s.meta?.league || '')}${s.meta?.league ? ' · ' : ''}Saison ${seasonTxt(s.season)} · Spieltag ${s.week + 1}</em></span>
-    <span class="sv-meta"><span class="sv-slot">${s.slot === 'auto' ? 'Autosave' : s.slot === 'szenario' ? 'Szenario' : 'Slot ' + esc(String(s.slot).replace('slot', ''))}</span><small>${ago(s.savedAt)}</small></span></button>`).join('')}</div>`;
+    <span class="sv-meta"><span class="sv-slot">${s.slot === 'auto' ? 'Autosave' : s.slot === 'szenario' ? 'Szenario' : 'Slot ' + esc(String(s.slot).replace('slot', ''))}</span><small>${ago(s.savedAt)}</small></span></button>
+    ${state.confirmDel === s.slot
+      ? `<span class="del-ask"><small>Wirklich löschen?</small><button class="del-yes" data-del-yes="${esc(s.slot)}">Löschen</button><button class="del-no" data-del-no>Abbrechen</button></span>`
+      : `<button class="del" data-del="${esc(s.slot)}" title="Spielstand löschen" aria-label="Spielstand löschen">🗑</button>`}</div>`).join('')}</div>`;
 }
 function settingsHtml() {
   const g = loadSettings();
@@ -137,6 +140,14 @@ function renderPanel() {
   P.innerHTML = `<div class="pane">${{ news: newsHtml, saves: savesHtml, settings: settingsHtml, info: infoHtml }[state.tab]()}</div>`;
   P.querySelectorAll('[data-exp]').forEach((b) => (b.onclick = () => { state.expanded = state.expanded ? null : b.dataset.exp; renderPanel(); }));
   P.querySelectorAll('.save').forEach((b) => { b.onclick = () => launch(b.dataset.slot); b.onpointerenter = sfx.tick; });
+  // v3.0.5: delete save games right in the launcher (inline confirmation, no system dialog)
+  P.querySelectorAll('[data-del]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); state.confirmDel = b.dataset.del; sfx.click(); renderPanel(); }));
+  P.querySelectorAll('[data-del-no]').forEach((b) => (b.onclick = () => { state.confirmDel = null; sfx.click(); renderPanel(); }));
+  P.querySelectorAll('[data-del-yes]').forEach((b) => (b.onclick = async () => {
+    const slot = b.dataset.delYes; await deleteGame(slot); state.confirmDel = null; sfx.click();
+    state.saves = state.saves.filter((x) => x.slot !== slot);
+    renderPanel(); renderStats(); renderContinue();
+  }));
   P.querySelectorAll('[data-seg]').forEach((s) => s.querySelectorAll('button').forEach((b) => (b.onclick = () => { const g = loadSettings(); g[s.dataset.seg] = b.dataset.v; saveSettings(g); sfx.click(); renderPanel(); })));
   const vol = $('#vol'); if (vol) vol.oninput = () => { $('#vol-o').textContent = `${vol.value} %`; const g = loadSettings(); g.volume = vol.value / 100; saveSettings(g); };
   const bind = (id, key, after) => { const el = $(`#${id}`); if (el) el.onchange = () => { LS[key] = el.checked; saveLS(); sfx.click(); after?.(); }; };

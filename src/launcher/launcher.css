@@ -147,3 +147,16 @@ body.still .play-bg, body.still .play::before, body.still .t3, body.still .ticke
 .play.wait .play-ico { font-size: 0; width: 34px; height: 34px; margin: 4px; background: none; border: 3px solid rgba(255,255,255,.3); border-top-color: var(--acc-ink, #fff); animation: spin .9s linear infinite; }
 .notes li { display: flex; flex-direction: column; gap: 1px; line-height: 1.4; } .notes li b { color: #fff; font-size: 13px; } .notes li span { color: #cfc9ea; font-size: 12.3px; }
 .ot { white-space: normal; }
+/* v3.0.5 delete saves */
+.save-row { display: flex; align-items: stretch; gap: 6px; animation: paneIn .45s var(--ease) both; animation-delay: var(--d); }
+.save-row .save { flex: 1; min-width: 0; animation: none; }
+.save-row .del { flex: 0 0 44px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); color: inherit; font-size: 1.05rem; cursor: pointer; opacity: .55; transition: .2s; }
+.save-row .del:hover { opacity: 1; border-color: rgba(255,77,106,.6); background: rgba(255,77,106,.14); }
+.save-row .del-ask { display: flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 14px; border: 1px solid rgba(255,77,106,.5); background: rgba(255,77,106,.12); animation: paneIn .25s var(--ease) both; }
+.save-row .del-ask small { color: #ffb3c0; font-weight: 700; white-space: nowrap; }
+.del-yes, .del-no { border: 0; border-radius: 10px; padding: 7px 11px; font: inherit; font-weight: 700; cursor: pointer; color: #fff; }
+.del-yes { background: #e0405c; } .del-no { background: rgba(255,255,255,.1); }
+.save-row.confirm .save { opacity: .6; }
+.save-row { position: relative; }
+.save-row .del-ask { position: absolute; inset: 0; justify-content: flex-end; padding: 0 10px; background: linear-gradient(90deg, rgba(40,10,20,.55), rgba(60,12,28,.96) 45%); backdrop-filter: blur(3px); }
+.save-row .del-ask small { margin-right: auto; padding-left: 6px; }

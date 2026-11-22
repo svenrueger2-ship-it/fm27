@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.0.5', date: '23.11.2026', title: 'Spielstände im Launcher löschen',
+    neu: ['Launcher: Spielstände direkt im Tab „Spielstände“ löschen (🗑 mit Rückfrage)'],
+    verbessert: [],
+    behoben: [],
+    geplant: ['Unity-3D-Modus mit neuer Spieler-KI', 'Mehrspieler (Hot-Seat)', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '3.0.4', date: '22.11.2026', title: 'Dein Manager',
     neu: ['Manager-Editor: Name, Alter, Nationalität, Gesicht, Outfit, Werdegang und Spezialisierung – Pflicht bei jeder neuen Karriere', 'Manager jederzeit im Manager-Profil bearbeiten'],
     verbessert: [],
