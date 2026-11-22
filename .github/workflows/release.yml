@@ -4,6 +4,7 @@ name: Release Windows
 on:
   push:
     tags: ['v*']
+  workflow_dispatch: {}   # manuell starten: Actions → Release Windows → Run workflow
 permissions:
   contents: write
 jobs:
