@@ -1,0 +1,57 @@
+# Baut die Android-App (APK) – optimiert für Xiaomi 15T Pro.
+# Signiert mit dem eigenen Schlüssel aus den Repo-Secrets FM27_KEYSTORE_B64 / FM27_KEYSTORE_PASSWORD.
+# Fertige APK: Release "live" → FM2027-BAKUSA-Android.apk (immer gleicher Link).
+# Spiel-Updates kommen danach live in die App – eine neue APK braucht es nur, wenn sich die App selbst ändert.
+name: Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: node build.mjs
+      - name: Spieldateien in die App kopieren
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp dist/index.html dist/version.json android/app/src/main/assets/
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Signaturschlüssel
+        env:
+          KS: ${{ secrets.FM27_KEYSTORE_B64 }}
+          PW: ${{ secrets.FM27_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/fm27.jks"
+            echo "FM27_KEYSTORE_FILE=$RUNNER_TEMP/fm27.jks" >> $GITHUB_ENV
+            echo "FM27_KEYSTORE_PASSWORD=$PW" >> $GITHUB_ENV
+            echo "SIGNED=1" >> $GITHUB_ENV
+          else
+            echo "::warning::Keine Signatur-Secrets gesetzt – Test-Build mit Debug-Schlüssel, wird NICHT veröffentlicht."
+          fi
+      - name: APK bauen
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: APK benennen
+        run: cp android/app/build/outputs/apk/release/app-release.apk FM2027-BAKUSA-Android.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: FM2027-BAKUSA-Android, path: FM2027-BAKUSA-Android.apk }
+      - name: Im Release "live" veröffentlichen
+        if: env.SIGNED == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view live >/dev/null 2>&1 || gh release create live --prerelease --title "Live-Updates" --notes "Live-Updates"
+          gh release upload live FM2027-BAKUSA-Android.apk --clobber
+          echo "APK veröffentlicht: https://github.com/${{ github.repository }}/releases/download/live/FM2027-BAKUSA-Android.apk" >> $GITHUB_STEP_SUMMARY

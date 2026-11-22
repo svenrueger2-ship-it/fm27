@@ -4,6 +4,7 @@ import { preloadCrests } from './render/crestImages.js';
 import { loadGame } from './storage/db.js';
 
 const root = document.getElementById('app');
+if (/FM27-Android/.test(navigator.userAgent)) document.documentElement.classList.add('android');
 const app = new App(root);
 window.ufm = app; // handy for debugging in the console
 preloadCrests().finally(async () => {

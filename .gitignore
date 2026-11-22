@@ -5,3 +5,8 @@ desktop/app/index.html
 dist/
 desktop/app/launcher.html
 desktop/app/version.json
+android/app/src/main/assets/
+android/.gradle/
+android/app/build/
+android/build/
+*.jks

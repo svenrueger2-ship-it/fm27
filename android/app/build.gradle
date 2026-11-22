@@ -1,0 +1,41 @@
+plugins { id 'com.android.application' }
+
+// version name/code come from the game content version (e.g. 2.8.0 → 20800)
+def gameVersion = new groovy.json.JsonSlurper().parse(file('../../dist/version.json')).version
+def parts = gameVersion.tokenize('.').collect { it as int }
+
+android {
+    namespace 'de.bakusa.fm27'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'de.bakusa.fm27'
+        minSdk 26
+        targetSdk 35
+        versionCode parts[0] * 10000 + parts[1] * 100 + parts[2]
+        versionName gameVersion
+    }
+    signingConfigs {
+        release {
+            def ks = System.getenv('FM27_KEYSTORE_FILE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('FM27_KEYSTORE_PASSWORD')
+                keyAlias 'fm27'
+                keyPassword System.getenv('FM27_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('FM27_KEYSTORE_FILE') ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    // the game files are copied in by the workflow (android/app/src/main/assets)
+    androidResources { noCompress 'html', 'json' }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

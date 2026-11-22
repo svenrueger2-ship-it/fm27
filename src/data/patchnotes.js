@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '2.9.0', date: '22.11.2026', title: 'Version 2.9 – Android-App',
+    neu: ['Android-App (APK), optimiert für Xiaomi 15T Pro', 'Live-Updates und Update-Zwang auch auf dem Handy'],
+    verbessert: ['Handy: 120 Hz, Vollbild bis in die Kamera-Aussparung, hohe Grafik als Standard'],
+    behoben: [],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '2.8.0', date: '22.11.2026', title: 'Version 2.8 – Spielergesichter',
     neu: [
       'Spielergesichter: 642 KI-Porträts',

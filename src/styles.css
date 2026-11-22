@@ -961,3 +961,11 @@ body { background: radial-gradient(1200px 700px at 85% -10%, rgba(var(--acc-rgb)
 body.light .pp-card, body.light .pp-facts > div { background: #fff; border-color: rgba(20,22,40,.08); }
 body.light .card::before { opacity: .35; }
 .rail-scroll { min-height: 0; } .pp-face .pface i { display: none; }
+/* v2.9 Android app: keep clear of the camera cutout / rounded corners, no tap highlight, no text selection */
+html.android body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); -webkit-tap-highlight-color: transparent; }
+html.android .hud-top, html.android .hud-bottom { padding-left: max(.6rem, env(safe-area-inset-left)); padding-right: max(.6rem, env(safe-area-inset-right)); }
+html.android { -webkit-user-select: none; user-select: none; } html.android input, html.android textarea { -webkit-user-select: text; user-select: text; }
+@media (max-height: 520px) and (orientation: landscape) {
+  html.android .topbar { padding-top: .3rem; padding-bottom: .3rem; } html.android .topbar .club-chip small { display: none; }
+  html.android .nv { min-height: 40px; } html.android .rail-ink { height: 40px; }
+}
