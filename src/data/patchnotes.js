@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.0.4', date: '22.11.2026', title: 'Dein Manager',
+    neu: ['Manager-Editor: Name, Alter, Nationalität, Gesicht, Outfit, Werdegang und Spezialisierung – Pflicht bei jeder neuen Karriere', 'Manager jederzeit im Manager-Profil bearbeiten'],
+    verbessert: [],
+    behoben: ['„Weiter“-Knopf im Kalender schaltet jetzt einen Tag weiter'],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '3.0.3', date: '22.11.2026', title: 'Handy: alles auf einen Blick',
     neu: [],
     verbessert: ['Android: kompaktes Querformat-Layout – Startbildschirm, Zentrale, Kalender, Spieltag und Spielerprofil passen (fast) ohne Scrollen aufs Display'],

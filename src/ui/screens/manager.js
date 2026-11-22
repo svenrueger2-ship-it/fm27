@@ -1,4 +1,5 @@
 import { isMatchToday, daysToMatch } from '../../manager/calendar.js';
+import { mgrPortrait } from './managerCreate.js';
 // Club HQ dashboard, squad (cards & table), player profile, league tables & fixtures.
 import { projectPlayer, projectionSvg } from '../../manager/projection.js';
 import { computeTable, userLeague, userFixture, isUserSeasonOver } from '../../manager/season.js';
@@ -53,7 +54,7 @@ export function dashboardScreen(app, el) {
         ${crest(club, 92)}<div style="position:relative"><small style="letter-spacing:.2em;text-transform:uppercase;color:#fff;opacity:.8">${esc(L.name)} · Saison ${w.season}/${String((w.season + 1) % 100).padStart(2, '0')}</small><h2>${esc(club.name)}</h2>
         <p>🏟️ ${esc(club.stadium.name)} · ${club.stadium.capacity.toLocaleString('de-DE')} Plätze</p>
         <div class="kpis"><div><small>Tabelle</small><b>${rank}.</b></div><div><small>Teamstärke</small><b class="${ratingClass(str)}">${str}</b></div><div><small>Punkte</small><b>${row?.pts ?? 0}</b></div><div><small>Vertrautheit</small><b>${Math.round((club.familiarity ?? 0.7) * 100)}%</b></div></div>
-        <p class="muted" style="color:#d8e4fa">${isDirector(w) ? `Sportdirektor · Trainer: ${esc(w.coach?.name || '–')}` : `Manager: ${esc(w.manager?.name && w.manager.name !== 'Manager' ? w.manager.name : 'Du')}`} · Vorstandsziel: <b>${esc(w.manager?.goal || '–')}</b></p>
+        <p class="muted hero-mgr" style="color:#d8e4fa">${w.manager?.looks ? `<span class="linkish" id="to-prof">${mgrPortrait(w, 30)}</span>` : ''}${isDirector(w) ? `Sportdirektor · Trainer: ${esc(w.coach?.name || '–')}` : `Manager: ${esc(w.manager?.name && w.manager.name !== 'Manager' ? w.manager.name : 'Du')}`} · Vorstandsziel: <b>${esc(w.manager?.goal || '–')}</b></p>
         <button class="btn sm" id="club-hist">📜 Vereinsprofil & Historie</button></div>
       </div>
       <div class="card next-match" style="--h1:${H?.colors.primary || '#333'};--a1:${A?.colors.primary || '#333'}">
@@ -97,6 +98,7 @@ export function dashboardScreen(app, el) {
       <div class="card"><h3>🏋️ Trainingsbericht</h3>${(w.trainingReport?.items || []).slice(0, 8).map((r) => `<p>${r.type === 'up' ? '📈' : '🩹'} ${esc(r.text)}</p>`).join('') || '<p class="muted">Der erste Bericht kommt nach dem nächsten Spieltag.</p>'}
         <button class="btn ghost sm" data-nav2="training">Training →</button></div>
     </div></div>`;
+  el.querySelector('#to-prof')?.addEventListener('click', () => app.go('profile'));
   el.querySelector('#go-md')?.addEventListener('click', () => app.go(isMatchToday(w) ? 'matchday' : 'calendar'));
   const showEvent = () => {
     const ev = w.pendingEvent; if (!ev) return;

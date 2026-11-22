@@ -243,15 +243,14 @@ export function confirmClub(app, w, id) {
   const m = modal(`
     <div class="confirm-club">${crest(c, 64)}<h3>${esc(c.name)}</h3>
     <p>${esc(L.name)} · Vorstandsziel: <b>${goal}</b></p>
-    <label class="field">Dein Managername<input id="mgr" maxlength="28" placeholder="z. B. Alex Berger"></label>
     <div class="mode-pick"><b>Spielmodus</b>
       <label><input type="radio" name="mode" value="manager" checked><span><b>Trainer & Manager</b><small>Du machst alles: Aufstellung, Taktik, Wechsel, Transfers, Finanzen.</small></span></label>
       <label><input type="radio" name="mode" value="director"><span><b>Sportdirektor</b><small>Du planst Kader, Transfers, Finanzen und Stadion. Ein KI-Cheftrainer stellt auf, wählt die Taktik und wechselt ein – du kannst ihn entlassen.</small></span></label></div>
     <label class="field">Herausforderung (optional)<select id="chal" class="input">${CHALLENGES.map((c) => `<option value="${c.id}" title="${esc(c.desc)}">${esc(c.name)}${c.id !== 'none' ? ` – ${esc(c.desc)}` : ''}</option>`).join('')}</select></label>
-    <div class="row-actions end"><button class="btn primary" id="go">Karriere starten</button></div></div>`);
+    <div class="row-actions end"><button class="btn primary" id="go">Weiter: Manager erstellen ▶</button></div></div>`);
   m.el.querySelector('#go').onclick = async () => {
     w.userClubId = id;
-    w.manager = { name: m.el.querySelector('#mgr').value.trim() || 'Manager', goal };
+    w.manager = { name: 'Manager', goal }; // the manager himself is created in the next step (v3.0.4)
     w.mode = m.el.querySelector('input[name=mode]:checked')?.value || 'manager';
     if (w.mode === 'director') { const rng = newRng(w); ensureCoach(w, rng); coachDecides(w); }
     w.news = [{ season: w.season, week: 0, text: `Willkommen bei ${c.name}! Der Vorstand erwartet: ${goal}.` }];

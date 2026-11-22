@@ -1,5 +1,7 @@
 // Manager-Profil (v2.5): level, XP, skill tree, daily & weekly tasks.
 import { esc, money, toast } from '../dom.js';
+import { mgrPortrait } from './managerCreate.js';
+import { NATIONS_EXTRA } from '../../data/nationsExtra.js';
 import { SKILLS, ensureMgr, xpForLevel, buySkill, ensureTasks, claimTask, MAX_LEVEL } from '../../manager/progress.js';
 
 const untilMidnight = () => { const n = new Date(), m = new Date(n); m.setHours(24, 0, 0, 0); const h = Math.floor((m - n) / 36e5), mi = Math.floor(((m - n) % 36e5) / 6e4); return `${h} Std. ${mi} Min.`; };
@@ -14,7 +16,7 @@ export function profileScreen(app, el) {
   el.innerHTML = `<div class="page"><div class="page-head"><h2>🎖️ Manager-Profil</h2>${M.points ? `<span class="chip good">${M.points} Skillpunkt${M.points > 1 ? 'e' : ''} verfügbar</span>` : ''}</div>
     <div class="grid2">
       <div class="card lvl-card"><div class="lvl-ring" style="--p:${pct}"><b>${M.level}</b><small>Level</small></div>
-        <div><h3>${esc(w.manager?.name || 'Manager')}</h3><p class="muted">${title}</p><div class="tbar big"><i style="width:${pct}%"></i></div><small>${M.level >= MAX_LEVEL ? 'Maximales Level erreicht' : `${M.xp} / ${need} XP bis Level ${M.level + 1}`}</small>
+        <div class="lvl-face">${mgrPortrait(w, 84)}</div><div><h3>${esc(w.manager?.name || 'Manager')}</h3><p class="muted">${title}${w.manager?.age ? ` · ${NATIONS_EXTRA[w.manager.nat]?.flag || ''} ${w.manager.bornSeason != null ? w.season - w.manager.bornSeason : w.manager.age} Jahre` : ''}</p><button class="btn sm ghost" id="mgr-edit">✏️ Manager bearbeiten</button><div class="tbar big"><i style="width:${pct}%"></i></div><small>${M.level >= MAX_LEVEL ? 'Maximales Level erreicht' : `${M.xp} / ${need} XP bis Level ${M.level + 1}`}</small>
         <p class="muted" style="margin-top:.5rem">XP gibt es für Siege, Tore, Titel, Erfolge und erledigte Aufgaben. Jedes Level bringt einen Skillpunkt.</p></div></div>
       <div class="card"><div class="row-between"><h3>📅 Tagesaufgaben</h3><small class="muted">neu in ${untilMidnight()}</small></div>${T.daily.map(task).join('')}
         <div class="row-between" style="margin-top:12px"><h3>🗓️ Wochenaufgaben</h3><small class="muted">neu in ${untilMonday()}</small></div>${T.weekly.map(task).join('')}</div>
@@ -23,6 +25,7 @@ export function profileScreen(app, el) {
       <ul>${s.ranks.map((t, k) => `<li class="${k < r ? 'got' : k === r ? 'next' : ''}">${k < r ? '✓' : k + 1}. ${esc(t)}</li>`).join('')}</ul>
       ${r < 3 ? `<button class="btn sm ${M.points ? 'primary' : ''}" data-skill="${s.id}" ${M.points ? '' : 'disabled'}>Stufe ${r + 1} lernen</button>` : '<span class="chip good">Gemeistert</span>'}</div>`; }).join('')}</div></div>
     <div class="card"><h3>📜 Letzte XP</h3>${M.log.slice(0, 12).map((l) => `<div class="kv"><span>${esc(l.why)}</span><b class="good">+${l.xp} XP</b></div>`).join('') || '<p class="muted">Noch keine Erfahrungspunkte – bestreite dein erstes Spiel!</p>'}</div></div>`;
+  el.querySelector('#mgr-edit')?.addEventListener('click', () => app.go('mgrCreate'));
   el.querySelectorAll('[data-skill]').forEach((b) => (b.onclick = () => { if (buySkill(w, b.dataset.skill)) { toast('Fähigkeit gelernt!'); app.go('profile'); } }));
   el.querySelectorAll('[data-claim]').forEach((b) => (b.onclick = () => { const t = claimTask(w, b.dataset.claim); if (t) { toast(`+${t.xp} XP${t.cash ? ` · ${money(t.cash)}` : ''}`); app.go('profile'); } }));
 }

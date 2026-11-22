@@ -23,6 +23,7 @@ import { achievementsScreen } from './screens/achievements.js';
 import { analysisScreen } from './screens/analysis.js';
 import { profileScreen } from './screens/profile.js';
 import { calendarScreen } from './screens/calendar.js';
+import { managerCreateScreen, mgrNeedsCreation } from './screens/managerCreate.js';
 import { dateOf, fmtDate } from '../manager/calendar.js';
 import { openTasks } from '../manager/progress.js';
 import { navHtml, placeInk, openPalette, icon } from './nav.js';
@@ -36,7 +37,7 @@ const NAV = [
   ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion bauen', '🏟️', 'Stadion'],
   ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
 ];
-const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen };
+const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen };
 
 export class App {
   constructor(root) {
@@ -58,6 +59,8 @@ export class App {
     this.cleanup?.(); this.cleanup = null;
     // after a sacking the user has to pick a new club first
     if (this.world?.career?.pendingSack && !['career', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'career';
+    // v3.0.4: no career without your own manager – old saves get the editor once too
+    if (mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'mgrCreate';
     this.screen = screen; this.params = params;
     if (this.pendingLive && screen !== 'match') setTimeout(() => this.applyLive?.(), 800);
     document.body.classList.toggle('no-anim', this.settings.animations === false);
@@ -111,7 +114,13 @@ export class App {
     this.world.eventRate = this.settings.events || 'normal';
     document.body.classList.toggle('nav-pinned', !!this.settings.navPinned);
     requestAnimationFrame(() => placeInk(r));
-    r.querySelector('#top-next').addEventListener('click', () => this.go(isMatchToday(w) ? 'matchday' : isUserSeasonOver(w) ? 'seasonEnd' : 'calendar'));
+    r.querySelector('#top-next').addEventListener('click', () => {
+      if (isMatchToday(w)) return this.go('matchday');
+      if (isUserSeasonOver(w)) return this.go('seasonEnd');
+      // v3.0.4: already in the calendar → "Weiter" moves on one day instead of re-opening the same screen
+      const step = this.screen === 'calendar' && document.getElementById('cal-step');
+      if (step && !step.disabled) step.click(); else this.go('calendar');
+    });
     const fn = SCREENS[this.screen] || dashboardScreen;
     this.cleanup = fn(this, r.querySelector('#content'), this.params) || null;
   }
