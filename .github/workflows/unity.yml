@@ -1,0 +1,94 @@
+# Builds the Unity 3D match (WebGL) and publishes it on GitHub Pages:
+#   https://<user>.github.io/fm27/unity/
+# Needs the secrets UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD (see UNITY_SETUP.md)
+# and Settings → Pages → Source: "GitHub Actions".
+name: Unity WebGL
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['unity/**', '.github/workflows/unity.yml']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: unity-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.chk.outputs.ok }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Unity secrets
+        id: chk
+        env:
+          L: ${{ secrets.UNITY_LICENSE }}
+          E: ${{ secrets.UNITY_EMAIL }}
+          P: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          if [ -z "$L" ] || [ -z "$E" ] || [ -z "$P" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Unity-Secrets fehlen (UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD) – siehe UNITY_SETUP.md. Build übersprungen."
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/cache@v4
+        if: steps.chk.outputs.ok == 'true'
+        with:
+          path: unity/FM27Match/Library
+          key: Library-WebGL-${{ hashFiles('unity/FM27Match/Assets/**', 'unity/FM27Match/Packages/**', 'unity/FM27Match/ProjectSettings/**') }}
+          restore-keys: Library-WebGL-
+
+      - name: Build WebGL
+        if: steps.chk.outputs.ok == 'true'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity/FM27Match
+          targetPlatform: WebGL
+          buildMethod: BuildScript.BuildWebGL
+          allowDirtyBuild: true
+
+      - name: Collect site
+        if: steps.chk.outputs.ok == 'true'
+        run: |
+          set -e
+          OUT=unity/FM27Match/build/WebGL/FM27Match
+          ls -la "$OUT" "$OUT/Build"
+          mkdir -p site/unity
+          cp -r "$OUT"/* site/unity/
+          echo "{\"build\":\"$(date -u +%Y%m%d%H%M)\",\"commit\":\"${GITHUB_SHA::7}\"}" > site/unity/version.json
+          printf '<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=unity/">' > site/index.html
+          touch site/.nojekyll
+          du -sh site/unity
+
+      - uses: actions/configure-pages@v5
+        if: steps.chk.outputs.ok == 'true'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.chk.outputs.ok == 'true'
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

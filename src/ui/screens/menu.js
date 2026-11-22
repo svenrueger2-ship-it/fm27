@@ -299,6 +299,7 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
       ${tog('s-story', 'Saison-Story am Saisonende', '', s.story !== false)}
       ${tog('s-acht', 'Meldungen für Erfolge & Level-Ups', '', s.achToasts !== false)}`,
     spiel3d: () => `
+      ${sel('s-eng', '3D-Engine', 'Unity: neue Grafik & Spieler-KI (Beta, braucht Internet beim Laden)', s.engine3d === 'unity' ? 'unity' : 'klassisch', [['klassisch', 'Klassisch (Three.js)'], ['unity', 'Unity (Beta)']])}
       ${sel('s-q', 'Grafikqualität', 'Auf schwächeren PCs „Niedrig“ oder „Mittel“', s.quality, [['niedrig', 'Niedrig'], ['mittel', 'Mittel'], ['hoch', 'Hoch'], ['ultra', 'Ultra']])}
       ${sel('s-sp', 'Standard-Spielgeschwindigkeit', '', s.speed, [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x'], ['highlights', 'Nur Highlights']])}
       ${sel('s-cam', 'Standard-Kamera', '', s.camera, CAMERA_MODES)}
@@ -334,7 +335,7 @@ function bindSettings(app, root, redraw) {
   root.querySelectorAll('[data-stab]').forEach((b) => (b.onclick = () => { app.setTab = b.dataset.stab; redraw(); }));
   const map = {
     's-q': (v) => (s.quality = v), 's-sp': (v) => (s.speed = v === 'highlights' ? v : +v), 's-cam': (v) => (s.camera = v), 's-ui': (v) => (s.uiScale = +v),
-    's-theme': (v) => (s.theme = v), 's-ev': (v) => { s.events = v; if (window.ufm?.world) window.ufm.world.eventRate = v; }, 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v),
+    's-theme': (v) => (s.theme = v), 's-ev': (v) => { s.events = v; if (window.ufm?.world) window.ufm.world.eventRate = v; }, 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v), 's-eng': (v) => (s.engine3d = v),
   };
   const bools = { 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
   const commit = () => { saveSettings(s); applyTheme(s, window.ufm?.world ? window.ufm.club : null); toast('Einstellungen gespeichert', 1200); };

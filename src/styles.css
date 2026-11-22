@@ -1149,3 +1149,26 @@ html.mobile .mc-card { padding: .7rem .6rem; } html.mobile .mc-face .pface { wid
 html.mobile .mc-card h2 b { font-size: 1.5rem; } html.mobile .mc-card h2 { font-size: 1rem; } html.mobile .mc-card small { margin-top: .5rem; }
 html.mobile .mc-f .pface { width: 40px !important; height: 40px !important; } html.mobile .mc-pick { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .3rem; } html.mobile .mc-p { padding: .35rem .5rem; }
 html.mobile .mc-o { padding: .2rem .5rem; font-size: .75rem; }
+/* ===================== v3.1 Unity 3D mode ===================== */
+.u-match { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #05040b; }
+.u-stage { position: relative; flex: 1; min-height: 0; }
+.u-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #07060f; }
+.u-bug { position: absolute; top: 12px; left: 12px; display: flex; align-items: stretch; border-radius: 10px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.45); font-weight: 800; pointer-events: none; }
+.u-bug span { display: flex; align-items: center; gap: .4rem; padding: .3rem .6rem; background: rgba(12,10,26,.9); color: #fff; }
+.u-bug em { font-style: normal; padding: .3rem .8rem; background: #fff; color: #111; font-family: var(--display); font-size: 1.25rem; display: flex; align-items: center; }
+.u-bug i { font-style: normal; padding: .3rem .7rem; background: var(--acc); color: #fff; display: flex; align-items: center; font-variant-numeric: tabular-nums; }
+.u-bug.flash em { animation: uFlash 1.4s ease; } @keyframes uFlash { 0%, 60% { background: var(--acc); color: #fff; transform: scale(1.15); } 100% { background: #fff; color: #111; } }
+.u-feed { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column-reverse; gap: 4px; pointer-events: none; max-width: min(460px, 70%); }
+.u-feed div { padding: .35rem .65rem; border-radius: 8px; background: rgba(10,8,22,.82); color: #e9e4ff; font-size: .85rem; animation: cardIn .3s both; }
+.u-feed .goal { background: linear-gradient(90deg, var(--acc), rgba(10,8,22,.85)); color: #fff; } .u-feed .bad { border-left: 3px solid #ff4d6a; }
+.u-load { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: radial-gradient(70% 60% at 50% 40%, #1b1540, #07060f); color: #e7e1ff; padding: 1.5rem; }
+.u-load b { font-size: 1.15rem; } .u-load small { display: block; color: var(--muted); margin: .6rem auto 1rem; max-width: 30rem; }
+.u-bar { width: min(320px, 70vw); height: 7px; border-radius: 6px; background: #241d45; overflow: hidden; margin: 1rem auto 0; } .u-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--acc), #3aa0ff); transition: width .3s; }
+.u-load.err b { color: #ffb3c0; }
+.u-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; padding: .5rem .7rem; background: #0d0b1c; border-top: 1px solid var(--line); }
+.u-ctrl .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.u-ctrl .seg button { border: 0; background: transparent; color: inherit; padding: .4rem .7rem; font: inherit; font-size: .85rem; cursor: pointer; }
+.u-ctrl .seg button.on { background: var(--acc); color: #fff; }
+.u-ctrl select { width: auto; padding: .35rem .6rem; }
+.u-st { display: grid; grid-template-columns: 70px 1fr 70px; text-align: center; padding: .3rem 0; border-bottom: 1px solid rgba(255,255,255,.05); } .u-st span { color: var(--muted); }
+html.mobile .u-ctrl { padding: .3rem .45rem; gap: .3rem; } html.mobile .u-ctrl .seg button { padding: .3rem .5rem; font-size: .75rem; }

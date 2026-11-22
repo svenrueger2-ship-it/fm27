@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.1.0', date: '23.11.2026', title: 'Unity-3D (Beta)',
+    neu: ['Neuer 3D-Modus mit Unity-Engine (Beta): selbst gebaute Spieler, Stadion & Flutlicht', 'Komplett neue Spieler-KI: Raumaufteilung, Pressing, Tiefenläufe, Flanken, Abseitslinie', 'Einstellung „3D-Engine“: Klassisch oder Unity'],
+    verbessert: ['Ergebnisse aus beiden 3D-Modi werden gleich in die Saison übernommen'],
+    behoben: [],
+    geplant: ['Unity: Wiederholungen, Wetter, Auswechslungen im Spiel', 'Mehrspieler (Hot-Seat)'],
+  },
+  {
     version: '3.0.5', date: '23.11.2026', title: 'Spielstände im Launcher löschen',
     neu: ['Launcher: Spielstände direkt im Tab „Spielstände“ löschen (🗑 mit Rückfrage)'],
     verbessert: [],

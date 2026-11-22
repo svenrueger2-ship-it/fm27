@@ -3,6 +3,7 @@ import { prefetchCrowd } from '../../render/audio.js';
 import { recordLive } from '../../manager/analysisHub.js';
 import { taskEvent } from '../../manager/progress.js';
 import { MatchEngine } from '../../match/engine.js';
+import { unityMatch } from './unityMatch.js';
 import { ensureLineup, teamStrength, FORMATIONS, PRESETS, effectiveRating } from '../../match/tactics.js';
 import { simAheadButton, bindSimAhead } from './simAhead.js';
 import { pressQuestions, applyPressAnswer, postPressQuestions } from '../../manager/events.js';
@@ -12,7 +13,7 @@ import { opponentReport } from '../../manager/analysis.js';
 import { userCupFixture, resolveCupFixture, cupById } from '../../manager/cups.js';
 import { isDirector, ensureCoach, coachDecides } from '../../manager/director.js';
 
-const currentFixture = (w) => userCupFixture(w) || userFixture(w);
+export const currentFixture = (w) => userCupFixture(w) || userFixture(w);
 const cupLabel = (w, fx) => { const c = cupById(w, fx.cup); const rd = c.rounds[fx.round]; if (fx.group) return `${c.name} · Gruppe ${fx.group} · ${fx.md}. Spieltag`; return `${c.name} · ${rd.name}${rd.weeks.length > 1 ? (fx.leg === 0 ? ' · Hinspiel' : ' · Rückspiel') : ''}`; };
 import { userFixture, applyMatchResult, finishWeek, newRng, userLeague, isUserSeasonOver, quickSim, computeTable } from '../../manager/season.js';
 import { MatchView } from '../../render/matchView.js';
@@ -90,7 +91,7 @@ export function matchdayScreen(app, el, params = {}) {
     ${simAheadButton()}
   </div>`;
   bindSimAhead(app, el);
-  el.querySelector('#play3d').onclick = () => app.go('match', { mode: '3d' });
+  el.querySelector('#play3d').onclick = () => app.go('match', { mode: app.settings.engine3d === 'unity' ? 'unity' : '3d' });
   el.querySelector('#instant').onclick = () => app.go('match', { mode: 'instant' });
   el.querySelector('#tac').onclick = () => app.go('tactics');
   el.querySelector('#scoutopp').onclick = () => {
@@ -126,6 +127,7 @@ export function matchdayScreen(app, el, params = {}) {
 }
 
 function liveMatch(app, el, params) {
+  if (params.mode === 'unity' && !params.friendly) return unityMatch(app, el, params);
   const w = app.world, S = app.settings;
   const friendly = !!params.friendly;
   const fx = friendly ? { h: params.home, a: params.away } : currentFixture(w);
@@ -476,42 +478,46 @@ function liveMatch(app, el, params) {
       };
       step();
     });
-    el.querySelector('#cont').onclick = async () => {
-      if (friendly) { app.world = null; app.go('start'); return; }
-      const rng = newRng(w);
-      const m = currentFixture(w);
-      m.hg = r.hg; m.ag = r.ag;
-      applyMatchResult(w, m, r, rng);
-      { const ui = engine.teams.findIndex((T) => T.club.id === w.userClubId); if (ui >= 0) recordLive(w, engine.teams, ui, r.stats?.[ui]?.possession); }
-      for (const id in r.ratings) {
-        const p = w.players[id]; if (!p || !p.stats.apps) continue;
-        // average over the rated (3D) matches only – simulated games have no rating (fix v2.5)
-        const n = (p.stats.rN = (p.stats.rN || 0) + 1);
-        p.stats.rating = ((n > 1 ? p.stats.rating || 0 : 0) * (n - 1) + r.ratings[id]) / n;
-      }
-      const me = w.clubs[w.userClubId];
-      const myG = me.id === H.id ? r.hg : r.ag, opG = me.id === H.id ? r.ag : r.hg;
-      const opp = me.id === H.id ? A : H;
-      w.news.unshift({ season: w.season, week: w.week + 1, text: `${myG > opG ? 'Sieg' : myG < opG ? 'Niederlage' : 'Unentschieden'} gegen ${opp.name}: ${r.hg}:${r.ag}.` });
-      for (const e of r.events) if (e.type === 'injury' && e.weeks >= 1 && me.squad.includes(e.player)) w.news.unshift({ season: w.season, week: w.week + 1, text: `${w.players[e.player].lastName} fällt verletzt ca. ${e.weeks} Woche(n) aus.` });
-      w.news = w.news.slice(0, 40);
-      if (m.cup) {
-        // cup game played – the league match of this week is still to come
-        resolveCupFixture(w, m, rng);
-        if (!userFixture(w) && !userCupFixture(w)) { finishWeek(w, rng); await app.autosave(); app.go('home'); return; }
-        await app.autosave();
-        w.day = Math.max(w.day || 0, 3);
-        toast('Weiter geht es mit dem Ligaspiel am Sonntag');
-        app.go('calendar');
-        return;
-      }
-      finishWeek(w, rng);
-      await app.autosave();
-      app.go('calendar');
-    };
+    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
   }
 
   if (params.mode === 'instant') { runInstant(); }
   else startView();
   return () => { view?.dispose(); };
+}
+
+// v3.1: shared by the classic 3D mode and the Unity mode – books the result into the season
+export async function commitResult(app, { r, H, A, friendly, record }) {
+  const w = app.world;
+  if (friendly) { app.world = null; app.go('start'); return; }
+  const rng = newRng(w);
+  const m = currentFixture(w);
+  m.hg = r.hg; m.ag = r.ag;
+  applyMatchResult(w, m, r, rng);
+  record?.(w);
+  for (const id in r.ratings) {
+    const p = w.players[id]; if (!p || !p.stats.apps) continue;
+    // average over the rated (3D) matches only – simulated games have no rating (fix v2.5)
+    const n = (p.stats.rN = (p.stats.rN || 0) + 1);
+    p.stats.rating = ((n > 1 ? p.stats.rating || 0 : 0) * (n - 1) + r.ratings[id]) / n;
+  }
+  const me = w.clubs[w.userClubId];
+  const myG = me.id === H.id ? r.hg : r.ag, opG = me.id === H.id ? r.ag : r.hg;
+  const opp = me.id === H.id ? A : H;
+  w.news.unshift({ season: w.season, week: w.week + 1, text: `${myG > opG ? 'Sieg' : myG < opG ? 'Niederlage' : 'Unentschieden'} gegen ${opp.name}: ${r.hg}:${r.ag}.` });
+  for (const e of r.events) if (e.type === 'injury' && e.weeks >= 1 && me.squad.includes(e.player)) w.news.unshift({ season: w.season, week: w.week + 1, text: `${w.players[e.player].lastName} fällt verletzt ca. ${e.weeks} Woche(n) aus.` });
+  w.news = w.news.slice(0, 40);
+  if (m.cup) {
+    // cup game played – the league match of this week is still to come
+    resolveCupFixture(w, m, rng);
+    if (!userFixture(w) && !userCupFixture(w)) { finishWeek(w, rng); await app.autosave(); app.go('home'); return; }
+    await app.autosave();
+    w.day = Math.max(w.day || 0, 3);
+    toast('Weiter geht es mit dem Ligaspiel am Sonntag');
+    app.go('calendar');
+    return;
+  }
+  finishWeek(w, rng);
+  await app.autosave();
+  app.go('calendar');
 }
