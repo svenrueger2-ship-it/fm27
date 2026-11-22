@@ -246,7 +246,11 @@ function actionPose(m, p, P) {
     P.hipRx = -0.45 * q; P.kneeR = 0.6 * q; P.spineX = 0.18; P.shLz = 0.4; P.shRz = -0.4;
   } else if (t === 'celebrate' && ac.style && ac.style !== 'jump') {
     const st = ac.style, tt = ac.t;
-    P._upper = ['airplane', 'salute'].includes(st);
+    // v2.8: while running to the fans the legs keep their running cycle (only the upper body celebrates);
+    // standing still they bounce / step on the spot instead of being frozen
+    const moving = (m.amp || 0) > 0.15;
+    P._upper = moving ? !['knieslide', 'backflip'].includes(st) : ['airplane', 'salute'].includes(st);
+    const stepOnSpot = () => { const s1 = Math.sin(tt * 6.5); P.hipLx = 0.3 * s1; P.hipRx = -0.3 * s1; P.kneeL = 0.25 + 0.45 * Math.max(0, s1); P.kneeR = 0.25 + 0.45 * Math.max(0, -s1); P.bodyY = Math.abs(s1) * 0.05; };
     if (st === 'knieslide') {
       const q = sm(u / 0.25);
       P.bodyY = -0.42 * q; P.kneeL = P.kneeR = 1.75 * q + 0.1; P.hipLx = P.hipRx = 0.25 * q; P.spineX = -0.55 * q; P.neckX = -0.4 * q;
@@ -256,23 +260,24 @@ function actionPose(m, p, P) {
     } else if (st === 'salute') {
       P.shRx = -2.9; P.shRz = -0.6; P.elR = -1.9; P.shLx = -0.3; P.shLz = 0.4; P.elL = -0.6; P.spineX = -0.1;
     } else if (st === 'shush') {
-      P.shRx = -1.7; P.shRz = -0.25; P.elR = -2.4; P.shLz = 0.5; P.shLx = 0.2; P.neckX = 0.1; P.kneeL = P.kneeR = 0.15;
+      P.shRx = -1.7; P.shRz = -0.25; P.elR = -2.4; P.shLz = 0.5; P.shLx = 0.2; P.neckX = 0.1; stepOnSpot();
     } else if (st === 'heart') {
-      P.shLx = P.shRx = -2.25; P.shLz = -0.25; P.shRz = 0.25; P.elL = P.elR = -1.8; P.spineX = -0.1;
+      P.shLx = P.shRx = -2.25; P.shLz = -0.25; P.shRz = 0.25; P.elL = P.elR = -1.8; P.spineX = -0.1; stepOnSpot();
     } else if (st === 'backflip') {
       const v = Math.min(1, tt / 1.1);
       if (v < 1) { w = Math.max(w, 1); P.bodyX = -Math.PI * 2 * sm(v); P.bodyY = 1.25 * Math.sin(Math.PI * v); P.kneeL = P.kneeR = 1.7 * Math.sin(Math.PI * v); P.hipLx = P.hipRx = -1.2 * Math.sin(Math.PI * v); P.shLx = P.shRx = -2.6; }
       else { const j = Math.abs(Math.sin(tt * 7)); P.shLx = P.shRx = -2.75; P.shLz = 0.35; P.shRz = -0.35; P.bodyY = j * 0.18; P.kneeL = P.kneeR = 0.3 + j * 0.3; }
     } else if (st === 'hug') {
       const j = Math.abs(Math.sin(tt * 6));
-      P.shLx = P.shRx = -1.35; P.shLz = -0.55; P.shRz = 0.55; P.elL = P.elR = -1.25; P.bodyY = j * 0.08; P.spineX = 0.2; P.kneeL = P.kneeR = 0.25;
+      P.shLx = P.shRx = -1.35; P.shLz = -0.55; P.shRz = 0.55; P.elL = P.elR = -1.25; P.spineX = 0.2; P.hipLx = 0.2 * Math.sin(tt * 6); P.hipRx = -P.hipLx; P.kneeL = 0.3 + j * 0.25; P.kneeR = 0.3 + (1 - j) * 0.25; P.bodyY = j * 0.08;
     } else if (st === 'shake') {
       P.shRx = -1.15; P.shRz = -0.15; P.elR = -0.35; P.shLz = 0.15; P.spineX = 0.08; P.kneeL = P.kneeR = 0.12;
     }
   } else if (t === 'celebrate') {
     const j = Math.abs(Math.sin(ac.t * 7));
-    P.shLx = P.shRx = -2.75; P.shLz = 0.35; P.shRz = -0.35; P.elL = P.elR = -0.2; P.bodyY = j * 0.18; P.spineX = -0.15;
-    P.kneeL = P.kneeR = 0.3 + j * 0.3;
+    P.shLx = P.shRx = -2.75; P.shLz = 0.35; P.shRz = -0.35; P.elL = P.elR = -0.2; P.spineX = -0.15;
+    if ((m.amp || 0) > 0.15) P._upper = true; // running with arms up: legs keep running
+    else { P.bodyY = j * 0.18; P.kneeL = P.kneeR = 0.3 + j * 0.45; P.hipLx = P.hipRx = -0.25 * j; P.ankleL = P.ankleR = 0.3 * j; } // jumping: knees and hips push off
   } else if (t === 'frustrate') {
     P.shLx = P.shRx = -2.3; P.shLz = 1.2; P.shRz = -1.2; P.elL = P.elR = -2.2; P.neckX = 0.45; P.spineX = 0.15;
   } else if (t === 'injured') {

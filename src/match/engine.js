@@ -12,7 +12,7 @@ const { HALF_L, HALF_W, GOAL_HW, GOAL_H, BALL_R, G } = C;
 function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 function colorDist(a, b) { const x = hexToRgb(a), y = hexToRgb(b); return Math.abs(x[0] - y[0]) + Math.abs(x[1] - y[1]) + Math.abs(x[2] - y[2]); }
 
-const SETPIECE_DELAY = { kickoff: 1.2, throw: 1.4, corner: 2.6, goalkick: 2.2, freekick: 2.6, penalty: 3.2 };
+const SETPIECE_DELAY = { kickoff: 1.2, throw: 1.2, corner: 2.1, goalkick: 1.8, freekick: 1.9, penalty: 3.0 };
 
 export class MatchEngine {
   constructor({ home, away, db, homeLineup, awayLineup, seed, userTeam = -1, autoSubsUser = true }) {
@@ -836,7 +836,7 @@ export class MatchEngine {
     const tk = sp.taker;
     if (!tk || tk.offPitch || tk.leaving) { sp.taker = this.teams[sp.team].active.find((p) => !p.isGK) || null; return; }
     if (sp.timer < (SETPIECE_DELAY[sp.type] || 2) + injuredDelay) return;
-    if (!tk.atSpot && sp.timer < 6) return;
+    if (!tk.atSpot && sp.timer < 4) return; // don't let the game stand still while the taker jogs over
     if (!tk.atSpot) { tk.pos.x = tk.target.x; tk.pos.z = tk.target.z; }
     this.executeSetPiece();
   }

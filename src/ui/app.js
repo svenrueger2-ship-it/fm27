@@ -1,6 +1,6 @@
 import { GAME_VERSION } from '../data/patchnotes.js';
 // Application shell: routing, layout, autosave. Screens live in ./screens/*.
-import { loadSettings, saveGame } from '../storage/db.js';
+import { loadSettings, saveSettings, saveGame } from '../storage/db.js';
 import { userFixture, userLeague, isUserSeasonOver } from '../manager/season.js';
 import { crest, esc, money, toast } from './dom.js';
 import { startScreen, newGameScreen, savesScreen, settingsScreen, seasonEndScreen } from './screens/menu.js';
@@ -22,6 +22,7 @@ import { achievementsScreen } from './screens/achievements.js';
 import { analysisScreen } from './screens/analysis.js';
 import { profileScreen } from './screens/profile.js';
 import { openTasks } from '../manager/progress.js';
+import { navHtml, placeInk, openPalette, icon } from './nav.js';
 import { openInbox } from '../manager/staff.js';
 import { applyTheme } from './theme.js';
 import { animateNumbers, runCeremonies } from './fx.js';
@@ -36,6 +37,7 @@ const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScr
 
 export class App {
   constructor(root) {
+    addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && this.world) { e.preventDefault(); openPalette(this); } });
     if (window.bakusa?.onUpdate) window.bakusa.onUpdate((u) => this.onUpdate(u));
     if (window.bakusa?.onLive) window.bakusa.onLive((l) => this.onLive(l));
     this.root = root;
@@ -93,12 +95,17 @@ export class App {
         <header class="topbar">
           <div class="brand"><span class="logo">FM<b>2027</b><small class="by">© BAKUSA</small></span></div>
           <div class="club-chip">${crest(club, 30)}<div><strong>${esc(club.name)}</strong><small>${esc(league.name)} · Saison ${w.season}/${String((w.season + 1) % 100).padStart(2, '0')} · ${isUserSeasonOver(w) ? 'Saisonende' : `Spieltag ${md}`}</small></div></div>
+          <button class="top-search" id="top-search">${icon('search', 16)}<span>Suchen …</span><kbd>Strg K</kbd></button>
           <div class="top-stats"><span class="win ${win.open ? 'open' : ''}">${win.open ? `🔓 Transferfenster · noch ${win.closesIn} Wo.` : '🔒 Transferfenster zu'}</span><span>Kontostand <b>${money(club.budget)}</b></span><button class="btn primary sm" id="top-next">${isUserSeasonOver(w) ? 'Saison abschließen' : 'Zum Spieltag ▶'}</button></div>
         </header>
-        <nav class="sidenav">${NAV.map((n) => { if (n === '-') return '<div class="sep"></div>'; const [id, label, ic, short] = n; return `<button data-nav="${id}" class="${this.screen === id ? 'active' : ''}"><span>${ic}</span><em>${label}${id === 'transfers' && offers ? `<b class="badge">${offers}</b>` : ''}${id === 'kabine' && (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '<b class="badge">!</b>' : ''}${id === 'profile' && (openTasks(w) + (w.mgr?.points || 0)) ? `<b class="badge">${openTasks(w) + (w.mgr?.points || 0)}</b>` : ''}${id === 'staff' && inbox ? `<b class="badge">${inbox}</b>` : ''}${id === 'career' && (w.career?.offers?.length || w.career?.natOffer) ? `<b class="badge">${(w.career.offers.length) + (w.career.natOffer ? 1 : 0)}</b>` : ''}</em><i>${short}</i></button>`; }).join('')}</nav>
+        ${navHtml(this.screen, { transfers: offers, kabine: (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '!' : 0, profile: openTasks(w) + (w.mgr?.points || 0), staff: inbox, career: (w.career?.offers?.length || 0) + (w.career?.natOffer ? 1 : 0) }, this.settings.navPinned, w.mgr?.level || 1)}
         <main class="content" id="content"></main>
       </div>`;
     r.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => this.go(b.dataset.nav)));
+    r.querySelector('#rail-pin')?.addEventListener('click', () => { this.settings.navPinned = !this.settings.navPinned; saveSettings(this.settings); this.render(); });
+    r.querySelector('#top-search')?.addEventListener('click', () => openPalette(this));
+    document.body.classList.toggle('nav-pinned', !!this.settings.navPinned);
+    requestAnimationFrame(() => placeInk(r));
     r.querySelector('#top-next').addEventListener('click', () => this.go(isUserSeasonOver(w) ? 'seasonEnd' : 'matchday'));
     const fn = SCREENS[this.screen] || dashboardScreen;
     this.cleanup = fn(this, r.querySelector('#content'), this.params) || null;

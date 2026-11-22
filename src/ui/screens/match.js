@@ -1,3 +1,4 @@
+import { prefetchCrowd } from '../../render/audio.js';
 // Matchday: pre-match, live 3D match with HUD (speed, cameras, subs, tactics, stats), instant sim, report.
 import { recordLive } from '../../manager/analysisHub.js';
 import { taskEvent } from '../../manager/progress.js';
@@ -32,11 +33,12 @@ const isBigMatch = (w, fx) => !!fx.cup || (w.clubs[fx.h].rep + w.clubs[fx.a].rep
 
 function lineupList(w, club) {
   const L = club.lineup; const slots = FORMATIONS[L.formation];
-  return `<ol class="lineup">${L.xi.map((id, i) => { const p = w.players[id]; return `<li><span class="pos">${slots[i][0]}</span>${flag(p.nation)} ${esc(shortName(p))}<b class="${ratingClass(effectiveRating(p, slots[i][0]))}">${effectiveRating(p, slots[i][0])}</b></li>`; }).join('')}</ol>
+  return `<ol class="lineup">${L.xi.map((id, i) => { const p = w.players[id]; return `<li><span class="pos">${slots[i][0]}</span><span class="nm">${flag(p.nation)}<span>${esc(shortName(p))}</span></span><b class="${ratingClass(effectiveRating(p, slots[i][0]))}">${effectiveRating(p, slots[i][0])}</b></li>`; }).join('')}</ol>
     <p class="muted">Bank: ${L.bench.map((id) => esc(w.players[id].lastName)).join(', ')}</p>`;
 }
 
 export function matchdayScreen(app, el, params = {}) {
+  if ((app.settings.volume ?? 0.6) > 0) prefetchCrowd();
   if (params.live) return liveMatch(app, el, params);
   const w = app.world;
   if (isUserSeasonOver(w) && !userCupFixture(w)) { app.go('seasonEnd'); return; }
@@ -139,6 +141,7 @@ function liveMatch(app, el, params) {
   const chip = (T) => `<span class="sb-team" style="--c1:${T.kit.primary};--c2:${T.kit.secondary}"><i></i>${esc(T.club.short)}</span>`;
   el.innerHTML = `<div class="match">
     <div class="stage" id="stage"></div>
+    <div class="cmd-banner" id="cmd"><i></i><div><b></b><small></small></div></div><div class="shout-chip" id="shchip"></div>
     <div class="hud-top">
       <div class="scoreboard"><span class="live">● LIVE</span>${chip(T0)}<b id="sc">0 : 0</b>${chip(T1)}<span class="clock" id="clk">00:00</span></div>
       <div class="hud-right"><span id="fps" class="fps">– FPS</span><button class="btn icon" id="fs" title="Vollbild">⛶</button></div>
@@ -179,6 +182,7 @@ function liveMatch(app, el, params) {
   let hudT = 0;
   let lastTick = performance.now();
   const update = (v) => {
+    if (userTeam >= 0 && (v.frameCount & 15) === 0) { const U = engine.teams[userTeam], sh = U.shout, c = $('#shchip'); if (c) { const on = sh && sh.until > engine.simTime; c.classList.toggle('show', !!on); if (on) c.textContent = `📣 ${({ druck: 'Mehr Druck', ruhe: 'Ruhig bleiben', pressing: 'Pressing', dicht: 'Hinten dicht', fluegel: 'Über die Flügel', konter: 'Konter' })[sh.key] || sh.key} · noch ${Math.max(1, Math.ceil((sh.until - engine.simTime) / 60))}'`; } }
     { const now = performance.now(); if (!view?.replay && !view?.paused) say(commentator.tick((now - lastTick) / 1000 * (typeof speed === 'number' ? speed : 4))); lastTick = now; }
     hudT += 1;
     if (hudT % 6 !== 0) return;
@@ -208,7 +212,7 @@ function liveMatch(app, el, params) {
     const cond = friendly ? { tod: ['nacht', 'abend', 'tag'][Math.floor(Math.random() * 3)], weather: ['klar', 'klar', 'regen', 'schnee', 'nebel'][Math.floor(Math.random() * 5)] } : cond0;
     engine.weather = cond.weather; engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06 }[cond.weather] || 1;
     view = new MatchView($('#stage'), engine, { quality: S.quality, speed, camera: camSel.value, onFrame: update, tod: cond.tod, weather: S.weatherFx === false ? 'klar' : cond.weather, replays: S.replays !== false,
-      audio: { volume: S.volume ?? 0.6, announcer: S.announcer !== false, commentary: !!S.commentary, crowd: S.crowd ?? 1, chants: S.chants !== false },
+      audio: { volume: S.volume ?? 0.6, announcer: S.announcer === true, commentary: !!S.commentary, crowd: S.crowd ?? 1, chants: S.chants !== false },
       onReplay: (on, label) => { $('#replay')?.classList.toggle('show', on); const sp = $('#replay span'); if (sp) sp.textContent = `⟲ WIEDERHOLUNG${label ? ` · ${label}` : ''}`; } });
     $('#intro').classList.add('show');
     const endIntro = () => { view.skipIntro(); $('#intro')?.classList.remove('show'); };
@@ -355,6 +359,13 @@ function liveMatch(app, el, params) {
     }
     bindPanel();
   };
+  // v2.8: clear feedback for every command given from the touchline
+  let cmdTimer;
+  const cmd = (icon, title, sub = '', kind = 'ok') => {
+    const c = $('#cmd'); if (!c) return;
+    c.className = `cmd-banner show ${kind}`; c.querySelector('i').textContent = icon; c.querySelector('b').textContent = title; c.querySelector('small').textContent = sub;
+    clearTimeout(cmdTimer); cmdTimer = setTimeout(() => c.classList.remove('show'), 2600);
+  };
   const bindPanel = () => {
     const P = $('#panel');
     P.querySelector('#c-z')?.addEventListener('input', (e) => (view.rig.zoom = e.target.value / 100));
@@ -366,16 +377,18 @@ function liveMatch(app, el, params) {
       camSel.value = 'spieler'; view.setCamera('spieler');
     }));
     P.querySelectorAll('[data-stab]').forEach((b) => b.addEventListener('click', () => { statTab = b.dataset.stab; renderPanel(); }));
-    P.querySelectorAll('[data-shout]').forEach((b) => b.addEventListener('click', () => { if (engine.shout(userTeam, b.dataset.shout)) { toast(`📣 ${b.textContent.trim().split('\n')[0]}`); view?.stadium?.excite?.(0.6); } renderPanel(); }));
+    P.querySelectorAll('[data-shout]').forEach((b) => b.addEventListener('click', () => { const label = b.querySelector('b')?.textContent || b.dataset.shout; if (engine.shout(userTeam, b.dataset.shout)) { cmd('📣', `Kommando: ${label}`, 'Die Mannschaft setzt es ab sofort um · ca. 10 Minuten'); view?.stadium?.excite?.(0.6); } else cmd('⛔', 'Kommando nicht möglich', 'Bitte gleich noch einmal versuchen', 'err'); renderPanel(); }));
     P.querySelectorAll('[data-out]').forEach((b) => b.addEventListener('click', () => { subOut = +b.dataset.out; renderPanel(); }));
     P.querySelectorAll('[data-in]').forEach((b) => b.addEventListener('click', () => {
-      if (engine.substitute(userTeam, subOut, +b.dataset.in)) toast('Wechsel durchgeführt'); else toast('Wechsel nicht möglich');
+      const outP = engine.teams[userTeam].players.find((p) => p.id === subOut), inP = w.players[+b.dataset.in];
+      if (engine.substitute(userTeam, subOut, +b.dataset.in)) cmd('🔁', `Wechsel: ${inP?.lastName || ''} für ${outP?.data.lastName || ''}`, `Noch ${engine.teams[userTeam].subsLeft} Wechsel übrig`);
+      else cmd('⛔', 'Wechsel nicht möglich', engine.teams[userTeam].subsLeft <= 0 ? 'Keine Wechsel mehr übrig' : 'Spieler nicht verfügbar', 'err');
       subOut = null; renderPanel();
     }));
     const U = engine.teams[userTeam];
-    P.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { engine.setTactic(userTeam, { ...U.tactic, formation: b.dataset.f }); renderPanel(); }));
-    P.querySelectorAll('[data-pr]').forEach((b) => b.addEventListener('click', () => { engine.setTactic(userTeam, { ...U.tactic, ...PRESETS[b.dataset.pr], formation: U.formation }); toast(`Spielstil: ${b.dataset.pr}`); renderPanel(); }));
-    P.querySelectorAll('[data-tk]').forEach((i) => i.addEventListener('change', () => { engine.setTactic(userTeam, { ...U.tactic, [i.dataset.tk]: i.value / 100, formation: U.formation }); }));
+    P.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { engine.setTactic(userTeam, { ...U.tactic, formation: b.dataset.f }); cmd('📋', `Neue Formation: ${b.dataset.f}`, 'Die Spieler nehmen ihre neuen Positionen ein'); renderPanel(); }));
+    P.querySelectorAll('[data-pr]').forEach((b) => b.addEventListener('click', () => { engine.setTactic(userTeam, { ...U.tactic, ...PRESETS[b.dataset.pr], formation: U.formation }); cmd('🎯', `Spielstil: ${b.dataset.pr}`, 'Gilt ab sofort'); renderPanel(); }));
+    P.querySelectorAll('[data-tk]').forEach((i) => i.addEventListener('change', () => { engine.setTactic(userTeam, { ...U.tactic, [i.dataset.tk]: i.value / 100, formation: U.formation }); const lab = i.closest('.slider')?.querySelector('span')?.textContent || ''; cmd('🎚️', `${lab}: ${i.value} %`, 'Taktik angepasst – wirkt sofort'); }));
   };
   el.querySelectorAll('[data-panel]').forEach((b) => b.addEventListener('click', () => { panel = panel === b.dataset.panel ? null : b.dataset.panel; subOut = null; renderPanel(); }));
   el.querySelectorAll('.sp').forEach((b) => b.addEventListener('click', () => { speed = b.dataset.sp === 'highlights' ? 'highlights' : +b.dataset.sp; view.setSpeed(speed); markSpeed(); }));

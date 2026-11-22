@@ -226,28 +226,38 @@ export function playerModal(app, p, { onChange } = {}) {
   const attrs = (p.pos === 'TW' ? [...GK_ATTRS, ...OUTFIELD_ATTRS.filter(([k]) => ['kraft', 'sprungkraft', 'passspiel', 'tempo'].includes(k))] : OUTFIELD_ATTRS);
   const fuzz = (v) => { const e = Math.round(((100 - est.k) / 100) * 10); const m = Math.round(v / 5) * 5; return [Math.max(1, m - e), Math.min(99, m + e)]; };
   const acts = transferActions(app, p, onChange);
-  const m = modal(`<div class="player-profile" style="--c1:${club?.colors.primary || '#334'}">
-    <div class="pp-head">${portrait(p, club, 96)}<div><h3>${flag(p.nation)} ${esc(pname(p))}</h3>
-      <p>#${p.number} · ${POSITIONS[p.pos].name} · ${p.age} Jahre · ${p.looks.height} cm · ${nationName(p.nation)}</p>
-      <p>${club ? `<button class="linkish" id="pp-club">${crest(club, 20)} ${esc(club.name)}</button>` : 'Vereinslos'}${p.loan ? ` · Leihe von ${esc(w.clubs[p.loan.from].short)}` : ''} · Vertrag bis ${w.season + p.contract} · ${money(p.wage)}/Jahr</p></div>
-      <div class="pp-ovr"><b class="${ratingClass(est.ovr)}">${known ? p.ovr : `${est.ovrLo}-${est.ovrHi}`}</b><small>Potenzial ${known ? p.pot : `${est.potLo}-${est.potHi}`}</small></div></div>
-    <div class="grid-2">
-      <div>${!known ? '<p class="tag y" style="display:block;padding:.45rem .6rem;margin-bottom:.5rem">🕵️ Ungescoutet – Werte sind Schätzungen.</p>' : ''}
+  // v2.8: redesigned profile – hero with face, name, chips and rating rings, quick facts, then details
+  const ring = (val, label, lo, hi) => { const v = typeof val === 'number' ? val : Math.round((lo + hi) / 2); return `<div class="pp-ring ${ratingClass(v)}" style="--p:${v}"><b>${val}</b><small>${label}</small></div>`; };
+  const grp = POSITIONS[p.pos]?.group || '';
+  const fitBar = (l, v) => `<div class="pp-mini"><span>${l}</span><i><b style="width:${Math.max(4, Math.min(100, v))}%"></b></i><em>${Math.round(v)}</em></div>`;
+  const m = modal(`<div class="player-profile pp2" style="--c1:${club?.colors.primary || '#334'};--c2:${club?.colors.secondary || '#fff'}">
+    <div class="pp-hero"><div class="pp-wm">${club ? crest(club, 260) : ''}</div>
+      <div class="pp-face">${portrait(p, club, 150)}</div>
+      <div class="pp-id"><small class="pp-first">${esc(p.firstName)}</small><h3>${esc(p.lastName)}</h3>
+        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span></div>
+        <p class="pp-club">${club ? `<button class="linkish" id="pp-club">${crest(club, 22)} ${esc(club.name)}</button>` : 'Vereinslos'}${p.loan ? ` · Leihe von ${esc(w.clubs[p.loan.from].short)}` : ''}</p></div>
+      <div class="pp-rings">${ring(known ? p.ovr : `${est.ovrLo}–${est.ovrHi}`, 'Stärke', est.ovrLo, est.ovrHi)}${ring(known ? p.pot : `${est.potLo}–${est.potHi}`, 'Potenzial', est.potLo, est.potHi)}</div>
+    </div>
+    <div class="pp-facts">
+      <div><small>Marktwert</small><b>${money(p.value)}</b></div><div><small>Gehalt</small><b>${money(p.wage)}<em>/Jahr</em></b></div>
+      <div><small>Vertrag bis</small><b>${w.season + p.contract}</b></div><div><small>Saison</small><b>${p.stats.apps}<em> Sp.</em> · ${p.stats.goals}<em> T.</em> · ${p.stats.assists}<em> V.</em></b></div>
+      <div><small>Ø Note</small><b>${p.stats.rating ? p.stats.rating.toFixed(1).replace('.', ',') : '–'}</b></div><div><small>Persönlichkeit</small><b>${esc(p.personality)}</b></div>
+    </div>
+    ${p.injury > 0 || p.suspension > 0 ? `<div class="pp-alert">${p.injury > 0 ? `🩹 Verletzt · ${p.injury} Woche(n)` : ''}${p.injury > 0 && p.suspension > 0 ? ' · ' : ''}${p.suspension > 0 ? `🟥 Gesperrt · ${p.suspension} Spiel(e)` : ''}</div>` : ''}
+    <div class="pp-body">
+      <div class="pp-card"><h4>Attribute</h4>${!known ? '<p class="tag y" style="display:block;padding:.45rem .6rem;margin-bottom:.5rem">🕵️ Ungescoutet – Werte sind Schätzungen.</p>' : ''}
         ${attrs.map(([k, l]) => { if (known) return `<div class="attr"><span>${l}</span>${bar(p.attrs[k], 99, ratingClass(p.attrs[k]))}<b class="${ratingClass(p.attrs[k])}">${p.attrs[k]}</b></div>`;
           const [lo, hi] = fuzz(p.attrs[k]); return `<div class="attr"><span>${l}</span>${bar((lo + hi) / 2, 99, 'r-mid')}<b class="muted">${lo}-${hi}</b></div>`; }).join('')}</div>
-      <div>${known ? radar(p) : ''}
-        ${report ? `<div class="card" style="padding:.7rem;margin:.4rem 0"><b>🕵️ Scoutingbericht</b><p>Stärken: ${report.strengths.map((k) => esc([...OUTFIELD_ATTRS, ...GK_ATTRS].find((a) => a[0] === k)?.[1] || k)).join(', ')}</p><p>Schwächen: ${report.weaknesses.map((k) => esc([...OUTFIELD_ATTRS, ...GK_ATTRS].find((a) => a[0] === k)?.[1] || k)).join(', ')}</p><p><b>${esc(report.rec)}</b></p></div>` : ''}
+      <div class="pp-col">
+        ${known ? `<div class="pp-card pp-radar"><h4>Profil</h4>${radar(p)}</div>` : ''}
+        ${known ? `<div class="pp-card"><h4>Zustand</h4>${fitBar('Fitness', p.fitness)}${fitBar('Moral', p.morale)}${fitBar('Form', p.form)}${fitBar('Professionalität', p.professionalism)}</div>` : ''}
+        ${report ? `<div class="pp-card"><h4>🕵️ Scoutingbericht</h4><p>Stärken: ${report.strengths.map((k) => esc([...OUTFIELD_ATTRS, ...GK_ATTRS].find((a) => a[0] === k)?.[1] || k)).join(', ')}</p><p>Schwächen: ${report.weaknesses.map((k) => esc([...OUTFIELD_ATTRS, ...GK_ATTRS].find((a) => a[0] === k)?.[1] || k)).join(', ')}</p></div>` : ''}
         ${(() => { if (!known || p.age > 34) return ''; const pr = projectPlayer(p, { facility: club?.facilities?.training ?? 2 }); const last = pr.points[pr.points.length - 1];
-          return `<div class="card proj-card"><div class="row-between"><b>📈 Entwicklungsprognose</b><small class="muted">Höhepunkt ca. ${pr.peak.ovr} mit ${pr.peak.age}</small></div>${projectionSvg(pr)}<small class="muted">Erwartete Stärke nach Alter · Band = Spanne je nach Training, Spielzeit & Glück · in ${last.age - p.age} Jahren: ${Math.round(last.lo)}–${Math.round(last.hi)}</small></div>`; })()}
-        <div class="kv"><span>Marktwert</span><b>${money(p.value)}</b></div>
-        <div class="kv"><span>Persönlichkeit</span><b>${esc(p.personality)}</b></div>
-        ${known ? `<div class="kv"><span>Professionalität</span><b>${p.professionalism}</b></div><div class="kv"><span>Fitness / Moral / Form</span><b>${Math.round(p.fitness)} / ${Math.round(p.morale)} / ${Math.round(p.form)}</b></div>` : ''}
-        <div class="kv"><span>Saison: Spiele · Tore · Vorlagen</span><b>${p.stats.apps} · ${p.stats.goals} · ${p.stats.assists}</b></div>
-        ${p.stats.rating ? `<div class="kv"><span>Ø Note</span><b>${p.stats.rating.toFixed(1)}</b></div>` : ''}
-        ${p.injury > 0 ? `<div class="kv warn"><span>Verletzt</span><b>${p.injury} Woche(n)</b></div>` : ''}
-        ${p.suspension > 0 ? `<div class="kv warn"><span>Gesperrt</span><b>${p.suspension} Spiel(e)</b></div>` : ''}
-        <div style="margin-top:.8rem">${acts.html}</div>
-      </div></div>${careerHtml(w, p)}</div>`, { wide: true });
+          return `<div class="pp-card proj-card"><div class="row-between"><h4>📈 Entwicklungsprognose</h4><small class="muted">Höhepunkt ca. ${pr.peak.ovr} mit ${pr.peak.age}</small></div>${projectionSvg(pr)}<small class="muted">In ${last.age - p.age} Jahren: ${Math.round(last.lo)}–${Math.round(last.hi)} · Band = Spanne je nach Training, Spielzeit & Glück</small></div>`; })()}
+      </div>
+    </div>
+    <div class="pp-actions">${acts.html}</div>
+    ${careerHtml(w, p)}</div>`, { wide: true });
   acts.bind(m.el, m.close);
   m.el.querySelector('#pp-club')?.addEventListener('click', () => { m.close(); clubModal(app, club, { onPlayer: (q) => playerModal(app, q, { onChange }) }); });
 }

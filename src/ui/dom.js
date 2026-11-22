@@ -1,3 +1,4 @@
+import { FACE_ATLAS, FACE_COUNT, FACE_COLS, FACE_ROWS } from '../data/faces.js';
 // Small DOM + formatting helpers shared by all screens.
 import { NATIONS } from '../data/names.js';
 import { NATIONS_EXTRA } from '../data/nationsExtra.js';
@@ -78,7 +79,18 @@ function shade(hex, f) {
   const c = (v) => Math.max(0, Math.min(255, Math.round(v * f)));
   return `rgb(${c(n >> 16)},${c((n >> 8) & 255)},${c(n & 255)})`;
 }
+// v2.8: AI face photos from the sprite atlas – random but stable per player (hash of the id)
+let faceCssReady = false;
+export function faceIndex(p) { let x = ((p.id + 1) * 2654435761) >>> 0; x ^= x >>> 13; x = Math.imul(x, 1274126177) >>> 0; x ^= x >>> 16; return (x >>> 0) % FACE_COUNT; }
 export function portrait(p, club, size = 64) {
+  if (!faceCssReady) { const b64 = FACE_ATLAS.slice(FACE_ATLAS.indexOf(',') + 1), bin = atob(b64), u8 = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+    const url = URL.createObjectURL(new Blob([u8], { type: 'image/webp' })); // a blob URL – large data: URLs are not drawn in CSS
+    const st = document.createElement('style'); st.textContent = `.pface{background-image:url("${url}"),linear-gradient(160deg,color-mix(in srgb,var(--c1) 70%,#1a1530),#120d24 85%)}`; document.head.appendChild(st); faceCssReady = true; }
+  const i = p.looks?.face ?? faceIndex(p), c1 = club?.colors?.primary || '#3a3358', c2 = club?.colors?.secondary || '#ffffff';
+  const col = i % FACE_COLS, row = Math.floor(i / FACE_COLS);
+  return `<span class="portrait pface" aria-hidden="true" style="width:${size}px;height:${size}px;--c1:${c1};--c2:${c2};background-size:${FACE_COLS * 100}% ${FACE_ROWS * 100}%, auto;background-position:${(col / (FACE_COLS - 1)) * 100}% ${(row / (FACE_ROWS - 1)) * 100}%, 0 0">${p.number && size >= 56 ? `<i>${p.number}</i>` : ''}</span>`;
+}
+export function svgPortrait(p, club, size = 64) {
   const L = p.looks || {};
   const skin = L.skin || '#e0b090', hair = L.hair || '#333';
   const shirt = club?.colors?.primary || '#3a3358', sec = club?.colors?.secondary || '#fff';

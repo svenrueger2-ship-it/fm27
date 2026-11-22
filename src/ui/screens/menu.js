@@ -313,7 +313,7 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
       ${rng('s-vol', 'Gesamtlautstärke', 'Alles im Stadion', s.volume ?? 0.6, 0, 1, 0.05, pct)}
       ${rng('s-crowd', 'Fan-Atmosphäre', 'Grundrauschen und Spannung der Zuschauer', s.crowd ?? 1, 0, 1.5, 0.05, pct)}
       ${tog('s-chants', 'Fangesänge', 'Gesänge und Klatsch-Rhythmen in ruhigen Phasen', s.chants !== false)}
-      ${tog('s-ann', 'Stadionsprecher', 'Sprachausgabe bei Toren und Wechseln', s.announcer !== false)}
+      ${tog('s-ann', 'Stadionsprecher', 'Computerstimme bei Toren und Wechseln', s.announcer === true)}
       ${tog('s-com', 'TV-Kommentar vorlesen', 'Der Kommentar wird zusätzlich gesprochen', !!s.commentary)}`,
     ablauf: () => `
       ${tog('s-auto', 'Automatisch speichern', 'Nach jedem Spieltag in den Autosave-Platz', !!s.autosave)}

@@ -103,6 +103,7 @@ export class MatchView {
       if (['goal', 'kickoff2', 'halftime', 'fulltime'].includes(e.type)) this.updateScreen();
     });
     this.updateScreen();
+    this.prebuildBench();
     if (intro) this.startIntro();
     window.__ufmView = this; // debug / QA hook
     this.loop = this.loop.bind(this);
@@ -124,8 +125,21 @@ export class MatchView {
     this.camera.updateProjectionMatrix();
   }
 
+  // v2.8: substitutes get their model (canvas kit textures + GPU upload) before kick-off, so a
+  // substitution at a free kick no longer freezes the picture for a moment
+  prebuildBench() {
+    this.benchModels = new Map();
+    for (const T of this.engine.teams) for (const id of T.bench || []) {
+      const d = this.engine.db[id]; if (!d) continue;
+      const m = createPlayerModel({ kit: T.kit, looks: d.looks, number: d.number, isGK: false, quality: this.quality, name: d.lastName, short: T.club.short });
+      m.root.visible = false; this.scene.add(m.root); this.benchModels.set(id, m);
+    }
+    try { this.renderer.compile(this.scene, this.camera); } catch { /* older three */ }
+  }
+
   modelFor(p) {
     let m = this.models.get(p);
+    if (!m && this.benchModels?.has(p.id) && !p.isGK) { m = this.benchModels.get(p.id); this.benchModels.delete(p.id); m.root.visible = true; this.models.set(p, m); return m; }
     if (!m) {
       const T = this.engine.teams[p.team];
       m = createPlayerModel({ kit: p.isGK ? T.gkKit : T.kit, looks: p.data.looks, number: p.data.number, isGK: p.isGK, quality: this.quality, name: p.data.lastName, short: T.club.short });
