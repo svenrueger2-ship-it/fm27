@@ -1,13 +1,14 @@
 // Club business (v1.0): members and fan shop, investors (German 50+1 rule), takeovers by rich owners,
 // debt warnings, credit line and the licensing procedure at the end of the season (conditions,
 // points deduction, licence refused → forced relegation).
+import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { ensureMood, moodChange } from './events.js';
 
 const leagueOf = (w, c) => w.leagues.find((l) => l.id === c.leagueId);
 const country = (w, c) => leagueOf(w, c).country;
 const per = (n) => Math.round(n / 1e5) * 1e5;
-const mio = (n) => `${(n / 1e6).toFixed(1).replace('.', ',')} Mio. €`;
+const mio = (n) => `${money(n)}`;
 const OWNERS = [['Gulf Sports Investment', 'Staatsfonds'], ['Redwood Capital', 'US-Investor'], ['Aurora Holdings', 'Konsortium'], ['Silk Road Sports', 'Investor aus Asien'], ['Nordlicht Beteiligungen', 'Unternehmer']];
 
 export function ensureBiz(world, club = world.clubs[world.userClubId]) {

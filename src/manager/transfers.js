@@ -1,6 +1,7 @@
 // Transfer market: windows, asking prices, bids & counter offers, contract negotiations, release clauses,
 // loans with buy option, incoming offers for own players, contract extensions, free agents,
 // scouting knowledge/reports and AI-to-AI transfers.
+import { money, eur } from '../core/fmt.js';
 import { rollRumours, confirmRumour, isDeadlineDay } from './events.js';
 import { clamp } from '../core/rng.js';
 import { POS_WEIGHTS, POS_COMPAT } from '../data/attributes.js';
@@ -137,7 +138,7 @@ export function extendContract(world, playerId, wage, years) {
   const d = contractDemand(world, p, club);
   if (!d.willing) return { ok: false, msg: d.reason };
   if (years < d.minY || years > d.maxY) return { ok: false, msg: `Laufzeit muss zwischen ${d.minY} und ${d.maxY} Jahren liegen.` };
-  if (wage < d.wage * 0.97) return { ok: false, msg: `${p.lastName} fordert mindestens ${Math.round(d.wage).toLocaleString('de-DE')} € pro Jahr.` };
+  if (wage < d.wage * 0.97) return { ok: false, msg: `${p.lastName} fordert mindestens ${eur(d.wage)} pro Jahr.` };
   if (!wageRoom(world, club, wage, p.wage)) return { ok: false, msg: 'Das Gehaltsbudget reicht dafür nicht aus.' };
   p.wage = wage; p.contract = years; p.morale = clamp(p.morale + 8, 0, 99);
   news(world, `${p.firstName} ${p.lastName} verlängert bis ${world.season + years}.`);
@@ -165,7 +166,7 @@ export function makeBid(world, playerId, fee) {
   if (fee >= ask) { T.pending = { playerId, fee, type: 'buy' }; return { result: 'accepted', fee }; }
   if (fee >= ask * 0.8) {
     const counter = Math.round((ask * (0.95 + Math.random() * 0.06)) / 1e4) * 1e4;
-    return { result: 'countered', counter, reason: `${seller.name} verlangt ${counter.toLocaleString('de-DE')} €.` };
+    return { result: 'countered', counter, reason: `${seller.name} verlangt ${eur(counter)}.` };
   }
   return { result: 'rejected', reason: `${seller.name} lehnt ab – das Angebot ist zu niedrig.` };
 }
@@ -180,7 +181,7 @@ export function signPending(world, wage, years) {
   if (wage < d.wage * 0.97) {
     pend.tries = (pend.tries || 0) + 1;
     if (pend.tries >= 3) { T.pending = null; return { ok: false, end: true, msg: `${p.lastName} bricht die Verhandlungen ab.` }; }
-    return { ok: false, msg: `${p.lastName} fordert ${d.wage.toLocaleString('de-DE')} € pro Jahr (Versuch ${pend.tries}/3).` };
+    return { ok: false, msg: `${p.lastName} fordert ${eur(d.wage)} pro Jahr (Versuch ${pend.tries}/3).` };
   }
   if (!wageRoom(world, club, wage)) return { ok: false, msg: 'Das Gehaltsbudget reicht dafür nicht aus. Verkaufe Spieler oder biete weniger.' };
   if (pend.type === 'buy') executeTransfer(world, p, p.clubId ? world.clubs[p.clubId] : null, club, pend.fee, wage, years);
@@ -215,7 +216,7 @@ export function executeTransfer(world, p, from, to, fee, wage, years) {
   T.history.unshift({ season: world.season, week: world.week + 1, playerId: p.id, name: `${p.firstName} ${p.lastName}`, from: from?.id ?? null, to: to.id, fee });
   T.history = T.history.slice(0, 300);
   if (to.id === world.userClubId || from?.id === world.userClubId)
-    news(world, `Transfer: ${p.firstName} ${p.lastName} wechselt ${from ? `von ${from.name} ` : 'ablösefrei '}zu ${to.name}${fee ? ` (${(fee / 1e6).toFixed(1).replace('.', ',')} Mio. €)` : ''}.`);
+    news(world, `Transfer: ${p.firstName} ${p.lastName} wechselt ${from ? `von ${from.name} ` : 'ablösefrei '}zu ${to.name}${fee ? ` (${money(fee)})` : ''}.`);
 }
 
 // ----------------------------------------------------------------- loans
@@ -244,7 +245,7 @@ export function requestLoan(world, playerId, wageShare, withOption) {
   world.scouting.knowledge[p.id] = 100;
   const used = new Set(to.squad.filter((id) => id !== p.id).map((id) => world.players[id].number));
   if (used.has(p.number)) { let n = 2; while (used.has(n)) n++; p.number = n; }
-  news(world, `Leihe: ${p.firstName} ${p.lastName} kommt bis Saisonende von ${from.name}${obligation ? ` (Kaufpflicht ab ${obligation.apps} Einsätzen: ${(obligation.fee / 1e6).toFixed(1).replace('.', ',')} Mio. €)` : withOption ? ` (Kaufoption ${(t.buyOption / 1e6).toFixed(1).replace('.', ',')} Mio. €)` : ''}.`);
+  news(world, `Leihe: ${p.firstName} ${p.lastName} kommt bis Saisonende von ${from.name}${obligation ? ` (Kaufpflicht ab ${obligation.apps} Einsätzen: ${money(obligation.fee)})` : withOption ? ` (Kaufoption ${money(t.buyOption)})` : ''}.`);
   return { ok: true };
 }
 
@@ -298,7 +299,7 @@ function generateOffers(world, rng) {
     if (clubWants(world, buyer, p) < 0.5 && !listed && rng.chance(0.6)) continue;
     const fee = Math.round((askingPrice(world, p) * rng.range(listed ? 0.7 : 0.85, listed ? 1.0 : 1.2)) / 1e4) * 1e4;
     T.offers.push({ id: T.nextId++, playerId: id, clubId: buyer.id, fee, week: world.week, countered: false });
-    news(world, `Angebot: ${buyer.name} bietet ${fee.toLocaleString('de-DE')} € für ${p.lastName}.`);
+    news(world, `Angebot: ${buyer.name} bietet ${eur(fee)} für ${p.lastName}.`);
   }
 }
 
@@ -311,7 +312,7 @@ export function respondOffer(world, offerId, action, rng) {
   if (action === 'counter') {
     if (o.countered) return { ok: false, msg: 'Du hast bereits nachverhandelt.' };
     o.countered = true;
-    if (rng.chance(0.55) && buyer.budget > o.fee * 1.15) { o.fee = Math.round((o.fee * 1.15) / 1e4) * 1e4; return { ok: true, msg: `${buyer.name} erhöht auf ${o.fee.toLocaleString('de-DE')} €.` }; }
+    if (rng.chance(0.55) && buyer.budget > o.fee * 1.15) { o.fee = Math.round((o.fee * 1.15) / 1e4) * 1e4; return { ok: true, msg: `${buyer.name} erhöht auf ${eur(o.fee)}.` }; }
     T.offers = T.offers.filter((x) => x !== o);
     return { ok: true, msg: `${buyer.name} zieht das Angebot zurück.` };
   }
@@ -321,7 +322,7 @@ export function respondOffer(world, offerId, action, rng) {
   if (action === 'sellon') { fee = Math.round((o.fee * 0.9) / 1e4) * 1e4; }
   executeTransfer(world, p, me, buyer, fee, Math.max(d.wage, p.wage), Math.max(d.minY, 3));
   if (action === 'sellon') p.sellOn = { club: me.id, pct: 15 };
-  return { ok: true, msg: `${p.lastName} verkauft für ${fee.toLocaleString('de-DE')} €${action === 'sellon' ? ' plus 15 % Weiterverkaufsbeteiligung' : ''}.` };
+  return { ok: true, msg: `${p.lastName} verkauft für ${eur(fee)}${action === 'sellon' ? ' plus 15 % Weiterverkaufsbeteiligung' : ''}.` };
 }
 
 // ----------------------------------------------------------------- AI clubs

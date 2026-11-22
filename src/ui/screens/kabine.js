@@ -1,4 +1,5 @@
 // Dressing room: team spirit, hierarchy, cliques, conflicts, players' council, team events.
+import { money } from '../../core/fmt.js';
 import { esc, toast, portrait, flag, pname } from '../dom.js';
 import { ensureKabine, hierarchy, cliques, spiritFactors, spiritLabel, CONFLICT_OPTIONS, resolveConflict, answerCouncil, TEAM_EVENTS, teamEvent } from '../../manager/kabine.js';
 import { newRng } from '../../manager/season.js';
@@ -18,7 +19,7 @@ export function kabineScreen(app, el) {
         <div class="card"><h3>Teamgeist</h3><div class="spirit"><b class="${s >= 65 ? 'good' : s < 45 ? 'bad' : ''}">${s}</b><span>${spiritLabel(s)}</span></div><div class="rep-bar"><i style="width:${s}%"></i></div>
           <p class="muted small">Teamgeist wirkt sich auf die Moral, die Abstimmung im 3D-Spiel und die simulierten Ergebnisse aus.</p>
           ${F.map((f) => `<div class="kv"><span>${esc(f.label)}</span><b class="${f.v > 0 ? 'good' : f.v < 0 ? 'bad' : ''}">${f.v > 0 ? '+' : ''}${f.v}</b></div>`).join('')}
-          <h3 style="margin-top:14px">🎉 Teamevent</h3><div class="sim-opts">${TEAM_EVENTS.map((e) => `<button class="btn" data-ev="${e.id}"><b>${e.icon} ${esc(e.name)} · ${(e.cost / 1000).toFixed(0)} Tsd. €</b><small>${esc(e.desc)} Teamgeist +${e.spirit}</small></button>`).join('')}</div>
+          <h3 style="margin-top:14px">🎉 Teamevent</h3><div class="sim-opts">${TEAM_EVENTS.map((e) => `<button class="btn" data-ev="${e.id}"><b>${e.icon} ${esc(e.name)} · ${money(e.cost)}</b><small>${esc(e.desc)} Teamgeist +${e.spirit}</small></button>`).join('')}</div>
         </div>
         <div class="card"><h3>⚡ Konflikte ${open.length ? `<span class="tag r">${open.length}</span>` : ''}</h3>
           ${open.length ? open.map((c) => `<div class="conflict"><p>${esc(c.text)}${c.ignored ? ' <small class="muted">(ignoriert)</small>' : ''}</p><div class="opt-row">${CONFLICT_OPTIONS.map(([k, l, d]) => `<button class="btn sm ${k === 'talk' ? 'primary' : ''}" title="${esc(d)}" data-cf="${c.id}" data-how="${k}">${l}</button>`).join('')}</div></div>`).join('') : '<p class="muted">Keine offenen Konflikte – Ruhe in der Kabine.</p>'}

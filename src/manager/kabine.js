@@ -1,5 +1,6 @@
 // Dressing room dynamics (v2.0): hierarchy, cliques, team spirit, conflicts between players,
 // the players' council with its requests and team events.
+import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { traits, leadership, ensureCaptain } from './players.js';
 
@@ -173,7 +174,7 @@ export function spiritLabel(s) { return s >= 80 ? 'Eingeschworene Einheit' : s >
 export function seasonKabine(world, reached) {
   const club = world.clubs[world.userClubId], K = club?.kabine; if (!K) return;
   if (K.bonusPromise) {
-    if (reached) { club.budget -= K.bonusPromise; log(world, club, `💶 Die versprochene Prämie (${(K.bonusPromise / 1e3).toFixed(0)} Tsd. €) wird ausgezahlt.`); club.spirit = clamp(club.spirit + 5, 5, 99); }
+    if (reached) { club.budget -= K.bonusPromise; log(world, club, `💶 Die versprochene Prämie (${money(K.bonusPromise)}) wird ausgezahlt.`); club.spirit = clamp(club.spirit + 5, 5, 99); }
     K.bonusPromise = 0;
   }
   for (const p of squadOf(world, club)) p.seasonsAtClub = (p.seasonsAtClub || 0) + 1;

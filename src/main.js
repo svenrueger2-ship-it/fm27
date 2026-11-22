@@ -1,3 +1,4 @@
+import { IS_MOBILE } from './core/device.js';
 // Entry point
 import { App } from './ui/app.js';
 import { preloadCrests } from './render/crestImages.js';
@@ -5,6 +6,7 @@ import { loadGame } from './storage/db.js';
 
 const root = document.getElementById('app');
 if (/FM27-Android/.test(navigator.userAgent)) document.documentElement.classList.add('android');
+if (IS_MOBILE) document.documentElement.classList.add('mobile');
 const app = new App(root);
 window.ufm = app; // handy for debugging in the console
 preloadCrests().finally(async () => {

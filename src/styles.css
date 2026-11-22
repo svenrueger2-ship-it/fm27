@@ -999,3 +999,36 @@ html.android { -webkit-user-select: none; user-select: none; } html.android inpu
 .minput i { font-style: normal; display: grid; place-items: center; padding: 0 .5rem 0 .2rem; color: var(--muted); font-weight: 700; }
 .mi-b { border: 0; background: rgba(255,255,255,.06); color: var(--text); width: 34px; font-size: 1.1rem; cursor: pointer; } .mi-b:hover { background: rgba(var(--acc-rgb), .3); }
 body.light .minput { background: #fff; }
+/* ===================== v3.0.1 phone / Android performance & declutter ===================== */
+/* the rail only flies out on devices with a real mouse – on touch a tap must not leave it open */
+@media (hover: none) { .rail:hover:not(.pinned) { width: 84px; box-shadow: none; } .rail:hover:not(.pinned) .nv .nv-l { opacity: 0; } .rail:hover:not(.pinned) .nv .nv-s { opacity: 1; } .rail:hover:not(.pinned) .rg-t { height: 0; opacity: 0; margin: 0; } .rail:hover:not(.pinned) .nv .ico { margin-top: -11px; } }
+/* expensive effects off: blur, fixed gradient backgrounds, endless animations, staggered entrances, heavy shadows */
+html.mobile *, html.mobile *::before, html.mobile *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.mobile body { background: var(--bg) !important; background-attachment: scroll !important; }
+html.mobile .page, html.mobile .page .card, html.mobile .page .pcard { animation: none !important; }
+html.mobile .nv-b, html.mobile .shout-chip.show, html.mobile .play::before, html.mobile .btn.primary::after { animation: none !important; }
+html.mobile .card { box-shadow: none; } html.mobile .card::before { display: none; }
+html.mobile .btn, html.mobile .btn:hover { box-shadow: none; transform: none; }
+html.mobile .btn.primary { box-shadow: 0 4px 12px -6px rgba(var(--acc-rgb), .8); }
+html.mobile .menu-bg { background: radial-gradient(120% 90% at 70% 0%, rgba(var(--acc-rgb), .35), transparent 55%), radial-gradient(90% 70% at 0% 100%, rgba(30, 120, 70, .35), transparent 60%), #0a0818; }
+html.mobile .pface { image-rendering: auto; }
+/* declutter */
+html.mobile .top-search, html.mobile .top-stats .win { display: none !important; }
+html.mobile .topbar { gap: .6rem; padding: .35rem .7rem; } html.mobile .brand .by { display: none; }
+html.mobile .page { padding: .7rem .8rem 1.2rem; } html.mobile .card { padding: .8rem .9rem; margin-bottom: .7rem; border-radius: 14px; }
+html.mobile .page-head h2, html.mobile .page > h2 { font-size: 1.5rem; }
+html.mobile .grid-3, html.mobile .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html.mobile .sm-notes, html.mobile .sm-ver { display: none; }
+html.mobile .start3 { grid-template-columns: 240px 1fr !important; }
+html.mobile .sm-nav { padding: .8rem .6rem; } html.mobile .sm-nav nav button { padding: .5rem .6rem; }
+html.mobile .sm-brand { padding-bottom: .6rem; margin-bottom: .5rem; }
+html.mobile .club-hero .wm, html.mobile .pp-wm { display: none; }
+html.mobile .pp-hero { grid-template-columns: auto 1fr; padding: 1rem; } html.mobile .pp-rings { grid-column: 1 / -1; } html.mobile .pp-body { grid-template-columns: 1fr; }
+html.mobile .pp-face .pface { width: 96px !important; height: 96px !important; }
+@media (max-height: 520px) {
+  html.mobile .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.mobile .kpis b, html.mobile .an-kpis .kpi b { font-size: 1.1rem; }
+  html.mobile .rail { padding: .3rem .4rem; } html.mobile .nv { min-height: 40px; } html.mobile .rail-ink { height: 40px; }
+  html.mobile .rail-foot { display: none !important; }
+}
+@media (max-width: 760px) { html.mobile .start3 { grid-template-columns: 1fr !important; } html.mobile .grid-3, html.mobile .grid-4 { grid-template-columns: 1fr 1fr; } }

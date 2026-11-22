@@ -1,6 +1,7 @@
 // Staff & automation (v0.9): an assistant coach, a physio, a youth coach and a chief scout who take
 // work off the user's hands. For every area the user decides: do it myself ("me"), the staff suggests
 // and I confirm in the inbox ("ask"), or the staff does it on its own ("auto").
+import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { autoLineup, ensureLineup } from '../match/tactics.js';
 import { TRAINING_FOCUS, ensureTraining, PLAN_TEMPLATES } from './training.js';
@@ -164,7 +165,7 @@ function planOffers(world) {
     const key = sorted.indexOf(p) < 11, ask = askingPrice(world, p);
     const good = o.fee >= ask * (key ? 1.35 : 1.05);
     o.staffSeen = true;
-    return { text: `${buyer.name} bietet ${(o.fee / 1e6).toFixed(1).replace('.', ',')} Mio. € für ${p.lastName}${key ? ' (Stammspieler)' : ''}. Empfehlung: ${good ? 'annehmen' : key ? 'ablehnen' : 'nachverhandeln'}.`,
+    return { text: `${buyer.name} bietet ${money(o.fee)} für ${p.lastName}${key ? ' (Stammspieler)' : ''}. Empfehlung: ${good ? 'annehmen' : key ? 'ablehnen' : 'nachverhandeln'}.`,
       key: `of-${o.id}`, label: good ? 'Annehmen' : key ? 'Ablehnen' : 'Nachverhandeln', run: (rng) => respondOffer(world, o.id, good ? 'accept' : key ? 'reject' : 'counter', rng) };
   });
 }

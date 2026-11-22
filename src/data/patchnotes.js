@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.0.1', date: '22.11.2026', title: 'Handy-Optimierung',
+    neu: ['Alle Beträge als Dezimalzahlen (z. B. 1,50 Mio. € oder 12.500,00 €)'],
+    verbessert: ['Android/Handy: deutlich flüssiger (weniger Effekte, niedrigere Auflösung, kein 3D-Hintergrund im Menü)', 'Aufgeräumtere Menüs auf kleinen Bildschirmen'],
+    behoben: ['Seitenleiste bleibt auf Touch-Geräten nicht mehr aufgeklappt'],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '3.0.0', date: '22.11.2026', title: 'Version 3.0 – Test-Update',
     neu: ['Test des Live-Updates: Wenn du das hier siehst, funktionieren Updates ohne Neuinstallation'],
     verbessert: [],

@@ -1,5 +1,6 @@
 // Off-pitch life of the user's club: sponsor deals, board & fan mood, press conferences,
 // random events with decisions, transfer rumours and Deadline Day.
+import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { generatePlayer } from '../data/generator.js';
 
@@ -53,7 +54,7 @@ export function sponsorOffers(world, club, slot, rng) {
 
 export function signSponsor(world, club, offer) {
   ensureSponsors(world, club)[offer.slot] = { ...offer };
-  world.news.unshift({ season: world.season, week: world.week + 1, text: `🤝 Neuer ${offer.slotName}: ${offer.brand} zahlt ${(offer.perSeason / 1e6).toFixed(1).replace('.', ',')} Mio. € pro Saison (${offer.years} Jahre).` });
+  world.news.unshift({ season: world.season, week: world.week + 1, text: `🤝 Neuer ${offer.slotName}: ${offer.brand} zahlt ${money(offer.perSeason)} pro Saison (${offer.years} Jahre).` });
 }
 
 // season end: performance bonuses and contract expiry
@@ -62,7 +63,7 @@ export function sponsorSeasonClose(world, club, rank) {
   const notes = [];
   for (const [k, d] of Object.entries(club.sponsorDeals)) {
     if (!d) continue;
-    if (d.bonus && rank <= d.bonus.rank) { club.budget += d.bonus.amount; notes.push(`${d.brand} zahlt Erfolgsbonus (${(d.bonus.amount / 1e6).toFixed(1).replace('.', ',')} Mio. €)`); }
+    if (d.bonus && rank <= d.bonus.rank) { club.budget += d.bonus.amount; notes.push(`${d.brand} zahlt Erfolgsbonus (${money(d.bonus.amount)})`); }
     d.years--;
     if (d.years <= 0) { club.sponsorDeals[k] = null; notes.push(`Vertrag mit ${d.brand} (${d.slotName}) ausgelaufen – neuen Partner suchen!`); }
   }

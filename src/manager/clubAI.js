@@ -2,6 +2,7 @@
 // quality, and plans its squad like a real sporting director: it analyses gaps (depth, quality, age,
 // expiring contracts), scouts fitting targets, bids, gets refused or countered, fights bidding wars,
 // sells surplus players, loans out talents and sacks its coach when results do not match expectations.
+import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { PRESETS, FORMATIONS, autoLineup, teamStrength } from '../match/tactics.js';
 import { makeCoach } from './director.js';
@@ -155,7 +156,7 @@ function aiDeal(world, rng, buyer, need, hot) {
           const finalFee = winner === buyer ? Math.round((rivalFee * 1.05) / 1e5) * 1e5 : rivalFee;
           const d = contractDemand(world, p, winner);
           executeTransfer(world, p, seller, winner, finalFee, d.wage, rng.int(d.minY, d.maxY));
-          reportDeal(world, `🔥 Bieterwettkampf um ${p.firstName} ${p.lastName}: ${winner.name} setzt sich gegen ${(winner === buyer ? rival : buyer).name} durch – ${(finalFee / 1e6).toFixed(1).replace('.', ',')} Mio. € an ${seller.short}.`, [winner, seller, buyer, rival]);
+          reportDeal(world, `🔥 Bieterwettkampf um ${p.firstName} ${p.lastName}: ${winner.name} setzt sich gegen ${(winner === buyer ? rival : buyer).name} durch – ${money(finalFee)} an ${seller.short}.`, [winner, seller, buyer, rival]);
           return true;
         }
       }
@@ -163,7 +164,7 @@ function aiDeal(world, rng, buyer, need, hot) {
     const d = contractDemand(world, p, buyer);
     if (!d.willing && rng.chance(0.7)) continue;
     executeTransfer(world, p, seller, buyer, fee, d.wage, rng.int(d.minY, d.maxY));
-    reportDeal(world, `KI-Transfer: ${p.firstName} ${p.lastName} (${p.pos}, ${p.ovr}) wechselt ${seller ? `von ${seller.short} ` : 'ablösefrei '}zu ${buyer.name}${fee ? ` für ${(fee / 1e6).toFixed(1).replace('.', ',')} Mio. €` : ''} – Grund: ${need.reason}.`, [buyer, seller], fee);
+    reportDeal(world, `KI-Transfer: ${p.firstName} ${p.lastName} (${p.pos}, ${p.ovr}) wechselt ${seller ? `von ${seller.short} ` : 'ablösefrei '}zu ${buyer.name}${fee ? ` für ${money(fee)}` : ''} – Grund: ${need.reason}.`, [buyer, seller], fee);
     buyer.ai.log.unshift(`${world.season}/${world.week + 1}: ${p.lastName} geholt (${need.reason})`);
     buyer.ai.log = buyer.ai.log.slice(0, 20);
     return true;

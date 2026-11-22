@@ -1,6 +1,7 @@
 // Sports director mode: the user plans squad, transfers, finances and the stadium while an AI head
 // coach picks the line-up, tactics and substitutions. Coaches have a style, a quality and a wage and
 // can be sacked and replaced.
+import { money } from '../core/fmt.js';
 import { PRESETS, FORMATIONS, autoLineup } from '../match/tactics.js';
 import { clamp } from '../core/rng.js';
 
@@ -49,7 +50,7 @@ export function hireCoach(world, cand) {
   club.budget -= severance;
   if (severance) club.finance.ledger.unshift({ season: world.season, week: world.week + 1, rows: [{ key: 'wages', label: `Abfindung Trainer ${old.name}`, amount: -severance }], net: -severance });
   world.coach = { ...cand, games: 0, pts: 0 };
-  world.news.unshift({ season: world.season, week: world.week + 1, text: `👔 Neuer Cheftrainer: ${cand.name} (${'★'.repeat(cand.quality)}, Spielstil ${cand.style}, ${cand.formation}).${old ? ` ${old.name} wurde entlassen (Abfindung ${(severance / 1e6).toFixed(1).replace('.', ',')} Mio. €).` : ''}` });
+  world.news.unshift({ season: world.season, week: world.week + 1, text: `👔 Neuer Cheftrainer: ${cand.name} (${'★'.repeat(cand.quality)}, Spielstil ${cand.style}, ${cand.formation}).${old ? ` ${old.name} wurde entlassen (Abfindung ${money(severance)}).` : ''}` });
   coachDecides(world);
   return severance;
 }

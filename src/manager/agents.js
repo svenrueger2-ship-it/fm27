@@ -2,11 +2,11 @@
 // Contract poker with signing fee, agent fee, release clause, goal & appearance bonuses;
 // pre-contracts (Bosman) for players in the last year of their contract – in both directions;
 // release clauses that rich clubs can trigger; sell-on percentages on outgoing transfers.
+import { money, eur } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { contractDemand, news, ensureTransferState, executeTransfer } from './transfers.js';
 import { ensureStats } from './achievements.js';
 
-const eur = (n) => `${Math.round(n).toLocaleString('de-DE')} €`; // exact amounts in negotiations (v2.9)
 const AGENTS = [
   ['Jorge Mendoza', 1.3, 2, 0.1], ['Pini Zahavsky', 1.25, 2, 0.12], ['Volker Struth', 1.12, 3, 0.08], ['Rafaela Pimenta', 1.22, 2, 0.1],
   ['Kia Joorab', 1.15, 3, 0.09], ['Marc Kosicke', 1.05, 4, 0.06], ['Giuliano Bertolucci', 1.1, 3, 0.07], ['Sascha Breese', 1.0, 4, 0.05],
@@ -111,7 +111,7 @@ export function weeklyAgents(world, rng) {
       if (!buyer || !rng.chance(clamp(p.value / p.releaseClause - 0.6, 0, 0.6))) continue;
       const fee = p.releaseClause;
       executeTransfer(world, p, me, buyer, fee, Math.round(p.wage * 1.3 / 1000) * 1000, 4);
-      news(world, `💥 Ausstiegsklausel gezogen! ${buyer.name} zahlt ${(fee / 1e6).toFixed(1).replace('.', ',')} Mio. € für ${p.firstName} ${p.lastName} – du konntest nichts tun.`);
+      news(world, `💥 Ausstiegsklausel gezogen! ${buyer.name} zahlt ${money(fee)} für ${p.firstName} ${p.lastName} – du konntest nichts tun.`);
     }
   }
 }
@@ -142,7 +142,7 @@ export function paySellOn(world, p, fee) {
   const amount = Math.round((fee * p.sellOn.pct) / 100 / 1e4) * 1e4;
   if (c && amount > 0) {
     c.budget += amount;
-    if (c.id === world.userClubId) news(world, `💶 Weiterverkaufsbeteiligung: ${p.lastName} wurde verkauft – du erhältst ${p.sellOn.pct} % = ${(amount / 1e6).toFixed(2).replace('.', ',')} Mio. €.`);
+    if (c.id === world.userClubId) news(world, `💶 Weiterverkaufsbeteiligung: ${p.lastName} wurde verkauft – du erhältst ${p.sellOn.pct} % = ${money(amount)}.`);
   }
   p.sellOn = null;
 }

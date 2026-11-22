@@ -1,3 +1,4 @@
+import { IS_MOBILE } from '../../core/device.js';
 // Start menu, new game / club selection, save slots, settings, season end.
 import { buildStory, showStory } from '../story.js';
 import { ceremony } from '../fx.js';
@@ -84,7 +85,8 @@ export function startScreen(app, el) {
       <main class="sm-center" id="m-center">${welcomeHtml()}</main>
       <aside class="sm-notes"><div class="pn-top"><small>BAKUSA</small><h3>Patchnotes</h3></div><div class="pn-list">${patchHtml()}</div></aside>
     </div>`;
-  const stopScene = startMenuScene(el.querySelector('#mbg'), app.settings.quality);
+  // phones: no live 3D scene behind the menu (it costs battery and makes the menu sluggish)
+  const stopScene = IS_MOBILE ? (() => {}) : startMenuScene(el.querySelector('#mbg'), app.settings.quality);
   const center = el.querySelector('#m-center');
   let latest = null, latestWorld = null;
   el.querySelectorAll('.pn-head').forEach((h) => (h.onclick = () => h.parentElement.classList.toggle('open')));

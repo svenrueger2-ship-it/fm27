@@ -11,15 +11,9 @@ export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-export const moneyExact = (v) => (v == null ? '–' : `${Math.round(v).toLocaleString('de-DE')} €`);
-export function money(v) {
-  if (v == null) return '–';
-  const a = Math.abs(v);
-  if (a >= 1e9) return (v / 1e9).toFixed(2).replace('.', ',') + ' Mrd. €';
-  if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e8 ? 0 : 1).replace('.', ',') + ' Mio. €';
-  if (a >= 1e3) return Math.round(v / 1e3) + ' Tsd. €';
-  return v + ' €';
-}
+export const moneyExact = (v) => _eur(v);
+export { money } from '../core/fmt.js';
+import { eur as _eur, dec2 as _dec2 } from '../core/fmt.js';
 
 // Flags are drawn with CSS (emoji flags do not render on Windows). h = horizontal bands, v = vertical bands.
 const FLAGS = {
@@ -181,7 +175,7 @@ export function confirmDialog(text, okLabel = 'OK') {
 
 // ------------------------------------------------------------------ money inputs (v2.9)
 // Commercial formatting while typing: "1.500.000 €". Accepts "1,5 Mio", "750 Tsd", "2m", "300k" too.
-export const fmtMoneyInput = (v) => (v == null || v === '' ? '' : Math.round(+v).toLocaleString('de-DE'));
+export const fmtMoneyInput = (v) => (v == null || v === '' ? '' : _dec2(Math.round(+v * 100) / 100));
 export function parseMoney(str) {
   if (str == null) return 0;
   const t = String(str).trim().toLowerCase().replace(/€/g, '').replace(/\s+/g, '');
@@ -190,9 +184,9 @@ export function parseMoney(str) {
   if (!m) return Math.round(+t.replace(/\D/g, '') || 0);
   let num = m[1];
   const unit = m[2];
-  if (unit) num = +num.replace(/\./g, '').replace(',', '.'); else num = +num.replace(/[.,]/g, '');
+  if (unit || /,\d{1,2}$/.test(num)) num = +num.replace(/\./g, '').replace(',', '.'); else num = +num.replace(/[.,]/g, '');
   const mul = unit === 'mrd' ? 1e9 : unit === 'mio' || unit === 'm' ? 1e6 : unit === 'tsd' || unit === 'k' || unit === 't' ? 1e3 : 1;
-  return Math.round((num || 0) * mul);
+  return Math.round((num || 0) * mul * 100) / 100;
 }
 export function moneyInput(id, value, { step = 10000, placeholder = '' } = {}) {
   return `<span class="minput"><button type="button" class="mi-b" data-mstep="-${step}" data-for="${id}" aria-label="weniger">−</button><input class="input" id="${id}" type="text" inputmode="numeric" autocomplete="off" data-money value="${value === '' || value == null ? '' : fmtMoneyInput(value)}" placeholder="${placeholder}"><i>€</i><button type="button" class="mi-b" data-mstep="${step}" data-for="${id}" aria-label="mehr">+</button></span>`;

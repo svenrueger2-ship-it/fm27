@@ -1,6 +1,7 @@
 // Player relations (v0.9): personalities, one-to-one talks, promises that are tracked and can be
 // broken, the captaincy, players who ask for a talk or want to leave — and loans with reports,
 // buy options and buy obligations in both directions.
+import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { taskEvent } from './progress.js';
 import { autoLineup } from '../match/tactics.js';
@@ -166,7 +167,7 @@ export function acceptLoanOut(world, id, o) {
   ensureTransferState(world);
   world.transfer.listed = world.transfer.listed.filter((x) => x !== id);
   if (o.fee) bookTransfer(me, o.fee, `Leihgebühr ${p.lastName}`, world);
-  news(world, `🔁 ${p.firstName} ${p.lastName} wird bis Saisonende an ${to.name} verliehen (${Math.round(o.share * 100)} % Gehaltsübernahme${o.kind === 'option' ? `, Kaufoption ${(o.buy / 1e6).toFixed(1).replace('.', ',')} Mio. €` : o.kind === 'obligation' ? `, Kaufpflicht ab ${o.apps} Einsätzen: ${(o.buy / 1e6).toFixed(1).replace('.', ',')} Mio. €` : ''}).`);
+  news(world, `🔁 ${p.firstName} ${p.lastName} wird bis Saisonende an ${to.name} verliehen (${Math.round(o.share * 100)} % Gehaltsübernahme${o.kind === 'option' ? `, Kaufoption ${money(o.buy)}` : o.kind === 'obligation' ? `, Kaufpflicht ab ${o.apps} Einsätzen: ${money(o.buy)}` : ''}).`);
 }
 
 export function loanedOut(world) { return (userClub(world).loanedOut || []).map((id) => world.players[id]).filter((p) => p && p.loan?.from === world.userClubId); }
@@ -204,7 +205,7 @@ export function seasonLoanDecisions(world, rng) {
     bookTransfer(host, -buy.fee, `Kauf ${p.lastName}`, null);
     (p.moves ||= []).push({ season: world.season, week: world.week, from: me.short, to: host.short, fee: buy.fee });
     p.clubId = host.id; p.loan = null; p.contract = Math.max(p.contract, 3);
-    news(world, `💶 ${host.name}: ${buy.why} – ${p.firstName} ${p.lastName} wechselt fest für ${(buy.fee / 1e6).toFixed(1).replace('.', ',')} Mio. €.`);
+    news(world, `💶 ${host.name}: ${buy.why} – ${p.firstName} ${p.lastName} wechselt fest für ${money(buy.fee)}.`);
   }
   for (const p of loanedIn(world)) {
     if (!p.loan.obligation || p.stats.apps < p.loan.obligation.apps) continue;
