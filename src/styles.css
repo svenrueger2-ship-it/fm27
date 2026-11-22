@@ -1023,8 +1023,8 @@ html.mobile .start3 { grid-template-columns: 240px 1fr !important; }
 html.mobile .sm-nav { padding: .8rem .6rem; } html.mobile .sm-nav nav button { padding: .5rem .6rem; }
 html.mobile .sm-brand { padding-bottom: .6rem; margin-bottom: .5rem; }
 html.mobile .club-hero .wm, html.mobile .pp-wm { display: none; }
-html.mobile .pp-hero { grid-template-columns: auto 1fr; padding: 1rem; } html.mobile .pp-rings { grid-column: 1 / -1; } html.mobile .pp-body { grid-template-columns: 1fr; }
-html.mobile .pp-face .pface { width: 96px !important; height: 96px !important; }
+html.mobile .pp-hero { grid-template-columns: auto 1fr auto !important; padding: .6rem .8rem; gap: .8rem; border-radius: 14px; } html.mobile .pp-rings { grid-column: auto !important; gap: .5rem; } html.mobile .pp-body { grid-template-columns: 1fr 1fr !important; gap: .5rem; }
+html.mobile .pp-face .pface { width: 72px !important; height: 72px !important; border-radius: 14px; }
 @media (max-height: 520px) {
   html.mobile .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html.mobile .kpis b, html.mobile .an-kpis .kpi b { font-size: 1.1rem; }
@@ -1043,3 +1043,79 @@ html.mobile .pp-face .pface { width: 96px !important; height: 96px !important; }
 .md-gate .cal-vs { display: flex; align-items: center; justify-content: center; gap: 1.4rem; margin: 1rem 0; }
 .md-gate .cal-vs b { font-family: var(--display); font-size: 1.6rem; color: var(--acc); }
 .md-gate h3 { font-size: 1.5rem; margin: .2rem 0 .3rem; }
+/* ===================== v3.0.3 phone landscape: everything on one screen ===================== */
+html.mobile { font-size: 12.5px; }
+html.mobile .sv-match span, html.mobile .ov-score b, html.mobile .next-match .vs .mid, html.mobile .kpis b { white-space: nowrap; }
+html.mobile .crest { flex-shrink: 0; }
+@media (orientation: landscape) and (max-height: 600px) {
+  /* --- start menu --- */
+  html.mobile .start3 { grid-template-columns: 190px minmax(0, 1fr) !important; gap: .5rem; padding: .45rem; height: 100vh; min-height: 0; }
+  html.mobile .sm-nav { padding: .55rem .45rem; border-radius: 14px; overflow-y: auto; }
+  html.mobile .sm-brand { padding: 0 .3rem .35rem; margin-bottom: .3rem; }
+  html.mobile .sm-brand b { font-size: 1rem; } html.mobile .sm-brand span { font-size: 2rem; } html.mobile .sm-brand small { font-size: .6rem; margin-top: .1rem; }
+  html.mobile .sm-nav nav button { padding: .38rem .55rem; font-size: .95rem; min-height: 0; } html.mobile .sm-nav nav { gap: 1px; }
+  html.mobile .sv-panel, html.mobile .sv-welcome { padding: .7rem .8rem; border-radius: 14px; overflow-y: auto; margin: 0; }
+  html.mobile .sv-welcome h1 { font-size: 2.6rem; margin-top: .3rem; } html.mobile .sv-welcome .sub { font-size: .92rem; margin: .5rem 0 .7rem; }
+  html.mobile .sv-feat { gap: .4rem; margin-bottom: .7rem; } html.mobile .sv-feat div { padding: .4rem .6rem; } html.mobile .sv-feat b { font-size: 1.4rem; }
+  html.mobile .sv-club { padding: .5rem .8rem; gap: .8rem; margin-bottom: .5rem; border-radius: 12px; }
+  html.mobile .sv-club .crest { width: 48px; height: 48px; } html.mobile .sv-club h2 { font-size: 1.45rem; } html.mobile .sv-club p { font-size: .85rem; }
+  html.mobile .sv-rank b { font-size: 2rem; }
+  html.mobile .sv-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; margin-bottom: .5rem; }
+  html.mobile .sv-card { padding: .45rem .6rem; border-radius: 11px; min-width: 0; } html.mobile .sv-card h4 { font-size: .68rem; margin-bottom: .3rem; }
+  html.mobile .sv-card.wide { grid-column: span 2; }
+  html.mobile .sv-match { gap: .3rem; font-size: .85rem; justify-content: space-between; } html.mobile .sv-match .crest { width: 24px; height: 24px; } html.mobile .sv-match span { font-size: 1.15rem; padding: 0 .15rem; }
+  html.mobile .sv-big { font-size: 1.35rem; } html.mobile .sv-card p.muted { font-size: .75rem; margin: .2rem 0 0; }
+  html.mobile .sv-table { gap: 0; } html.mobile .sv-table li { padding: .08rem .35rem; font-size: .8rem; white-space: nowrap; overflow: hidden; } html.mobile .sv-table li b { font-size: .9rem; }
+  html.mobile .sv-table li:nth-child(n+5) { display: none; }
+  html.mobile .sv-news { font-size: .76rem; gap: .15rem; } html.mobile .sv-news li { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; } html.mobile .sv-news li:nth-child(n+4) { display: none; }
+  html.mobile .sv-panel .row-actions .btn { padding: .45rem .9rem; }
+  /* --- general density --- */
+  html.mobile .topbar { min-height: 0; height: 40px; }
+  html.mobile .page { padding: .45rem .6rem .8rem; }
+  html.mobile .page-head { margin-bottom: .4rem; } html.mobile .page-head h2, html.mobile .page > h2 { font-size: 1.25rem; margin: 0 0 .4rem; }
+  html.mobile .card { padding: .55rem .7rem; margin-bottom: .45rem; border-radius: 12px; }
+  html.mobile .card h3 { font-size: .95rem; margin: 0 0 .35rem; }
+  html.mobile .grid-2, html.mobile .grid-3, html.mobile .grid-4 { gap: .45rem; margin-bottom: .45rem; }
+  html.mobile .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } html.mobile .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  html.mobile .grid-2 > .card, html.mobile .grid-3 > .card, html.mobile .grid-4 > .card { margin-bottom: 0; }
+  html.mobile p { margin: .3rem 0; } html.mobile .card p.muted { font-size: .82rem; }
+  html.mobile .btn.lg { padding: .55rem 1rem; font-size: 1rem; }
+  html.mobile .kpis { gap: .35rem; margin: .4rem 0; } html.mobile .kpis div { padding: .3rem .5rem; } html.mobile .kpis b { font-size: 1.05rem; }
+  html.mobile .tabs button { padding: .35rem .7rem; }
+  html.mobile .tbl td, html.mobile .tbl th { padding: .3rem .4rem; }
+  /* --- home --- */
+  html.mobile .club-hero { padding: .6rem .8rem; } html.mobile .club-hero > .crest { width: 56px; height: 56px; } html.mobile .club-hero h2 { font-size: 1.3rem; margin: 0; }
+  html.mobile .club-hero p { font-size: .82rem; } html.mobile .club-hero .btn { padding: .25rem .6rem; }
+  html.mobile .next-match .vs { margin: .3rem 0; } html.mobile .next-match .vs .crest { width: 44px; height: 44px; } html.mobile .next-match .vs strong { font-size: 1.05rem; } html.mobile .next-match .vs .mid { font-size: 1.5rem; }
+  html.mobile .next-match .chips .chip { font-size: .7rem; padding: .15rem .45rem; }
+  html.mobile .mini-player { padding: .15rem 0; } html.mobile .mini-player .pface { width: 28px !important; height: 28px !important; }
+  html.mobile .tbl.compact td { padding: .12rem .3rem; font-size: .8rem; }
+  /* --- matchday --- */
+  html.mobile .vs-screen { min-height: 0; } html.mobile .vs-screen .side { padding: .5rem .3rem; } html.mobile .vs-screen .side .crest { width: 64px; height: 64px; }
+  html.mobile .vs-screen .side h3 { font-size: 1.15rem; margin: .2rem 0; } html.mobile .vs-screen .chip { font-size: .68rem; }
+  html.mobile .vs-screen .mid b, html.mobile .vs-screen .vs { font-size: 2rem; }
+  html.mobile .lineup li { padding: .08rem .3rem; font-size: .8rem; } html.mobile .lineup { columns: 2; column-gap: .6rem; }
+  html.mobile .md-gate { margin: .5rem auto; padding: .9rem; } html.mobile .md-gate .crest { width: 44px; height: 44px; }
+  /* --- calendar --- */
+  html.mobile .cal-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) !important; gap: .45rem; margin-bottom: .45rem; }
+  html.mobile .cal-main { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important; gap: .45rem; }
+  html.mobile .cal-today h3 { font-size: 1.1rem; margin: .1rem 0; } html.mobile .cal-vs .crest { width: 40px; height: 40px; } html.mobile .cal-vs b { font-size: 1.3rem; }
+  html.mobile .cal-btns { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: .3rem; } html.mobile .cal-btns .btn { padding: .4rem .3rem; font-size: .82rem; }
+  html.mobile .cal-log { max-height: 92px; margin-top: .35rem; } html.mobile .cal-log div { padding: .15rem .4rem; font-size: .76rem; }
+  html.mobile .cal-ctrl > p.muted { display: none; }
+  html.mobile .cal-grid { gap: 2px; margin-top: .3rem; } html.mobile .cd { min-height: 34px; padding: .1rem .2rem; font-size: .65rem; border-radius: 6px; }
+  html.mobile .cd .crest { width: 16px; height: 16px; } html.mobile .cd-tr, html.mobile .cd-tag { display: none; }
+  html.mobile .cu { padding: .2rem 0; } html.mobile .cu .crest { width: 22px; height: 22px; } html.mobile .cu em { display: none; }
+  /* --- finance / misc --- */
+  html.mobile .facility { padding: .4rem .5rem; } html.mobile .sparkline, html.mobile svg.spark { max-height: 34px; }
+}
+html.mobile .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+html.mobile .table-wrap .tbl select { max-width: 9rem; }
+
+html.mobile .pp-ring { width: 64px; height: 64px; } html.mobile .pp-ring b { font-size: 1.3rem; } html.mobile .pp-ring small { font-size: .5rem; }
+html.mobile .pp-id h3 { font-size: 1.7rem; } html.mobile .pp-first { font-size: .8rem; } html.mobile .pp-chips { margin: .35rem 0 .2rem; } html.mobile .pp-chips span { padding: .12rem .45rem; font-size: .72rem; }
+html.mobile .pp-facts { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .35rem; margin: .45rem 0; } html.mobile .pp-facts > div { padding: .35rem .5rem; border-radius: 10px; } html.mobile .pp-facts b { font-size: .9rem; }
+html.mobile .pp-card { padding: .5rem .6rem; border-radius: 12px; } html.mobile .pp-col { gap: .5rem; } html.mobile .pp-mini { grid-template-columns: 90px 1fr 28px; margin: .15rem 0; font-size: .76rem; }
+html.mobile .pp-radar svg { max-width: 200px; } html.mobile .pp-actions { padding: .45rem; margin: .45rem 0; gap: .35rem; }
+html.mobile .modal { max-height: calc(100vh - 16px); padding: .8rem; } html.mobile .modal-wrap { padding: 8px; }
+html.mobile .lineup { display: block; columns: 2; column-gap: .6rem; } html.mobile .lineup li { break-inside: avoid; }

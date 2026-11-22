@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.0.3', date: '22.11.2026', title: 'Handy: alles auf einen Blick',
+    neu: [],
+    verbessert: ['Android: kompaktes Querformat-Layout – Startbildschirm, Zentrale, Kalender, Spieltag und Spielerprofil passen (fast) ohne Scrollen aufs Display'],
+    behoben: ['Ergebnis im Startmenü wurde umgebrochen', 'Fehlendes Symbol bei „Karriere fortsetzen“', 'Trainingstabelle ragte über den Bildschirmrand'],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '3.0.2', date: '22.11.2026', title: 'Lebendiger Kalender',
     neu: ['Die Welt läuft Tag für Tag weiter: Transfermarkt (Di), Pokal- und Europapokalspiele (Mi), Scoutberichte & Marktwerte (Do), Ligaspiele aller Länder (Sa)', 'Der Spieltag öffnet erst am Spieltag selbst – vorher geht es über den Kalender'],
     verbessert: ['Android: 3D-Spiel deutlich schärfer (höhere Auflösung, Kantenglättung, Schatten, Leuchteffekte ab „hoch“)'],

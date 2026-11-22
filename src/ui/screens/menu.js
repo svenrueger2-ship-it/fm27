@@ -69,7 +69,7 @@ export function startScreen(app, el) {
         <div class="sm-brand"><b>FUSSBALL MANAGER</b><span>2027</span><small>© BAKUSA</small></div>
         <nav>
           <button data-go="new"><i>▶</i>Karriere starten</button>
-          <button data-go="continue" id="m-cont"><i>⏵</i>Karriere fortsetzen</button>
+          <button data-go="continue" id="m-cont"><i>▶</i>Karriere fortsetzen</button>
           <button data-go="load"><i>💾</i>Spielstand laden</button>
           <button data-go="clubs"><i>🛡️</i>Vereinsauswahl</button>
           <button data-go="comps"><i>🏆</i>Wettbewerbe</button>
@@ -144,7 +144,7 @@ export function startScreen(app, el) {
       const btn = el.querySelector('#m-cont');
       if (!latest) { btn.classList.add('dim'); return; }
       latestWorld = await loadGame(latest.slot);
-      if (latestWorld && el.isConnected && center.querySelector('.sv-welcome')) center.innerHTML = `<div class="sv-panel">${careerHtml(latestWorld, latest)}<div class="row-actions"><button class="btn primary lg" data-go="continue">⏵ Karriere fortsetzen</button><button class="btn lg" data-go="new">Neue Karriere</button></div></div>`;
+      if (latestWorld && el.isConnected && center.querySelector('.sv-welcome')) center.innerHTML = `<div class="sv-panel">${careerHtml(latestWorld, latest)}<div class="row-actions"><button class="btn primary lg" data-go="continue">▶ Karriere fortsetzen</button><button class="btn lg" data-go="new">Neue Karriere</button></div></div>`;
     } catch (e) { console.warn('start overview', e); }
   })();
   return stopScene;
