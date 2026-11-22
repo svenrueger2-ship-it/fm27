@@ -33,3 +33,13 @@ console.log('dist/index.html', (readFileSync('dist/index.html').length / 1024).t
 const lr = await esbuild.build({ ...opts, entryPoints: ['src/launcher/main.js'] });
 writeFileSync('dist/launcher.html', html(lr.outputFiles[0].text, 'src/launcher/launcher.css', 'FUSSBALL MANAGER 2027 – Launcher').replace('<div id="app"></div>', ''));
 console.log('dist/launcher.html', (readFileSync('dist/launcher.html').length / 1024).toFixed(0) + ' KB');
+
+// v2.7: content version + manifest for live updates (uploaded to the GitHub release "live")
+import { createHash } from 'node:crypto';
+const { PATCHNOTES } = await import('./src/data/patchnotes.js');
+const shellApi = Number((readFileSync('desktop/main.cjs', 'utf8').match(/const SHELL_API = (\d+)/) || [0, 1])[1]);
+const files = {};
+for (const f of ['index.html', 'launcher.html']) { const b = readFileSync('dist/' + f); files[f] = { size: b.length, sha256: createHash('sha256').update(b).digest('hex') }; }
+writeFileSync('dist/version.json', JSON.stringify({ version: PATCHNOTES[0].version }));
+writeFileSync('dist/manifest.json', JSON.stringify({ version: PATCHNOTES[0].version, title: PATCHNOTES[0].title, date: PATCHNOTES[0].date, shellApi, files }, null, 2));
+console.log('dist/manifest.json', PATCHNOTES[0].version, 'shellApi', shellApi);

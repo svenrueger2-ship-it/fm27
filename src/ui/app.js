@@ -1,3 +1,4 @@
+import { GAME_VERSION } from '../data/patchnotes.js';
 // Application shell: routing, layout, autosave. Screens live in ./screens/*.
 import { loadSettings, saveGame } from '../storage/db.js';
 import { userFixture, userLeague, isUserSeasonOver } from '../manager/season.js';
@@ -36,6 +37,7 @@ const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScr
 export class App {
   constructor(root) {
     if (window.bakusa?.onUpdate) window.bakusa.onUpdate((u) => this.onUpdate(u));
+    if (window.bakusa?.onLive) window.bakusa.onLive((l) => this.onLive(l));
     this.root = root;
     this.world = null;
     this.slot = null;
@@ -52,10 +54,12 @@ export class App {
     // after a sacking the user has to pick a new club first
     if (this.world?.career?.pendingSack && !['career', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'career';
     this.screen = screen; this.params = params;
+    if (this.pendingLive && screen !== 'match') setTimeout(() => this.applyLive?.(), 800);
     document.body.classList.toggle('no-anim', this.settings.animations === false);
     this.render();
     requestAnimationFrame(() => animateNumbers(this.root || document));
     if (screen !== 'live') setTimeout(() => runCeremonies(this), 350);
+    if (this.settings.achToasts === false) { if (this.world?.mgr) this.world.mgr.levelUps = []; if (this.world) this.world.achToast = []; }
     if (this.world?.mgr?.levelUps?.length) { const l = this.world.mgr.levelUps.splice(0); setTimeout(() => toast(`⬆️ Level ${l.at(-1)} erreicht! ${l.length > 1 ? `+${l.length} Skillpunkte` : '+1 Skillpunkt'} im Manager-Profil`, 3800), 300); }
     if (this.world?.achToast?.length) { const t = this.world.achToast.splice(0); t.forEach((x, i) => setTimeout(() => toast(`🏅 Erfolg: ${x}`, 3200), 400 + i * 900)); }
     window.scrollTo(0, 0);
@@ -117,6 +121,30 @@ export class App {
         : u.state === 'downloading' ? `⬇ Update wird geladen … ${u.percent ?? 0}%` : `⬇ Neue Version <b>v${u.version}</b> gefunden – wird geladen …`;
       const go = bar.querySelector('#upd-go'); if (go) go.onclick = () => window.bakusa.installUpdate();
     } else if (bar) bar.remove();
+  }
+
+  // v2.7 live update: new game files were downloaded in the background – reload without reinstalling
+  onLive(l) {
+    if (l.state !== 'installed' || l.version === GAME_VERSION) return;
+    let bar = document.getElementById('update-bar');
+    if (!bar) { bar = document.createElement('div'); bar.id = 'update-bar'; document.body.appendChild(bar); }
+    this.pendingLive = l;
+    const apply = async () => {
+      if (this.liveApplying) return;
+      // never interrupt a running 3D match – the update is applied right after it
+      if (this.screen === 'match') { bar.innerHTML = `✨ Version <b>${l.version}</b> wird nach diesem Spiel automatisch installiert.`; return; }
+      this.liveApplying = true;
+      let n = 3;
+      const tick = async () => {
+        bar.innerHTML = `✨ Update auf Version <b>${l.version}</b> – Spielstand wird gesichert, Neustart in ${n} …`;
+        if (n-- > 0) return setTimeout(tick, 1000);
+        if (this.world) await this.save(this.slot || 'slot1', true);
+        window.bakusa.reloadGame(this.world ? this.slot || 'slot1' : null);
+      };
+      tick();
+    };
+    this.applyLive = apply;
+    apply();
   }
 
   async autosave() {

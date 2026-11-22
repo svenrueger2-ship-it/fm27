@@ -4,3 +4,4 @@ desktop/release/
 desktop/app/index.html
 dist/
 desktop/app/launcher.html
+desktop/app/version.json

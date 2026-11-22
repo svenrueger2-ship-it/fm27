@@ -12,5 +12,10 @@ contextBridge.exposeInMainWorld('bakusa', {
   close: () => ipcRenderer.send('bakusa:close'),
   getInfo: () => ipcRenderer.invoke('bakusa:info'),
   openReleases: () => ipcRenderer.send('bakusa:releases'),
+  // live updates (v2.7)
+  onLive: (cb) => ipcRenderer.on('bakusa:live', (_e, d) => cb(d)),
+  liveCheck: () => ipcRenderer.invoke('bakusa:live-check'),
+  reloadLauncher: () => ipcRenderer.send('bakusa:reload-launcher'),
+  reloadGame: (slot) => ipcRenderer.send('bakusa:reload-game', slot),
   platform: 'windows',
 });

@@ -5,7 +5,8 @@
 let ctx = null;
 
 export class StadiumAudio {
-  constructor({ volume = 0.7, announcer = true, commentary = false, homeName = '', awayName = '' } = {}) {
+  constructor({ volume = 0.7, announcer = true, commentary = false, crowd = 1, chants = true, homeName = '', awayName = '' } = {}) {
+    this.crowd = crowd; this.chantsOn = chants;
     this.enabled = volume > 0;
     this.vol = volume; this.announcer = announcer; this.commentary = commentary;
     this.home = homeName; this.away = awayName;
@@ -125,12 +126,12 @@ export class StadiumAudio {
     // tension: ball close to a goal and moving forward
     const b = E.ball.pos, near = Math.max(0, 1 - (52.5 - Math.abs(b.x)) / 35);
     this.tension += ((near * 0.9 + (E.phase === 'setpiece' ? 0.2 : 0)) - this.tension) * Math.min(1, dt * 1.5);
-    const target = E.phase === 'halftime' || E.phase === 'fulltime' ? 0.18 : 0.26 + this.tension * 0.35;
+    const target = (E.phase === 'halftime' || E.phase === 'fulltime' ? 0.18 : 0.26 + this.tension * 0.35) * this.crowd;
     this.bedGain.gain.setTargetAtTime(target, ctx.currentTime, 0.4);
-    this.hissGain.gain.setTargetAtTime(0.02 + this.tension * 0.08, ctx.currentTime, 0.4);
+    this.hissGain.gain.setTargetAtTime((0.02 + this.tension * 0.08) * this.crowd, ctx.currentTime, 0.4);
     // chants when the game is calm
     this.nextChant -= dt;
-    if (this.nextChant <= 0 && E.phase === 'play') { if (this.tension < 0.5) this.chant(); this.nextChant = 14 + Math.random() * 20; }
+    if (this.nextChant <= 0 && E.phase === 'play') { if (this.tension < 0.5 && this.chantsOn) this.chant(); this.nextChant = 14 + Math.random() * 20; }
     // ball contacts from velocity changes
     const v = E.ball.vel, sp = Math.hypot(v.x, v.y, v.z);
     if (this.prevSp != null && sp - this.prevSp > 5 && this.t - this.lastKick > 0.15) { this.kick(Math.min(1.2, (sp - this.prevSp) / 18)); this.lastKick = this.t; }

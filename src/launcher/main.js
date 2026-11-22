@@ -24,7 +24,7 @@ function accentFrom(colors) {
 const rgb = (h) => { const n = parseInt(h.replace('#', ''), 16); return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`; };
 
 sfx.setSfx(LS.sounds);
-const state = { tab: 'news', saves: [], update: { state: B ? 'idle' : 'browser' }, info: { version: GAME_VERSION }, launching: false, expanded: null };
+const state = { gate: !!B, queued: (() => { try { const q = JSON.parse(sessionStorage.getItem('fm27-queued') || 'null'); sessionStorage.removeItem('fm27-queued'); return q; } catch { return null; } })(), tab: 'news', saves: [], update: { state: B ? 'idle' : 'browser' }, live: { state: B ? 'idle' : 'browser' }, info: { version: GAME_VERSION }, launching: false, expanded: null };
 
 function badge(s, size = 46) {
   const m = s.meta || {}, c1 = m.colors?.primary || '#4a3d8f', c2 = m.colors?.secondary || '#ffffff';
@@ -82,16 +82,21 @@ function renderContinue() {
 }
 
 // ------------------------------------------------------------------ panel tabs
+// Patch-note lines are "Headline: details" or "Headline – details"; show the headline bold and the rest in full.
+function noteLi(n) {
+  const m = n.match(/^([^:–]{3,48})(?::| –)\s+(.+)$/);
+  return m ? `<li><b>${esc(m[1])}</b><span>${esc(m[2])}</span></li>` : `<li><span>${esc(n)}</span></li>`;
+}
 function newsHtml() {
   const [cur, ...older] = PATCHNOTES;
   const ex = state.expanded === cur.version;
   return `<article class="feat"><div class="feat-art"><span class="feat-ver">${esc(cur.version)}</span><span class="feat-new">NEU</span></div>
     <div class="feat-body"><small>${esc(cur.date)}</small><h3>${esc(cur.title)}</h3>
-    <ul>${(ex ? cur.neu : cur.neu.slice(0, 5)).map((n) => `<li>${esc(n.split(':')[0].length < 40 && n.includes(':') ? n.split(':')[0] : n.length > 90 ? n.slice(0, 88) + '…' : n)}</li>`).join('')}</ul>
-    ${ex ? `${cur.verbessert?.length ? `<h4>Verbessert</h4><ul>${cur.verbessert.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}${cur.behoben?.length ? `<h4>Behoben</h4><ul>${cur.behoben.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}` : ''}
-    <button class="link" data-exp="${esc(cur.version)}">${ex ? 'Weniger anzeigen' : `Alle ${cur.neu.length + (cur.verbessert?.length || 0) + (cur.behoben?.length || 0)} Änderungen`}</button></div></article>
+    <ul class="notes">${(ex ? cur.neu : cur.neu.slice(0, 4)).map(noteLi).join('')}</ul>
+    ${ex ? `${cur.verbessert?.length ? `<h4>Verbessert</h4><ul class="notes">${cur.verbessert.map(noteLi).join('')}</ul>` : ''}${cur.behoben?.length ? `<h4>Behoben</h4><ul class="notes">${cur.behoben.map(noteLi).join('')}</ul>` : ''}` : ''}
+    <button class="link" data-exp="${esc(cur.version)}">${ex ? 'Weniger anzeigen' : `Alle ${cur.neu.length + (cur.verbessert?.length || 0) + (cur.behoben?.length || 0)} Änderungen anzeigen`}</button></div></article>
     <h4 class="sec">Frühere Updates</h4>
-    ${older.slice(0, 8).map((v) => `<details class="old"><summary><span class="ov">${esc(v.version)}</span><span class="ot">${esc(v.title.replace(/^Version [\d.]+ – /, ''))}</span><span class="od">${v.neu.length} neu</span></summary><ul>${v.neu.slice(0, 8).map((n) => `<li>${esc(n.length > 120 ? n.slice(0, 118) + '…' : n)}</li>`).join('')}</ul></details>`).join('')}`;
+    ${older.slice(0, 10).map((v) => `<details class="old"><summary><span class="ov">${esc(v.version)}</span><span class="ot">${esc(v.title.replace(/^Version [\d.]+ – /, ''))}</span><span class="od">${v.neu.length} neu</span></summary><ul class="notes">${v.neu.map(noteLi).join('')}</ul></details>`).join('')}`;
 }
 function savesHtml() {
   if (!state.saves.length) return `<div class="empty-state"><div class="es-ico">💾</div><p>Noch keine Spielstände.</p><small>Sie erscheinen hier, sobald du im Spiel speicherst.</small></div>`;
@@ -110,8 +115,9 @@ function settingsHtml() {
     ${tog('snd', LS.sounds, 'Launcher-Sounds', 'Klicks und Anpfiff beim Start')}
     ${tog('motion', LS.motion, 'Animierter Hintergrund', 'Ausschalten spart Akku auf Laptops')}
     ${B ? tog('ret', LS.returnToLauncher, 'Zurück zum Launcher', 'Nach dem Beenden des Spiels den Launcher wieder öffnen') : ''}</div>
-    <div class="set-group"><h4 class="sec">Updates</h4><div class="row"><span><b>Update-Quelle</b><small>GitHub · svenrueger2-ship-it/fm27</small></span><button class="btn-sm" id="chk" ${B && state.info.portable ? 'disabled' : ''}>Jetzt prüfen</button></div>
-    ${state.info.portable ? '<p class="note">Du nutzt die portable Version – sie kann sich nicht selbst aktualisieren. Installiere einmal den Setup-Installer aus den Releases, dann laufen Updates automatisch.</p>' : ''}</div>`;
+    <div class="set-group"><h4 class="sec">Updates</h4><div class="row"><span><b>Update-Quelle</b><small>GitHub · svenrueger2-ship-it/fm27</small></span><button class="btn-sm" id="chk">Jetzt prüfen</button></div>
+    <div class="row"><span><b>Live-Updates</b><small>Neue Versionen werden beim Start und alle 10 Minuten geprüft und in Sekunden eingespielt – ohne Neuinstallation</small></span><span class="pill-ok">aktiv</span></div>
+    ${state.info.portable ? '<p class="note">Portable Version: Spiel-Updates kommen live. Nur selten nötige App-Updates (neue Fenster-Technik) musst du hier neu herunterladen.</p>' : ''}</div>`;
 }
 function infoHtml() {
   const keys = [['F11', 'Vollbild an/aus'], ['Esc', 'Vollbild verlassen'], ['Leertaste', 'Pause im 3D-Spiel'], ['Enter', 'Im Launcher: Spielen']];
@@ -119,7 +125,8 @@ function infoHtml() {
     <h4 class="sec">Tastenkürzel</h4><div class="keys">${keys.map(([k, l]) => `<div><kbd>${k}</kbd><span>${l}</span></div>`).join('')}</div>
     <h4 class="sec">Technik</h4><div class="kv"><span>Engine</span><b>Three.js · WebGL</b></div><div class="kv"><span>Spielstände</span><b>lokal auf diesem PC</b></div>
     ${state.info.electron ? `<div class="kv"><span>Electron / Chromium</span><b>${esc(state.info.electron)} / ${esc(state.info.chrome)}</b></div>` : ''}
-    <div class="kv"><span>Updates</span><b>${state.info.portable ? 'Portable (manuell)' : B ? 'automatisch' : 'Browser-Version'}</b></div>
+    <div class="kv"><span>Spiel-Version</span><b>${esc(state.info.version)}${state.info.appVersion ? ` · App ${esc(state.info.appVersion)}` : ''}</b></div>
+    <div class="kv"><span>Updates</span><b>${B ? 'Live (ohne Neuinstallation)' : 'Browser-Version'}</b></div>
     <button class="btn-sm wide" id="rel">Releases auf GitHub öffnen ↗</button>`;
 }
 function renderPanel() {
@@ -136,36 +143,72 @@ function renderPanel() {
   bind('fs', 'fullscreen'); bind('ret', 'returnToLauncher');
   bind('snd', 'sounds', () => { sfx.setSfx(LS.sounds); $('#tb-snd').textContent = LS.sounds ? '🔊' : '🔇'; });
   bind('motion', 'motion', () => { bg.setPaused(!LS.motion); document.body.classList.toggle('still', !LS.motion); });
-  $('#chk')?.addEventListener('click', () => { B?.checkUpdate(); setUpdate({ state: 'checking' }); });
+  $('#chk')?.addEventListener('click', () => { B?.liveCheck?.(); B?.checkUpdate(); });
   $('#rel')?.addEventListener('click', () => B ? B.openReleases() : window.open('https://github.com/svenrueger2-ship-it/fm27/releases', '_blank'));
 }
 
 // ------------------------------------------------------------------ update status + play button
+// Two update channels: "live" (game files, installed in seconds, no reinstall) and the app shell (rare).
+function setLive(l) {
+  state.live = { ...l };
+  if (['latest', 'error', 'needs-app'].includes(l.state) || (l.state === 'needs-app' && state.info.portable)) openGate();
+  if (l.state === 'installed') {
+    showToast(`✓ Auf Version ${esc(l.version)} aktualisiert`, l.title ? esc(l.title.replace(/^Version [\d.]+ – /, '')) : 'Neue Inhalte geladen');
+    try { if (state.queued) sessionStorage.setItem('fm27-queued', JSON.stringify(state.queued)); } catch {}
+    setTimeout(() => B?.reloadLauncher(), 2200);
+  }
+  setUpdate({});
+}
+function showToast(title, sub) {
+  const t = document.createElement('div'); t.className = 'ltoast'; t.innerHTML = `<b>${title}</b><small>${sub}</small>`;
+  document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3200);
+}
 function setUpdate(u) {
   state.update = { ...state.update, ...u };
-  const U = state.update, el = $('#upd'), play = $('#play'), sub = $('#play-sub'), txt = $('#play-txt');
+  const appU = state.update, Lv = state.live;
+  // the live channel decides what is shown, unless an app (shell) update is actually in progress
+  const appBusy = ['available', 'downloading', 'ready', 'installing'].includes(appU.state);
+  const U = appBusy ? appU : B ? { ...Lv, state: { idle: 'idle', checking: 'checking', latest: 'latest', downloading: 'live-dl', installed: 'live-ok', 'needs-app': state.info.portable ? 'needs-portable' : 'needs-app', error: 'error' }[Lv.state] || 'idle' } : appU;
+  const el = $('#upd'), play = $('#play'), sub = $('#play-sub'), txt = $('#play-txt');
   const msg = {
     browser: ['web', 'Browser-Version – immer aktuell'],
     idle: ['ok', 'Bereit'],
     checking: ['spin', 'Suche nach Updates …'],
-    latest: ['ok', `Neueste Version ${esc(U.version || GAME_VERSION)} installiert`],
+    latest: ['ok', `Aktuell · Version ${esc(U.version || GAME_VERSION)} · automatische Live-Updates aktiv`],
+    'live-dl': ['dl', `Update ${esc(U.version || '')} wird installiert · ${U.percent ?? 0} %`],
+    'live-ok': ['ok', `Auf Version ${esc(U.version || '')} aktualisiert ✓`],
+    'needs-app': ['dl', `Version ${esc(U.version || '')} braucht eine neue App-Version – wird im Hintergrund geladen`],
+    installing: ['dl', ''],
+    'needs-portable': ['gold', `Version ${esc(U.version || '')} braucht eine neue App-Version – bitte neu herunterladen`],
     available: ['dl', `Update ${esc(U.version || '')} gefunden – wird geladen …`],
     downloading: ['dl', `Update wird geladen · ${U.percent ?? 0} %`],
     ready: ['gold', `Update ${esc(U.version || '')} ist bereit`],
     portable: ['web', 'Portable Version · Updates über den Installer'],
     error: ['err', 'Update-Server nicht erreichbar – du kannst trotzdem spielen'],
   }[U.state] || ['ok', ''];
-  el.innerHTML = `<i class="ud ${msg[0]}"></i><span>${msg[1]}</span>${U.state === 'downloading' ? `<span class="mini"><b style="width:${U.percent || 0}%"></b></span>` : ''}`;
+  const dl = U.state === 'downloading' || U.state === 'live-dl';
+  if (U.state === 'installing') msg[1] = `App-Update ${esc(U.version || '')} wird installiert – der Launcher startet gleich neu …`;
+  el.innerHTML = `<i class="ud ${msg[0]}"></i><span>${msg[1]}</span>${dl ? `<span class="mini"><b style="width:${U.percent || 0}%"></b></span>` : ''}${B && !dl && U.state !== 'checking' ? '<button class="ud-btn" id="ud-chk">Jetzt prüfen</button>' : ''}`;
+  $('#ud-chk')?.addEventListener('click', () => { B.liveCheck(); B.checkUpdate(); });
   play.classList.toggle('gold', U.state === 'ready');
-  play.style.setProperty('--fill', U.state === 'downloading' ? `${U.percent || 0}%` : '0%');
-  play.classList.toggle('loading', U.state === 'downloading' || U.state === 'available');
-  txt.textContent = U.state === 'ready' ? 'UPDATE' : 'SPIELEN';
-  sub.textContent = U.state === 'ready' ? `Version ${U.version || ''} installieren · Neustart in Sekunden` : U.state === 'downloading' ? `Update lädt im Hintergrund · ${U.percent || 0} %` : '';
+  play.style.setProperty('--fill', dl ? `${U.percent || 0}%` : '0%');
+  play.classList.toggle('loading', dl || U.state === 'available');
+  const waiting = state.gate || dl || U.state === 'live-ok' || U.state === 'installing';
+  play.classList.toggle('wait', waiting);
+  txt.textContent = U.state === 'installing' ? 'UPDATE …' : state.gate && !dl ? 'PRÜFE …' : dl ? 'UPDATE …' : 'SPIELEN';
+  sub.textContent = state.queued && waiting ? 'Startet automatisch nach dem Update' : U.state === 'ready' ? `Version ${U.version || ''} installieren · Neustart in Sekunden` : U.state === 'live-dl' ? `Update ${U.version || ''} wird installiert · ${U.percent || 0} %` : U.state === 'downloading' ? `App-Update lädt im Hintergrund · ${U.percent || 0} %` : '';
 }
 
 // ------------------------------------------------------------------ launch
+function openGate() {
+  if (!state.gate) return;
+  state.gate = false; setUpdate({});
+  if (state.queued) { const q = state.queued; state.queued = null; launch(q.slot); }
+}
 async function launch(slot) {
   if (state.launching) return;
+  // forced update: playing only starts once the update check (and any update) is finished
+  if (state.gate || state.live.state === 'downloading' || state.live.state === 'installed' || state.update.state === 'installing') { state.queued = { slot }; sfx.click(); setUpdate({}); return; }
   if (state.update.state === 'ready' && !slot) { sfx.click(); B?.installUpdate(); return; }
   state.launching = true;
   sfx.kickoff();
@@ -181,7 +224,7 @@ async function launch(slot) {
 shell();
 const bg = startBackground($('#bg'));
 if (!LS.motion) { bg.setPaused(true); document.body.classList.add('still'); }
-$('#ticker').innerHTML = (() => { const items = PATCHNOTES[0].neu.map((n) => esc(n.split(':')[0].split(' – ')[0].slice(0, 70))); const one = items.map((t) => `<span>${t}</span><i>◆</i>`).join(''); return one + one; })();
+$('#ticker').innerHTML = (() => { const items = PATCHNOTES[0].neu.map((n) => esc((n.match(/^([^:–]{3,60})(?::| –)/) || [0, n])[1])); const one = items.map((t) => `<span>${t}</span><i>◆</i>`).join(''); return one + one; })();
 document.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => { if (state.tab === b.dataset.tab) return; state.tab = b.dataset.tab; sfx.tick(); renderPanel(); }; });
 $('#play').onclick = () => launch(null);
 $('#play').onpointerenter = sfx.tick;
@@ -203,7 +246,11 @@ renderPanel(); renderStats(); renderContinue();
   renderStats(); renderContinue(); if (state.tab === 'saves') renderPanel();
 })();
 if (B) {
-  B.getInfo().then((i) => { state.info = { ...state.info, ...i }; if (i.update) setUpdate(i.update); else if (i.portable) setUpdate({ state: 'portable' }); renderPanel(); });
+  B.getInfo().then((i) => { state.info = { ...state.info, ...i }; if (i.live && i.live.state !== 'installed') state.live = i.live; else if (i.live?.state === 'installed') state.live = { state: 'latest', version: i.version }; if (['latest', 'error', 'needs-app'].includes(state.live.state)) openGate(); if (i.update) setUpdate(i.update); else setUpdate({}); renderPanel(); });
+  // keep checking while the launcher is open
+  addEventListener('focus', () => { if (Date.now() - (state.lastFocusCheck || 0) > 60000) { state.lastFocusCheck = Date.now(); B.liveCheck?.(); } });
   B.onUpdate((u) => setUpdate(u));
+  B.onLive?.((l) => setLive(l));
+  setTimeout(openGate, 9000); // never block longer than a few seconds when offline
 }
 requestAnimationFrame(() => document.body.classList.add('ready'));

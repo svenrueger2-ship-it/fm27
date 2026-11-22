@@ -184,7 +184,7 @@ function liveMatch(app, el, params) {
     if (hudT % 6 !== 0) return;
     $('#sc').textContent = `${T0.score} : ${T1.score}`;
     $('#clk').textContent = engine.clockText();
-    $('#fps').textContent = `${v.fps} FPS`;
+    if (S.fps !== false) $('#fps').textContent = `${v.fps} FPS`; else $('#fps').style.display = 'none';
     const s = view.rig.selected;
     const sc = $('#selchip');
     if (s && !s.offPitch) { sc.style.display = 'flex'; sc.innerHTML = `<b>#${s.data.number} ${esc(s.data.lastName)}</b><small>${s.role} · Kondition</small>${bar(s.energy * 100, 100, s.energy < 0.6 ? 'warn' : '')}`; }
@@ -198,7 +198,7 @@ function liveMatch(app, el, params) {
           if (g.shown) continue; g.shown = true;
           const sc = w.clubs[g.side === 'h' ? m.h : m.a];
           const [hg, ag] = confScore(m, min);
-          toast(`⚽ Konferenz ${g.min}': Tor für ${sc.short}! ${w.clubs[m.h].short} ${hg}:${ag} ${w.clubs[m.a].short}`, 3500);
+          if (S.confToasts !== false) toast(`⚽ Konferenz ${g.min}': Tor für ${sc.short}! ${w.clubs[m.h].short} ${hg}:${ag} ${w.clubs[m.a].short}`, 3500);
         }
         lastConfGoals = now;
       }
@@ -207,8 +207,8 @@ function liveMatch(app, el, params) {
   const startView = () => {
     const cond = friendly ? { tod: ['nacht', 'abend', 'tag'][Math.floor(Math.random() * 3)], weather: ['klar', 'klar', 'regen', 'schnee', 'nebel'][Math.floor(Math.random() * 5)] } : cond0;
     engine.weather = cond.weather; engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06 }[cond.weather] || 1;
-    view = new MatchView($('#stage'), engine, { quality: S.quality, speed, camera: camSel.value, onFrame: update, tod: cond.tod, weather: cond.weather,
-      audio: { volume: S.volume ?? 0.6, announcer: S.announcer !== false, commentary: !!S.commentary },
+    view = new MatchView($('#stage'), engine, { quality: S.quality, speed, camera: camSel.value, onFrame: update, tod: cond.tod, weather: S.weatherFx === false ? 'klar' : cond.weather, replays: S.replays !== false,
+      audio: { volume: S.volume ?? 0.6, announcer: S.announcer !== false, commentary: !!S.commentary, crowd: S.crowd ?? 1, chants: S.chants !== false },
       onReplay: (on, label) => { $('#replay')?.classList.toggle('show', on); const sp = $('#replay span'); if (sp) sp.textContent = `⟲ WIEDERHOLUNG${label ? ` · ${label}` : ''}`; } });
     $('#intro').classList.add('show');
     const endIntro = () => { view.skipIntro(); $('#intro')?.classList.remove('show'); };
@@ -246,7 +246,7 @@ function liveMatch(app, el, params) {
   const commentator = new Commentator(engine);
   let commTimer = null;
   const say = (line) => {
-    if (!line || instantRunning) return;
+    if (!line || instantRunning || S.commBar === false) return;
     const c = $('#comm'); if (!c) return;
     c.querySelector('span').textContent = line; c.classList.add('show');
     clearTimeout(commTimer); commTimer = setTimeout(() => c.classList.remove('show'), 5200);
@@ -255,7 +255,7 @@ function liveMatch(app, el, params) {
   engine.on((e) => {
     ticker(e);
     say(commentator.onEvent(e));
-    if (!instantRunning) lowerThird(e);
+    if (!instantRunning && S.lowerThirds !== false) lowerThird(e);
     if (e.type === 'goal') {
       const b = $('#banner');
       if (!b) return;

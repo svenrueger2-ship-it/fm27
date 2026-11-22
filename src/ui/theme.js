@@ -16,6 +16,7 @@ export function clubAccent(colors) {
 }
 
 export function applyTheme(settings, club) {
+  document.body.style.zoom = settings?.uiScale && settings.uiScale !== 1 ? String(settings.uiScale) : '';
   const rs = document.documentElement.style;
   const A = settings.theme === 'violett' || !club ? DEFAULT : clubAccent(club.colors);
   rs.setProperty('--acc', A.acc); rs.setProperty('--acc2', A.acc2); rs.setProperty('--acc3', A.acc3);

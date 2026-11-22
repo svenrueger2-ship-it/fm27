@@ -3,7 +3,7 @@ import { buildStory, showStory } from '../story.js';
 import { ceremony } from '../fx.js';
 import { generateWorld } from '../../data/generator.js';
 import { teamStrength } from '../../match/tactics.js';
-import { listSaves, loadGame, deleteGame, saveSettings, loadSettings } from '../../storage/db.js';
+import { listSaves, loadGame, saveGame, deleteGame, saveSettings, loadSettings } from '../../storage/db.js';
 import { computeTable, endSeason, newRng, userLeague, userFixture, isUserSeasonOver } from '../../manager/season.js';
 import { CHALLENGES, startChallenge, checkAchievements } from '../../manager/achievements.js';
 import { applyTheme } from '../theme.js';
@@ -277,53 +277,98 @@ export function savesScreen(app, el) {
   draw();
 }
 
-function settingsForm(app) {
-  const s = app.settings;
+// v2.7: settings grouped in tabs – display, 3D match, sound, game flow, data
+const SET_TABS = [['anzeige', '🖥️ Anzeige'], ['spiel3d', '🏟️ 3D-Spiel'], ['ton', '🔊 Ton'], ['ablauf', '⚙️ Spielablauf'], ['daten', '💾 Daten']];
+const LKEY = 'ufm3d-launcher';
+const launcherCfg = () => { try { return JSON.parse(localStorage.getItem(LKEY) || '{}'); } catch { return {}; } };
+function settingsForm(app, tab = app.setTab || 'anzeige') {
+  const s = app.settings, L = launcherCfg(), desk = !!window.bakusa?.toggleFullscreen;
   const opt = (v, cur, label) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${label}</option>`;
-  return `<div class="settings">
-    <label class="field">Grafikqualität<select id="s-q">${[['niedrig', 'Niedrig'], ['mittel', 'Mittel'], ['hoch', 'Hoch'], ['ultra', 'Ultra']].map(([v, l]) => opt(v, s.quality, l)).join('')}</select></label>
-    <label class="field">Standard-Spielgeschwindigkeit<select id="s-sp">${[[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x'], ['highlights', 'Nur Highlights']].map(([v, l]) => opt(v, s.speed, l)).join('')}</select></label>
-    <label class="field">Standard-Kamera<select id="s-cam">${CAMERA_MODES.map(([v, l]) => opt(v, s.camera, l)).join('')}</select></label>
-    <label>Farbschema <select id="s-theme" class="input"><option value="verein" ${s.theme !== 'violett' ? 'selected' : ''}>Vereinsfarben</option><option value="violett" ${s.theme === 'violett' ? 'selected' : ''}>Klassisch Violett</option></select></label>
-    <label>Darstellung <select id="s-mode" class="input"><option value="dunkel" ${s.mode !== 'hell' ? 'selected' : ''}>Dunkel</option><option value="hell" ${s.mode === 'hell' ? 'selected' : ''}>Hell</option></select></label>
-    <label class="check"><input type="checkbox" id="s-anim" ${s.animations !== false ? 'checked' : ''}> Animierte Übergänge & Pokal-Zeremonie</label>
-    <label class="check"><input type="checkbox" id="s-story" ${s.story !== false ? 'checked' : ''}> Saison-Story am Saisonende</label>
-    <label>Stadion-Sound <input type="range" id="s-vol" min="0" max="1" step="0.05" value="${s.volume ?? 0.6}"></label>
-    <label class="check"><input type="checkbox" id="s-ann" ${s.announcer !== false ? 'checked' : ''}> Stadionsprecher (Sprachausgabe)</label>
-    <label class="check"><input type="checkbox" id="s-com" ${s.commentary ? 'checked' : ''}> TV-Kommentar vorlesen</label>
-    <label class="check"><input type="checkbox" id="s-pyro" ${s.pyro !== 'aus' ? 'checked' : ''}> Pyrotechnik & Rauch in den Fankurven</label>
-    <label class="check"><input type="checkbox" id="s-var" ${s.var !== false ? 'checked' : ''}> VAR-Überprüfungen im Spiel</label>
-    <label class="check"><input type="checkbox" id="s-auto" ${s.autosave ? 'checked' : ''}> Automatisch speichern</label>
-    <label class="check"><input type="checkbox" id="s-subs" ${s.autoSubs !== false ? 'checked' : ''}> Automatische Auswechslungen für mein Team</label>
-    <p class="muted">Tipp: Auf Smartphones „Niedrig" oder „Mittel" wählen. Die FPS-Anzeige siehst du im 3D-Spiel oben rechts.</p>
-  </div>`;
-}
-function bindSettings(app, root) {
-  const s = app.settings;
-  const upd = () => {
-    s.quality = root.querySelector('#s-q').value;
-    const sp = root.querySelector('#s-sp').value; s.speed = sp === 'highlights' ? sp : +sp;
-    s.camera = root.querySelector('#s-cam').value;
-    s.autosave = root.querySelector('#s-auto').checked;
-    s.autoSubs = root.querySelector('#s-subs').checked;
-    s.pyro = root.querySelector('#s-pyro').checked ? 'normal' : 'aus';
-    s.volume = +root.querySelector('#s-vol').value;
-    s.theme = root.querySelector('#s-theme').value; s.mode = root.querySelector('#s-mode').value; s.animations = root.querySelector('#s-anim').checked; s.story = root.querySelector('#s-story').checked;
-    s.announcer = root.querySelector('#s-ann').checked;
-    s.commentary = root.querySelector('#s-com').checked;
-    s.var = root.querySelector('#s-var').checked;
-    saveSettings(s);
-    applyTheme(s, window.ufm?.world ? window.ufm.club : null);
+  const sel = (id, label, sub, cur, opts) => `<div class="set-row"><span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span><select id="${id}" class="input">${opts.map(([v, l]) => opt(v, cur, l)).join('')}</select></div>`;
+  const tog = (id, label, sub, on) => `<label class="set-row tog-row"><span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i class="sw"></i></label>`;
+  const rng = (id, label, sub, val, min, max, step, fmt) => `<div class="set-row"><span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"><output>${fmt(val)}</output></div>`;
+  const pct = (v) => `${Math.round(v * 100)} %`;
+  const body = {
+    anzeige: () => `
+      ${desk ? `<div class="set-row"><span><b>Vollbild</b><small>Auch jederzeit mit F11</small></span><button class="btn sm" id="s-fsnow">⛶ Vollbild umschalten</button></div>${tog('s-fsstart', 'Im Vollbild starten', 'Das Spiel öffnet sich direkt im Vollbild', !!L.fullscreen)}` : ''}
+      ${sel('s-ui', 'Größe der Oberfläche', 'Schrift, Knöpfe und Karten', s.uiScale ?? 1, [[0.85, '85 %'], [0.9, '90 %'], [1, '100 %'], [1.1, '110 %'], [1.25, '125 %']])}
+      ${sel('s-theme', 'Farbschema', 'Akzentfarben der Oberfläche', s.theme === 'violett' ? 'violett' : 'verein', [['verein', 'Vereinsfarben'], ['violett', 'Klassisch Violett']])}
+      ${sel('s-mode', 'Darstellung', '', s.mode === 'hell' ? 'hell' : 'dunkel', [['dunkel', 'Dunkel'], ['hell', 'Hell']])}
+      ${tog('s-anim', 'Animierte Übergänge', 'Seitenwechsel, hochzählende Zahlen, Pokal-Zeremonie', s.animations !== false)}
+      ${tog('s-story', 'Saison-Story am Saisonende', '', s.story !== false)}
+      ${tog('s-acht', 'Meldungen für Erfolge & Level-Ups', '', s.achToasts !== false)}`,
+    spiel3d: () => `
+      ${sel('s-q', 'Grafikqualität', 'Auf schwächeren PCs „Niedrig“ oder „Mittel“', s.quality, [['niedrig', 'Niedrig'], ['mittel', 'Mittel'], ['hoch', 'Hoch'], ['ultra', 'Ultra']])}
+      ${sel('s-sp', 'Standard-Spielgeschwindigkeit', '', s.speed, [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x'], ['highlights', 'Nur Highlights']])}
+      ${sel('s-cam', 'Standard-Kamera', '', s.camera, CAMERA_MODES)}
+      ${tog('s-rep', 'Wiederholungen nach Toren', 'Multi-Kamera-Replay nach jedem Treffer', s.replays !== false)}
+      ${tog('s-wfx', 'Wetter-Effekte', 'Regen, Schnee und Nebel im Stadion', s.weatherFx !== false)}
+      ${tog('s-pyro', 'Pyrotechnik & Rauch', 'Bengalos und Rauch in den Fankurven', s.pyro !== 'aus')}
+      ${tog('s-var', 'VAR-Überprüfungen', '', s.var !== false)}
+      ${tog('s-commbar', 'Kommentarzeile', 'TV-Kommentar unten im Bild', s.commBar !== false)}
+      ${tog('s-l3', 'Bauchbinden', 'Torschützen-Einblendungen mit Spielerbild', s.lowerThirds !== false)}
+      ${tog('s-conf', 'Konferenz-Meldungen', 'Tore aus anderen Stadien während deines Spiels', s.confToasts !== false)}
+      ${tog('s-fps', 'FPS-Anzeige', 'Bilder pro Sekunde oben rechts', s.fps !== false)}`,
+    ton: () => `
+      ${rng('s-vol', 'Gesamtlautstärke', 'Alles im Stadion', s.volume ?? 0.6, 0, 1, 0.05, pct)}
+      ${rng('s-crowd', 'Fan-Atmosphäre', 'Grundrauschen und Spannung der Zuschauer', s.crowd ?? 1, 0, 1.5, 0.05, pct)}
+      ${tog('s-chants', 'Fangesänge', 'Gesänge und Klatsch-Rhythmen in ruhigen Phasen', s.chants !== false)}
+      ${tog('s-ann', 'Stadionsprecher', 'Sprachausgabe bei Toren und Wechseln', s.announcer !== false)}
+      ${tog('s-com', 'TV-Kommentar vorlesen', 'Der Kommentar wird zusätzlich gesprochen', !!s.commentary)}`,
+    ablauf: () => `
+      ${tog('s-auto', 'Automatisch speichern', 'Nach jedem Spieltag in den Autosave-Platz', !!s.autosave)}
+      ${tog('s-subs', 'Automatische Auswechslungen', 'Der Co-Trainer wechselt bei Verletzungen und Müdigkeit', s.autoSubs !== false)}`,
+    daten: () => `
+      <div class="set-row"><span><b>Spielstand exportieren</b><small>Als Datei sichern – z. B. für einen anderen PC</small></span><button class="btn sm" id="s-exp" ${app.world ? '' : 'disabled'}>⬇ Exportieren</button></div>
+      <div class="set-row"><span><b>Spielstand importieren</b><small>Eine exportierte .fm27-Datei laden</small></span><label class="btn sm">⬆ Importieren<input type="file" id="s-imp" accept=".fm27,.json" hidden></label></div>
+      <div class="set-row"><span><b>Erfolge zurücksetzen</b><small>Löscht die spielstandübergreifenden Erfolge</small></span><button class="btn sm danger" id="s-rach">Zurücksetzen</button></div>
+      <div class="set-row"><span><b>Einstellungen zurücksetzen</b><small>Alles wieder auf Standard</small></span><button class="btn sm" id="s-rset">Standard</button></div>
+      <p class="muted">Version ${esc(GAME_VERSION)} · Spielstände liegen lokal auf diesem Gerät.</p>`,
   };
-  root.querySelectorAll('select,input').forEach((i) => i.addEventListener('change', () => { upd(); toast('Einstellungen gespeichert', 1200); }));
+  return `<div class="set-tabs">${SET_TABS.map(([k, l]) => `<button data-stab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div><div class="settings">${body[tab]()}</div>`;
+}
+function bindSettings(app, root, redraw) {
+  const s = app.settings, $ = (q) => root.querySelector(q);
+  root.querySelectorAll('[data-stab]').forEach((b) => (b.onclick = () => { app.setTab = b.dataset.stab; redraw(); }));
+  const map = {
+    's-q': (v) => (s.quality = v), 's-sp': (v) => (s.speed = v === 'highlights' ? v : +v), 's-cam': (v) => (s.camera = v), 's-ui': (v) => (s.uiScale = +v),
+    's-theme': (v) => (s.theme = v), 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v),
+  };
+  const bools = { 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
+  const commit = () => { saveSettings(s); applyTheme(s, window.ufm?.world ? window.ufm.club : null); toast('Einstellungen gespeichert', 1200); };
+  for (const [id, fn] of Object.entries(map)) { const el = $(`#${id}`); if (!el) continue; el.addEventListener(el.type === 'range' ? 'input' : 'change', () => { fn(el.value); if (el.nextElementSibling?.tagName === 'OUTPUT') el.nextElementSibling.textContent = `${Math.round(el.value * 100)} %`; }); el.addEventListener('change', commit); }
+  for (const [id, key] of Object.entries(bools)) { const el = $(`#${id}`); if (el) el.addEventListener('change', () => { s[key] = el.checked; commit(); }); }
+  const pyro = $('#s-pyro'); if (pyro) pyro.onchange = () => { s.pyro = pyro.checked ? 'normal' : 'aus'; commit(); };
+  $('#s-fsnow')?.addEventListener('click', () => window.bakusa.toggleFullscreen());
+  const fss = $('#s-fsstart'); if (fss) fss.onchange = () => { const L = launcherCfg(); L.fullscreen = fss.checked; try { localStorage.setItem(LKEY, JSON.stringify(L)); } catch {} toast('Gespeichert – gilt ab dem nächsten Start', 1500); };
+  $('#s-exp')?.addEventListener('click', () => {
+    const w = app.world, c = app.club;
+    const blob = new Blob([JSON.stringify({ format: 'fm27-save', version: GAME_VERSION, exportedAt: Date.now(), world: w })], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `FM27-${c.short}-${w.season}-Spieltag${w.week + 1}.fm27`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Spielstand exportiert');
+  });
+  $('#s-imp')?.addEventListener('change', async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text()), world = data.world || data;
+      if (!world?.clubs || !world?.userClubId) throw new Error('keine FM27-Datei');
+      await saveGame('import', world, `Import · ${world.clubs[world.userClubId].name}`);
+      const w = await loadGame('import'); app.world = w; app.slot = 'import';
+      toast('Spielstand importiert'); app.go('home');
+    } catch (err) { toast(`Import fehlgeschlagen: ${err.message}`, 3500); }
+  });
+  $('#s-rach')?.addEventListener('click', async () => { if (await confirmDialog('Alle spielstandübergreifenden Erfolge löschen?', 'Löschen')) { localStorage.removeItem('ufm3d-achievements'); toast('Erfolge zurückgesetzt'); } });
+  $('#s-rset')?.addEventListener('click', async () => { if (await confirmDialog('Alle Einstellungen auf Standard zurücksetzen?', 'Zurücksetzen')) { localStorage.removeItem('ufm3d-settings'); Object.keys(s).forEach((k) => delete s[k]); Object.assign(s, loadSettings()); commit(); redraw(); } });
 }
 export function settingsScreen(app, el) {
-  el.innerHTML = `<div class="page narrow"><h2>Einstellungen</h2><div class="card">${settingsForm(app)}</div></div>`;
-  bindSettings(app, el);
+  const draw = () => { el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2><div class="card">${settingsForm(app)}</div></div>`; bindSettings(app, el, draw); };
+  draw();
 }
 function settingsModal(app) {
-  const m = modal(`<h3>Einstellungen</h3>${settingsForm(app)}`);
-  bindSettings(app, m.el);
+  const m = modal('<div class="set-host"></div>');
+  const host = m.el.querySelector('.set-host');
+  const draw = () => { host.innerHTML = `<h3>⚙️ Einstellungen</h3>${settingsForm(app)}`; bindSettings(app, host, draw); };
+  draw();
 }
 
 export function seasonEndScreen(app, el) {

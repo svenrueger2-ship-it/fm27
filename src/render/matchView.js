@@ -17,7 +17,8 @@ const REC_DT = 1 / 30;
 const REC_LEN = 300; // 10 s of simulated play
 
 export class MatchView {
-  constructor(container, engine, { quality = 'mittel', speed = 1, camera = 'tv', tod = 'nacht', weather = 'klar', intro = true, onFrame, onReplay, audio = null } = {}) {
+  constructor(container, engine, { quality = 'mittel', speed = 1, camera = 'tv', tod = 'nacht', weather = 'klar', intro = true, onFrame, onReplay, audio = null, replays = true } = {}) {
+    this.replaysOn = replays;
     this.container = container;
     this.engine = engine;
     this.quality = quality;
@@ -93,7 +94,7 @@ export class MatchView {
     this.unsub = engine.on((e) => {
       this.audio?.onEvent(e, engine);
       if (e.type === 'goal') {
-        this.rig.shake = 0.8; this.stadium.excite(1, e.team); this.pendingReplay = { at: performance.now() + 1700, t: engine.simTime };
+        this.rig.shake = 0.8; this.stadium.excite(1, e.team); if (this.replaysOn !== false) this.pendingReplay = { at: performance.now() + 1700, t: engine.simTime };
         if (this.pyroMode !== 'aus' && Math.random() < (engine.bigMatch ? 0.7 : 0.4)) this.pyro.fire(e.team === 0 ? this.stadium.fanSpots.home : this.stadium.fanSpots.away, quality === 'niedrig' ? 3 : 6, e.team === 0 ? 0xff5522 : 0xff3355);
       }
       if (e.type === 'var' && e.overturned) this.stadium.excite(1, 1 - e.team);

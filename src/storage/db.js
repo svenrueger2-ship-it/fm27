@@ -1,3 +1,4 @@
+import { CRESTS } from '../data/crests.js';
 import { migrateWorld } from '../manager/migrate.js';
 // IndexedDB save system (multiple slots) + localStorage settings. Falls back to memory if unavailable.
 const DB_NAME = 'ufm3d';
@@ -32,7 +33,7 @@ export async function saveGame(slot, world, label) {
   const club = world.clubs[world.userClubId];
   const lg = world.leagues?.find((l) => l.id === club.leagueId);
   // small summary for the launcher / save list (v2.6)
-  const meta = { short: club.short, colors: club.colors, league: lg?.name, level: world.mgr?.level || 1, scenario: world.scenario?.name || null, crest: club.custom?.crest || null };
+  const meta = { short: club.short, colors: club.colors, league: lg?.name, level: world.mgr?.level || 1, scenario: world.scenario?.name || null, crest: club.custom?.crest || CRESTS[club.short] || null };
   const record = { slot, label: label || club.name, club: club.name, season: world.season, week: world.week, savedAt: Date.now(), meta, data: JSON.stringify(world) };
   const db = await openDB();
   if (!db) { memory.set(slot, record); return; }

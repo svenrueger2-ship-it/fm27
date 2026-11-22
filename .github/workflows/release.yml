@@ -1,14 +1,40 @@
-# Baut bei jedem Tag "v*" (z. B. v0.8.0) Installer + portable .exe und lädt sie als GitHub-Release hoch.
-# Die installierten Spiele finden das Update dann automatisch.
+# Veröffentlicht neue Versionen.
+#  • Immer: Live-Update – index.html, launcher.html und manifest.json landen im Release "live".
+#    Launcher und Spiel holen sich das in Sekunden, ohne Neuinstallation.
+#  • Nur wenn "App neu bauen" angehakt ist (oder bei einem Tag v*): zusätzlich Installer + portable .exe
+#    (nötig nur, wenn sich die Fenster-Technik/Electron ändert).
 name: Release Windows
 on:
   push:
     tags: ['v*']
-  workflow_dispatch: {}   # manuell starten: Actions → Release Windows → Run workflow
+  workflow_dispatch:
+    inputs:
+      full_app:
+        description: 'App neu bauen (Installer + portable .exe)'
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
-  build:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: node build.mjs
+      - name: Live-Release aktualisieren
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VER=$(node -p "require('./dist/manifest.json').version")
+          gh release view live >/dev/null 2>&1 || gh release create live --prerelease --title "Live-Updates" --notes "Wird automatisch aktualisiert. Hier holen sich Launcher und Spiel neue Versionen."
+          gh release upload live dist/index.html dist/launcher.html dist/manifest.json --clobber
+          gh release edit live --notes "Aktuelle Live-Version: $VER"
+          echo "Live-Version $VER veröffentlicht" >> $GITHUB_STEP_SUMMARY
+  app:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.full_app }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -16,7 +42,7 @@ jobs:
         with: { node-version: 22 }
       - run: npm ci
       - run: node build.mjs
-      - run: copy dist\index.html desktop\app\index.html && copy dist\launcher.html desktop\app\launcher.html
+      - run: copy dist\index.html desktop\app\index.html && copy dist\launcher.html desktop\app\launcher.html && copy dist\version.json desktop\app\version.json
         shell: cmd
       - run: npm ci
         working-directory: desktop

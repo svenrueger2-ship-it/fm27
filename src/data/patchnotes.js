@@ -2,6 +2,30 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '2.7.0', date: '22.11.2026', title: 'Version 2.7 – Live-Updates',
+    neu: [
+      'Live-Updates: Der Launcher prüft beim Start und alle 10 Minuten nach neuen Versionen und spielt sie in Sekunden ein – ohne Installer, ohne Neuinstallation, auch in der portablen Version',
+      'Fortschritt live im Spielen-Knopf; danach lädt sich der Launcher selbst neu und zeigt „Auf Version … aktualisiert“',
+      'Jede Datei wird vor dem Einspielen per SHA-256-Prüfsumme kontrolliert; bei Problemen bleibt einfach die alte Version aktiv',
+      '„Jetzt prüfen“ direkt in der Statusleiste des Launchers',
+      'Update-Zwang: Updates werden immer sofort und ohne Rückfrage eingespielt; Spielen startet erst danach (offline nach wenigen Sekunden trotzdem)',
+      'Läuft gerade ein Spiel, wird automatisch gespeichert und in der neuen Version an derselben Stelle weitergemacht – laufende 3D-Spiele werden nie unterbrochen, das Update folgt direkt nach dem Abpfiff',
+      'Echte Vereinswappen für Premier League, La Liga, Serie A und Ligue 1 (78 Vereine) – in Tabellen, Menüs, auf Trikots und Stadion-Leinwänden',
+      'Der Launcher zeigt beim Weiterspielen jetzt das echte Wappen deines Vereins',
+      'Neues Einstellungsmenü im Spiel mit 5 Bereichen (Anzeige, 3D-Spiel, Ton, Spielablauf, Daten) und vielen neuen Optionen: Vollbild, Oberflächengröße, Wiederholungen, Wetter-Effekte, Kommentarzeile, Bauchbinden, Konferenz-Meldungen, FPS-Anzeige, Fan-Atmosphäre, Fangesänge, Meldungen für Erfolge',
+      'Spielstände exportieren und importieren (z. B. für einen anderen PC), Erfolge und Einstellungen zurücksetzen',
+    ],
+    verbessert: [
+      'Ein App-Update ist nur noch nötig, wenn sich die Fenster-Technik selbst ändert – und auch das installiert sich jetzt automatisch und still im Hintergrund',
+      'Klickst du während eines Updates auf Spielen, startet das Spiel automatisch direkt nach dem Update',
+    ],
+    behoben: [
+      'Vollbild startet jetzt zuverlässig, wenn es im Launcher ausgewählt ist',
+      'Neuigkeiten im Launcher werden nicht mehr abgeschnitten – Überschrift und vollständiger Text',
+    ],
+    geplant: ['Mehrspieler (Hot-Seat)', 'Frauenfußball', 'Editor für Spieler und Vereine'],
+  },
+  {
     version: '2.6.0', date: '22.11.2026', title: 'Version 2.6 – der neue Launcher',
     neu: [
       'Neuer Launcher für die Windows-Version: eigenes Startfenster vor dem Spiel',
