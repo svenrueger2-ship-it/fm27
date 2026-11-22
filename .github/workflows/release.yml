@@ -1,0 +1,25 @@
+# Baut bei jedem Tag "v*" (z. B. v0.8.0) Installer + portable .exe und lädt sie als GitHub-Release hoch.
+# Die installierten Spiele finden das Update dann automatisch.
+name: Release Windows
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: node build.mjs
+      - run: copy dist\index.html desktop\app\index.html
+        shell: cmd
+      - run: npm ci
+        working-directory: desktop
+      - run: npx electron-builder --win nsis portable --x64 --publish always
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,66 @@
+{
+  "name": "ultimate-football-manager-3d",
+  "productName": "Fussball Manager 2027",
+  "version": "2.5.0",
+  "description": "FUSSBALL MANAGER 2027 © BAKUSA",
+  "main": "main.cjs",
+  "author": "UFM3D",
+  "license": "UNLICENSED",
+  "build": {
+    "appId": "de.ufm3d.game",
+    "productName": "Fussball Manager 2027",
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "app/**"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "FussballManager2027-BAKUSA-${version}-Windows.exe"
+    },
+    "nsis": {
+      "artifactName": "FussballManager2027-BAKUSA-Setup-${version}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Fussball Manager 2027",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "svenrueger2-ship-it",
+        "repo": "fm27",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  }
+}

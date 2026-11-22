@@ -1,0 +1,241 @@
+[center][size=200][b]⚽ ULTIMATE FOOTBALL MANAGER 3D – Patch 0.2[/b][/size][/center]
+[size=150][b][color=#3dffa0]„Transfer-, Trainings- & Grafik-Update“[/color][/b][/size]
+
+Moin zusammen!
+
+Patch 0.2 ist da – und er ist groß. Wir haben die komplette Optik überarbeitet, die 3D-Spiele sehen jetzt aus wie eine echte TV-Übertragung, und mit Transfers, Training, Finanzen und Scouting kommt endlich das, was einen Manager ausmacht. Hier alle Änderungen im Detail.
+
+[quote][b]Wichtig vorab:[/b] Alte Spielstände aus Version 0.1 werden beim Laden automatisch auf 0.2 umgestellt. Gehälter und Gehaltsbudgets werden dabei an das neue Wirtschaftssystem angepasst.[/quote]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🎮 TL;DR – Die Highlights[/color][/b][/size]
+
+[list]
+[*][b]Komplett neue 3D-Grafik:[/b] Flutlicht mit Glow-Effekten, Tag/Abend/Nacht, Regen, animierte Fans, zweistöckige Arenen, Videowände, Großstadt-Skyline
+[*][b]Neue Spielermodelle:[/b] Gesichter, Frisuren, Trikots mit Mustern, Sponsor, Rückennummer [b]und Namen[/b]
+[*][b]TV-Präsentation:[/b] Stadion-Kameraflug vor dem Anpfiff, Torwiederholungen aus der Torkamera, Einblendungen wie im Fernsehen
+[*][b]Transfermarkt[/b] mit Ablöseverhandlungen, Gegenangeboten, Vertragsgesprächen, Ausstiegsklauseln und Leihen mit Kaufoption
+[*][b]Scouting:[/b] Ungescoutete Spieler zeigen nur noch geschätzte Werte
+[*][b]Training:[/b] Mannschafts- und Einzeltraining, Intensität und taktische Vertrautheit
+[*][b]Finanzen & Vereinsausbau:[/b] Zuschauer, TV-Gelder, Sponsoren, Ticketpreise, Trainingsgelände, Jugendakademie, Medizinabteilung, Stadionausbau
+[*][b]Die KI-Vereine leben:[/b] Sie kaufen, verkaufen, verlängern Verträge und verpflichten vereinslose Spieler
+[*][b]Komplett neues UI[/b] im Broadcast- und Konsolen-Look
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🏟️ 3D-Grafik & Präsentation[/color][/b][/size]
+
+[size=120][b]Atmosphäre[/b][/size]
+[list]
+[*][b]Tageszeiten:[/b] Nachmittagsspiel ☀️, Abendspiel 🌇 mit Sonnenuntergang, Flutlichtspiel 🌙 mit Sternenhimmel. Die Tageszeit wird pro Partie festgelegt und vorab in der Spielvorschau angezeigt.
+[*][b]Wetter:[/b] Regenspiele mit sichtbarem Regen und nassem, glänzendem Rasen
+[*][b]Post-Processing:[/b] Bloom/Glow für Flutlichter, Dachbeleuchtung und LED-Banden; ACES-Tonemapping; Kantenglättung (MSAA) auf Hoch und Ultra
+[*][b]Himmel:[/b] Farbverlauf je nach Tageszeit, Sterne bei Nacht und eine [b]beleuchtete Stadt-Skyline[/b] rund ums Stadion (Hoch/Ultra)
+[/list]
+
+[size=120][b]Stadion[/b][/size]
+[list]
+[*][b]Zweistöckige Tribünen[/b] ab 38.000 Plätzen, mit [b]LED-Laufband[/b] zwischen den Rängen
+[*][b]Stahldächer[/b] mit Fachwerkträgern und [b]Flutlichtleisten[/b] an der Dachkante. Kleinere Stadien behalten die klassischen Flutlichtmasten.
+[*][b]Zwei Videowände[/b] in den Ecken zeigen live Spielstand und Spielminute
+[*][b]Laufende LED-Werbebanden[/b]
+[*][b]Animierte Zuschauer:[/b] Die Fans wippen und bewegen sich, bei Toren und großen Chancen springt die Kurve auf. Die Animation läuft komplett auf der Grafikkarte.
+[*][b]Neuer Rasen:[/b] feines Halmmuster aus der Nähe, Mähstreifen oder Karomuster (je nach Verein), [b]Abnutzung[/b] im Torraum und am Mittelkreis
+[*]Durch den Stadionausbau wächst die 3D-Arena tatsächlich mit.
+[/list]
+
+[size=120][b]Spielermodelle[/b][/size]
+[list]
+[*]Neue, [b]anatomisch geformte Körper[/b]: Brustkorb, Taille, Schultern sowie konische Arme und Beine
+[*][b]Gesichter[/b] mit Augen, Brauen, Nase, Mund und Ohren
+[*][b]Sechs Frisuren[/b], darunter Afro und Iro, außerdem Bärte
+[*][b]Trikots[/b] mit Vereinsmuster (Streifen, Ringel, Halbiert, Schärpe, Nadelstreifen, Chevron), Kragen, Ärmelbündchen, Brustsponsor, Brustnummer sowie [b]Name und Nummer auf dem Rücken[/b]
+[*]Hosen mit Nummer, Stutzen mit Ringeln, farbige Schuhe mit Sohle, Torwarthandschuhe
+[*]Detailgrad je nach Grafikstufe
+[/list]
+
+[size=120][b]TV-Präsentation[/b][/size]
+[list]
+[*][b]Einlaufsequenz:[/b] Kameraflug durchs Stadion mit Aufstellungen beider Teams, überspringbar per „Anpfiff ▶“
+[*][b]Torwiederholungen:[/b] Die letzten Sekunden vor jedem Tor laufen in Zeitlupe aus der Kamera hinter dem Tor („⟲ WIEDERHOLUNG“, überspringbar)
+[*][b]Torjubel-Kamera:[/b] Die TV-Kamera zoomt nach einem Treffer auf den Torschützen.
+[*][b]Bauchbinden:[/b] Nach Toren, Karten, Wechseln und Paraden werden Nummer und Name eingeblendet.
+[*][b]Neue Anzeigetafel[/b] im TV-Stil mit LIVE-Marke, Vereinsfarben und Spieluhr
+[*][b]Animiertes TOR-Banner[/b]
+[*][b]Ballspur[/b] bei harten Schüssen und hohen Bällen
+[*]Die TV-Kamera sitzt jetzt [b]wie im echten Stadion auf der Haupttribüne[/b] und schwenkt leicht. Auf Smartphones im Hochformat ist sie näher am Spielfeld.
+[/list]
+
+[quote]Die 3D-Partien werden weiterhin [b]vollständig von der KI gespielt[/b]: Alle 22 Spieler entscheiden selbst. Du greifst als Manager über Taktik, Wechsel und Kamera ein.[/quote]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🔄 Transfers & Verträge[/color][/b][/size]
+
+[size=120][b]Transfermarkt[/b][/size]
+[list]
+[*]Suche über [b]alle Spieler der Welt[/b] und [b]vereinslose Spieler[/b]
+[*]Filter: Name, Position, Liga, Höchstalter, Mindeststärke, maximale Ablöse; Sortierung nach Stärke, Potenzial, Preis oder Alter
+[*][b]Transferfenster:[/b] Sommer (Spieltag 1–6) und Winter (rund um die Saisonmitte). Vereinslose Spieler kannst du jederzeit verpflichten.
+[*][b]Ablöseforderung[/b] abhängig von Vertragslaufzeit, Stellenwert im Kader, Transferliste und Finanzlage des Vereins
+[/list]
+
+[size=120][b]Verhandlungen[/b][/size]
+[list]
+[*][b]Angebot abgeben:[/b] Der Verein nimmt an, lehnt ab oder macht ein [b]Gegenangebot[/b].
+[*][b]Ausstiegsklauseln:[/b] Rund ein Viertel der Spieler hat eine Klausel. Wird sie gezahlt, ist der Verein machtlos.
+[*]Topvereine geben Leistungsträger nicht an deutlich kleinere Clubs ab.
+[*][b]Vertragsgespräch:[/b] Der Berater nennt Gehaltsforderung und Laufzeit. Du hast [b]drei Versuche[/b], danach bricht der Spieler die Gespräche ab.
+[*]Stars wechseln nicht zu jedem Verein: Das [b]Vereinsniveau[/b] spielt eine Rolle.
+[*][b]Gehaltsbudget[/b] wird geprüft: Du kannst nicht unbegrenzt Gehälter verteilen.
+[/list]
+
+[size=120][b]Leihen[/b][/size]
+[list]
+[*]Ergänzungsspieler (nicht in der Top-11 ihres Vereins, bis 30 Jahre) sind [b]ausleihbar[/b].
+[*]Leihgebühr und [b]Gehaltsübernahme frei wählbar[/b] (25–100 %; der verleihende Verein verlangt mindestens 50 %)
+[*]Optional mit [b]Kaufoption[/b], jederzeit ziehbar
+[*]Leihspieler kehren zum Saisonende automatisch zurück.
+[/list]
+
+[size=120][b]Verkäufe[/b][/size]
+[list]
+[*][b]Transferliste:[/b] Gelistete Spieler bekommen im Transferfenster deutlich mehr Angebote.
+[*]Auch für ungelistete Leistungsträger flattern gelegentlich Angebote rein.
+[*][b]Angebote annehmen, nachverhandeln (+15 %) oder ablehnen.[/b] Beim Nachverhandeln kann der Interessent auch abspringen.
+[*]Mindestens 18 Spieler müssen im Kader bleiben.
+[/list]
+
+[size=120][b]Vertragsverlängerungen[/b][/size]
+[list]
+[*]Neuer Reiter [b]„Verträge & Verkauf“[/b] mit allen Laufzeiten, auslaufende Verträge rot markiert
+[*]Warnung in den Nachrichten 6 Spieltage vor Saisonende
+[*][b]Auslaufende Verträge:[/b] Der Spieler geht ablösefrei und landet auf dem Markt der vereinslosen Spieler.
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🕵️ Scouting[/color][/b][/size]
+
+[list]
+[*][b]Nebel des Krieges:[/b] Spieler fremder Vereine zeigen Stärke, Potenzial und Attribute nur als [b]Schätzspanne[/b]. Spieler aus der eigenen Liga kennst du etwas besser.
+[*][b]Scouts schicken:[/b] 1 Woche (eigene Liga) bzw. 2 Wochen (andere Ligen). Danach sind alle Werte exakt.
+[*][b]Scoutingbericht[/b] mit Stärken, Schwächen und Empfehlung („Sofortige Verstärkung“, „Großes Talent“ …), verglichen mit deiner aktuellen Startelf
+[*][b]Beobachtungsliste[/b] mit ☆ markieren, Ansicht als Spielerkarten
+[*]Anzahl der Scouts steigt mit der Stufe der Jugendakademie.
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🏋️ Training & Entwicklung[/color][/b][/size]
+
+[list]
+[*][b]Spieler entwickeln sich jetzt Woche für Woche[/b] statt nur einmal am Saisonende.
+[*]Einflussfaktoren: [b]Alter, Potenzial, Trainingsschwerpunkt, Intensität, Trainingsgelände, Einsatzzeit, Fitness, Verletzungen und Professionalität[/b]
+[*][b]Mannschaftstraining:[/b] Ausgewogen, Athletik, Technik, Angriff, Verteidigung, Taktik
+[*][b]Intensität:[/b] schnellere Entwicklung, aber Müdigkeit und [b]Trainingsverletzungen[/b]
+[*][b]Einzeltraining:[/b] pro Spieler ein Attribut als Schwerpunkt
+[*][b]Taktische Vertrautheit:[/b] steigt wöchentlich (mit Taktiktraining schneller) und sinkt bei Formations- oder Stilwechseln. [b]Wirkt direkt im 3D-Spiel:[/b] Vertraute Teams treffen sicherere Pass- und Laufentscheidungen.
+[*]Ältere Spieler bauen körperlich schleichend ab (Tempo, Antritt, Ausdauer, Sprungkraft).
+[*][b]Wöchentlicher Trainingsbericht[/b] mit allen Verbesserungen und den verbesserten Attributen
+[*]Neue Spätzünder-Logik: Junge Spieler können ihr Potenzial nach oben korrigieren.
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]💶 Finanzen & Vereinsentwicklung[/color][/b][/size]
+
+[size=120][b]Einnahmen & Ausgaben (wöchentlich, für alle 158 Vereine)[/b][/size]
+[list]
+[*][b]Ticketverkauf[/b] pro Heimspiel. Der Zuschauerschnitt hängt von Ruf, Tabellenplatz und [b]Ticketpreis[/b] ab, den du selbst festlegst.
+[*][b]TV-Gelder[/b] je nach Liga und Ruf, [b]Sponsoren[/b], [b]Merchandising[/b]
+[*][b]Gehälter[/b], Unterhalt für Anlagen und Stadion
+[*][b]Prämien[/b] zum Saisonende nach Tabellenplatz
+[*][b]Gehaltsbudget[/b] wird jede Saison anhand der Einnahmen neu berechnet.
+[/list]
+
+[size=120][b]Finanzbildschirm[/b][/size]
+[list]
+[*]Kontostand, Gehaltsbudget-Auslastung, Zuschauer und Saisonbilanz
+[*][b]Kontoverlauf als Diagramm[/b], Einnahmen und Ausgaben als Ringdiagramme
+[*][b]Buchungsjournal[/b] mit allen Transaktionen
+[/list]
+
+[size=120][b]Ausbau (je 5 Stufen)[/b][/size]
+[list]
+[*]🏋️ [b]Trainingsgelände:[/b] schnellere Spielerentwicklung
+[*]🌱 [b]Jugendakademie:[/b] stärkere Nachwuchsjahrgänge und mehr Scouts
+[*]🩺 [b]Medizinische Abteilung:[/b] weniger Trainingsverletzungen, schnellere Heilung
+[*]🏟️ [b]Stadionausbau:[/b] +5.000 Plätze pro Ausbaustufe (bis 90.000)
+[/list]
+
+[size=120][b]Jugend[/b][/size]
+[list]
+[*]Jedes Saisonende rücken [b]eigene Jugendspieler[/b] in den Profikader. Anzahl und Talent hängen von der Jugendakademie ab.
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🌍 Lebendige Fußballwelt[/color][/b][/size]
+
+[list]
+[*][b]KI-Vereine tätigen eigene Transfers[/b] im Transferfenster: Sie erkennen ihre schwächste Position und kaufen gezielt.
+[*]KI-Vereine [b]verlängern Verträge[/b] oder lassen Spieler ziehen.
+[*][b]Vereinslose Spieler[/b] werden zum Saisonende von KI-Clubs verpflichtet, wenn deren Kader zu dünn ist. Nicht vermittelte Spieler beenden nach einer Saison ihre Karriere.
+[*][b]Transferhistorie[/b] mit allen Wechseln weltweit
+[*]Spannende Wechsel in deiner Liga erscheinen in den [b]Nachrichten[/b].
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🖥️ Neues Interface[/color][/b][/size]
+
+[list]
+[*]Komplett neues Design im [b]Broadcast- und Konsolen-Look[/b]: dunkles Navy, Glas-Effekte, Neon-Akzente in Grün und Cyan, kantige Buttons, Schriftart Barlow Condensed
+[*]Das gesamte UI färbt sich in [b]deinen Vereinsfarben[/b].
+[*][b]Hauptmenü mit Live-3D-Stadion[/b] im Hintergrund (Abendstimmung, kreisende Kamera, laufende Spieler)
+[*][b]Neue Vereinszentrale:[/b] großer Vereins-Header mit Wappen, Spielvorschau, Kontostand-Kurve, Kaderstatus, Schlüsselspieler, Nachrichten und Trainingsbericht
+[*][b]Spielerkarten[/b] im Kader (Gold, Silber, Bronze, Talent) mit sechs Kernwerten und Glanzeffekt; die Tabellenansicht ist weiterhin umschaltbar.
+[*][b]VS-Bildschirm[/b] vor dem Spiel mit Vereinsfarben, Stärkebalken, Tageszeit und Wetter
+[*]Neue Spielerprofile mit Vereinsfarben-Header, Scoutingbericht und Transferaktionen
+[*]Animierte Karten, Übergänge und Pop-ups
+[*]Topbar zeigt Transferfenster-Status, Kontostand und offene Angebote (Badge)
+[*]Mobile Ansicht überarbeitet: Navigation unten, kein seitliches Verrutschen mehr, kompaktere Filter
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]⚙️ Match-Engine & Balancing[/color][/b][/size]
+
+[list]
+[*][b]Mehr Torgefahr:[/b] Abschlussentscheidungen überarbeitet. Im Schnitt fallen jetzt etwa [b]1,8–1,9 Tore[/b] bei [b]rund 9 Schüssen[/b] pro Partie (vorher 1,5 Tore / 8 Schüsse).
+[*]Taktische Vertrautheit beeinflusst die Entscheidungsqualität der KI.
+[*]Gehaltsstruktur realistischer: Spitzengehälter sind gedeckelt, Gehälter insgesamt im Verhältnis zu den Einnahmen.
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🐞 Fehlerbehebungen[/color][/b][/size]
+
+[list]
+[*]Die TV-Kamera wurde bei großen Stadien von der Haupttribüne verdeckt. Sie sitzt jetzt auf der Tribünenkante.
+[*]Auf Smartphones konnte die Seite seitlich verrutschen, wodurch die Navigation unten teilweise nicht antippbar war.
+[*]Bei der Sofortsimulation lief die 3D-Grafik im Hintergrund weiter und bremste die Simulation. Der Renderer wird jetzt beendet.
+[*]Der Vollbildmodus wirft keine Fehler mehr, wenn der Browser ihn verweigert.
+[*]Attributspannen im Spielerprofil werden nicht mehr umgebrochen.
+[/list]
+
+[hr]
+
+[size=150][b][color=#3dffa0]🔭 Bekannte Punkte / Ausblick[/color][/b][/size]
+
+[list]
+[*]Pokalwettbewerbe, internationale Wettbewerbe und Nationalmannschaften folgen mit [b]Phase 7[/b].
+[*]Die Passquote in den 3D-Spielen liegt noch bei rund 62 % und wird weiter verbessert.
+[*]Auf schwächeren Smartphones bitte die Grafikstufe [b]„Niedrig“[/b] oder [b]„Mittel“[/b] wählen (Einstellungen). Ultra ist für Desktop-PCs gedacht.
+[*]Die Schriftart Barlow Condensed wird aus dem Internet geladen. Offline fällt das Spiel auf eine Systemschrift zurück.
+[/list]
+
+Viel Spaß mit dem Update! Feedback, Bugs und Wünsche gerne hier im Thread. ⚽🔥
