@@ -3,6 +3,9 @@ import { IS_MOBILE } from './core/device.js';
 import { App } from './ui/app.js';
 import { preloadCrests } from './render/crestImages.js';
 import { loadGame } from './storage/db.js';
+import { startI18n, setLang } from './i18n/i18n.js';
+{ const lm = location.hash.match(/lang=(\w+)/); if (lm) setLang(lm[1]); }
+startI18n();
 
 const root = document.getElementById('app');
 if (/FM27-Android/.test(navigator.userAgent)) document.documentElement.classList.add('android');

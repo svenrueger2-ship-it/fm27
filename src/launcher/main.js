@@ -1,6 +1,8 @@
 // FUSSBALL MANAGER 2027 © BAKUSA – Launcher (v2.6)
 import { startBackground } from './bg.js';
 import * as sfx from './sfx.js';
+import { startI18n, LANGS, getLang, setLang } from '../i18n/i18n.js';
+startI18n();
 import { PATCHNOTES, GAME_VERSION } from '../data/patchnotes.js';
 import { listSaves, loadSettings, saveSettings, deleteGame } from '../storage/db.js';
 import { ACHIEVEMENTS, globalAchievements } from '../manager/achievements.js';
@@ -96,7 +98,7 @@ function newsHtml() {
     ${ex ? `${cur.verbessert?.length ? `<h4>Verbessert</h4><ul class="notes">${cur.verbessert.map(noteLi).join('')}</ul>` : ''}${cur.behoben?.length ? `<h4>Behoben</h4><ul class="notes">${cur.behoben.map(noteLi).join('')}</ul>` : ''}` : ''}
     <button class="link" data-exp="${esc(cur.version)}">${ex ? 'Weniger anzeigen' : `Alle ${cur.neu.length + (cur.verbessert?.length || 0) + (cur.behoben?.length || 0)} Änderungen anzeigen`}</button></div></article>
     <h4 class="sec">Frühere Updates</h4>
-    ${older.slice(0, 10).map((v) => `<details class="old"><summary><span class="ov">${esc(v.version)}</span><span class="ot">${esc(v.title.replace(/^Version [\d.]+ – /, ''))}</span><span class="od">${v.neu.length} neu</span></summary><ul class="notes">${v.neu.map(noteLi).join('')}</ul></details>`).join('')}`;
+    ${older.slice(0, 10).map((v) => `<details class="old"><summary><span class="ov">${esc(v.version)}</span><span class="ot" data-noi18n>${esc(v.title.replace(/^Version [\d.]+ – /, ''))}</span><span class="od">${v.neu.length} neu</span></summary><ul class="notes" data-noi18n>${v.neu.map(noteLi).join('')}</ul></details>`).join('')}`;
 }
 function savesHtml() {
   if (!state.saves.length) return `<div class="empty-state"><div class="es-ico">💾</div><p>Noch keine Spielstände.</p><small>Sie erscheinen hier, sobald du im Spiel speicherst.</small></div>`;
@@ -111,7 +113,9 @@ function settingsHtml() {
   const g = loadSettings();
   const seg = (id, val, opts) => `<div class="seg" data-seg="${id}">${opts.map(([v, l]) => `<button data-v="${v}" class="${String(val) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
   const tog = (id, on, label, sub) => `<label class="tog"><span><b>${label}</b><small>${sub}</small></span><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i></i></label>`;
-  return `<div class="set-group"><h4 class="sec">Grafik & Ton</h4>
+  return `<div class="set-group" data-noi18n><h4 class="sec">🌐 Sprache · Language</h4>
+    <div class="row"><span><b>Sprache / Language</b><small>Launcher & Spiel · launcher & game</small></span><div class="seg" id="lang-seg">${LANGS.map((l) => `<button data-lang="${l.id}" class="${getLang() === l.id ? 'on' : ''}">${l.flag} ${l.label}</button>`).join('')}</div></div></div>
+    <div class="set-group"><h4 class="sec">Grafik & Ton</h4>
     <div class="row"><span><b>Grafikqualität</b><small>3D-Spiel und Stadion</small></span>${seg('quality', g.quality, [['niedrig', 'Niedrig'], ['mittel', 'Mittel'], ['hoch', 'Hoch']])}</div>
     <div class="row"><span><b>Lautstärke im Spiel</b><small>Stadion-Sound und Kommentar</small></span><input type="range" min="0" max="100" value="${Math.round((g.volume ?? 0.8) * 100)}" id="vol"><output id="vol-o">${Math.round((g.volume ?? 0.8) * 100)} %</output></div>
     ${tog('fs', LS.fullscreen, 'Im Vollbild starten', 'Jederzeit mit F11 umschaltbar')}
@@ -148,6 +152,7 @@ function renderPanel() {
     state.saves = state.saves.filter((x) => x.slot !== slot);
     renderPanel(); renderStats(); renderContinue();
   }));
+  P.querySelectorAll('[data-lang]').forEach((b) => (b.onclick = () => { if (b.dataset.lang === getLang()) return; setLang(b.dataset.lang); sfx.click(); location.reload(); }));
   P.querySelectorAll('[data-seg]').forEach((s) => s.querySelectorAll('button').forEach((b) => (b.onclick = () => { const g = loadSettings(); g[s.dataset.seg] = b.dataset.v; saveSettings(g); sfx.click(); renderPanel(); })));
   const vol = $('#vol'); if (vol) vol.oninput = () => { $('#vol-o').textContent = `${vol.value} %`; const g = loadSettings(); g.volume = vol.value / 100; saveSettings(g); };
   const bind = (id, key, after) => { const el = $(`#${id}`); if (el) el.onchange = () => { LS[key] = el.checked; saveLS(); sfx.click(); after?.(); }; };

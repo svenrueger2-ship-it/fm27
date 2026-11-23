@@ -1,3 +1,4 @@
+import { getLang } from '../i18n/i18n.js';
 // Calendar (v2.9): maps season weeks to real dates. Each week runs Monday–Sunday: cup / European games on Wednesday,
 // league games on Sunday (matching the training week plan Mo–Sa). Days in between are training days.
 import { userFixture } from './season.js';
@@ -12,7 +13,13 @@ export const CUP_DAY = 2, LEAGUE_DAY = 6; // like the training week plan: sessio
 
 export function seasonStart(season) { const d = new Date(season, 7, 15); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return d; }
 export function dateOf(world, week = world.week, day = world.day || 0) { const d = seasonStart(world.season); d.setDate(d.getDate() + week * 7 + day); return d; }
-export const fmtDate = (d, long = false) => `${long ? WD_LONG[(d.getDay() + 6) % 7] : WD[(d.getDay() + 6) % 7]}, ${d.getDate()}. ${long ? MONTHS[d.getMonth()] : MONTHS[d.getMonth()].slice(0, 3) + '.'} ${d.getFullYear()}`;
+const WD_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], WDL_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const fmtDate = (d, long = false) => {
+  const i = (d.getDay() + 6) % 7;
+  if (getLang() === 'en') return `${long ? WDL_EN[i] : WD_EN[i]}, ${d.getDate()} ${long ? MON_EN[d.getMonth()] : MON_EN[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
+  return `${long ? WD_LONG[i] : WD[i]}, ${d.getDate()}. ${long ? MONTHS[d.getMonth()] : MONTHS[d.getMonth()].slice(0, 3) + '.'} ${d.getFullYear()}`;
+};
 export function weekOfDate(world, d) { const ms = d - seasonStart(world.season); return { week: Math.floor(ms / 864e5 / 7), day: ((Math.floor(ms / 864e5) % 7) + 7) % 7 }; }
 
 /** Everything that happens on a given week/day for the user (for the grid and the day stepper). */

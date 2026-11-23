@@ -1303,3 +1303,7 @@ textarea.input, .field textarea { width: 100%; resize: vertical; font: inherit; 
 .stock-chart { width: 100%; height: 200px; color: var(--muted); } .stock-head { display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap; margin-bottom: .4rem; } .stock-head b { font-size: 1.8rem; }
 .checks { list-style: none; padding: 0; margin: .5rem 0; } .checks li { padding: .2rem 0; } .checks .good { color: #3dffa0; } .checks .bad { color: #ff4d6a; }
 .diff-pick label { padding: .35rem .5rem; }
+
+/* v5.3 language picker */
+.lang-pick { display: flex; gap: .35rem; flex-wrap: wrap; } .lang-pick .chip-btn { font-size: .8rem; }
+.sm-lang { margin: .6rem 0 .2rem; } .sm-lang .chip-btn { padding: .2rem .5rem; font-size: .72rem; }

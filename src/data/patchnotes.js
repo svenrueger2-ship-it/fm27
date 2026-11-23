@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.3.0', date: '24.11.2026', title: 'Sprachauswahl: Deutsch & English',
+    neu: ['Sprachauswahl im Launcher, im Hauptmenü und in den Einstellungen: Deutsch oder English', 'Komplettes Spiel auf Englisch: Menüs, Nachrichten, Ereignisse, TV-Kommentar, Erfolge, Datum und Beträge'],
+    verbessert: ['Beim Sprachwechsel wird die Karriere gespeichert und direkt wieder geladen'],
+    behoben: [],
+    geplant: ['Weitere Sprachen'],
+  },
+  {
     version: '5.2.0', date: '23.11.2026', title: 'Stadion, Design-Editor, Börse & Schwierigkeitsgrade',
     neu: ['Stadion neu: Reiter für Übersicht, Tribünen, Innenausbau und Technik, 3D-Großansicht im Vollbild', 'Tribünen umbenennen (z. B. nach Vereinslegenden)', 'Innenausbau: Catering, Fanshop, Fan-Zone, Museum, WLAN & App, Medienzentrum, Kabinentrakt', 'Trikot- & Wappen-Editor für den eigenen Verein: Heim- und Auswärtstrikot, 10 Muster, eigenes Wappen', 'Editor: eigene Zeitungsartikel und Social-Posts, spielbare Spielszenen mit Startstand und Ziel, Spieler- und Vereinseditor', 'Börsengang: bis zu 49 % verkaufen, Kurs pro Woche, Kapitalerhöhung, Rückkauf, Dividende', 'Schwierigkeitsgrade Leicht, Normal, Schwer und Legende'],
     verbessert: ['Startbildschirm zeigt jetzt korrekt 12 Ligen und 224 Vereine'],

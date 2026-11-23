@@ -22,10 +22,10 @@ import { startMenuScene } from '../../render/menuScene.js';
 const isDesktop = () => !!window.bakusa;
 
 function patchHtml() {
-  const sec = (title, items, cls) => items?.length ? `<h5 class="${cls}">${title}</h5><ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
+  const sec = (title, items, cls, old) => items?.length ? `<h5 class="${cls}">${title}</h5><ul ${old ? 'data-noi18n' : ''}>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
   return PATCHNOTES.map((p, i) => `<article class="pn ${i === 0 ? 'open' : ''}">
-    <button class="pn-head"><span class="pn-ver">v${esc(p.version)}</span><span class="pn-title">${esc(p.title)}</span><small>${esc(p.date)}</small></button>
-    <div class="pn-body">${sec('Neu', p.neu, 'n')}${sec('Verbessert', p.verbessert, 'v')}${sec('Behoben', p.behoben, 'b')}${sec('Geplant', p.geplant, 'g')}</div></article>`).join('');
+    <button class="pn-head"><span class="pn-ver">v${esc(p.version)}</span><span class="pn-title" ${i > 1 ? 'data-noi18n' : ''}>${esc(p.title)}</span><small>${esc(p.date)}</small></button>
+    <div class="pn-body">${sec('Neu', p.neu, 'n', i > 1)}${sec('Verbessert', p.verbessert, 'v', i > 1)}${sec('Behoben', p.behoben, 'b', i > 1)}${sec('Geplant', p.geplant, 'g', i > 1)}</div></article>`).join('');
 }
 
 // Career snapshot from a loaded world (centre panel of the start screen)
@@ -84,7 +84,7 @@ export function startScreen(app, el) {
           <button data-go="credits"><i>✦</i>Credits</button>
           <button data-go="quit" class="quit"><i>⏻</i>Beenden</button>
         </nav>
-        <p class="sm-ver">Version ${GAME_VERSION} · ${isDesktop() ? 'Windows' : /FM27-Android/.test(navigator.userAgent) ? 'Android-App' : 'Browser'}</p>
+        ${langPicker('sm-lang')}<p class="sm-ver">Version ${GAME_VERSION} · ${isDesktop() ? 'Windows' : /FM27-Android/.test(navigator.userAgent) ? 'Android-App' : 'Browser'}</p>
       </aside>
       <main class="sm-center" id="m-center">${welcomeHtml()}</main>
       <aside class="sm-notes"><div class="pn-top"><small>BAKUSA</small><h3>Patchnotes</h3></div><div class="pn-list">${patchHtml()}</div></aside>
@@ -94,6 +94,7 @@ export function startScreen(app, el) {
   const center = el.querySelector('#m-center');
   let latest = null, latestWorld = null;
   el.querySelectorAll('.pn-head').forEach((h) => (h.onclick = () => h.parentElement.classList.toggle('open')));
+  bindLang(app, el);
   const showSaves = async () => {
     const saves = await listSaves();
     center.innerHTML = `<div class="sv-panel"><h2>Spielstand laden</h2>${saves.length ? `<div class="save-list">${saves.map((x) => saveRow(x)).join('')}</div>` : '<p class="muted">Noch keine Spielstände vorhanden.</p>'}</div>`;
@@ -213,6 +214,18 @@ function bindSaveRows(app, host, refresh) {
 }
 
 import { DIFFICULTIES, applyDifficulty } from '../../manager/difficulty.js';
+// v5.3 language picker (start menu, settings)
+import { LANGS, getLang, setLang } from '../../i18n/i18n.js';
+export const langPicker = (cls = '') => `<div class="lang-pick ${cls}" data-noi18n>${LANGS.map((l) => `<button class="chip-btn ${getLang() === l.id ? 'on' : ''}" data-lang="${l.id}" title="${l.label}">${l.flag} ${l.label}</button>`).join('')}</div>`;
+export function bindLang(app, root) {
+  root.querySelectorAll('[data-lang]').forEach((b) => (b.onclick = async () => {
+    const id = b.dataset.lang; if (id === getLang()) return;
+    setLang(id);
+    if (app.world && app.world.mode !== 'wm') { try { await app.save(app.slot || 'slot1', true); } catch {} location.hash = 'continue=' + encodeURIComponent(app.slot || 'slot1'); }
+    location.reload();
+  }));
+}
+
 export function newGameScreen(app, el) {
   if (!app.pendingWorld) app.pendingWorld = generateWorld();
   const w = app.pendingWorld;
@@ -399,7 +412,8 @@ export function settingsScreen(app, el) {
   const draw = () => {
     const w = app.world, cur = w?.difficulty || 'normal';
     const diffCard = w && w.mode !== 'wm' ? `<div class="card"><h3>🎚️ Schwierigkeitsgrad</h3><p class="muted small">Gilt ab sofort für Transfers, Vorstand und KI-Stärke. Das Startbudget bleibt unverändert.</p><div class="opt-row">${Object.entries(DIFFICULTIES).map(([k, d]) => `<button class="chip-btn ${cur === k ? 'on' : ''}" data-diff="${k}" title="${esc(d.desc)}">${d.icon} ${d.label}</button>`).join('')}</div></div>` : '';
-    el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2>${diffCard}<div class="card">${settingsForm(app)}</div></div>`;
+    el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2><div class="card"><h3>🌐 Sprache · Language</h3>${langPicker()}</div>${diffCard}<div class="card">${settingsForm(app)}</div></div>`;
+    bindLang(app, el);
     el.querySelectorAll('[data-diff]').forEach((b) => (b.onclick = () => { w.difficulty = b.dataset.diff; toast(`Schwierigkeitsgrad: ${DIFFICULTIES[w.difficulty].label}`); draw(); }));
     bindSettings(app, el, draw);
   };
@@ -408,7 +422,7 @@ export function settingsScreen(app, el) {
 function settingsModal(app) {
   const m = modal('<div class="set-host"></div>');
   const host = m.el.querySelector('.set-host');
-  const draw = () => { host.innerHTML = `<h3>⚙️ Einstellungen</h3>${settingsForm(app)}`; bindSettings(app, host, draw); };
+  const draw = () => { host.innerHTML = `<h3>⚙️ Einstellungen</h3><div class="row-between"><b>🌐 Sprache · Language</b>${langPicker()}</div>${settingsForm(app)}`; bindLang(app, host); bindSettings(app, host, draw); };
   draw();
 }
 
