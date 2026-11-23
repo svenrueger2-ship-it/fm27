@@ -89,22 +89,36 @@ namespace FM27.View
         {
             var a = agent;
             if (a.sentOff) { gameObject.SetActive(false); return; }
-            if (!gameObject.activeSelf) gameObject.SetActive(true);
             var p = V2.Lerp(a.prev, a.pos, alpha);
-            var world = Look.World(p.x, p.y);
-            float dt = Mathf.Max(Time.deltaTime, 1e-4f);
-            float speed = (new Vector3(world.x - lastPos.x, 0, world.z - lastPos.z)).magnitude / dt;
-            if (speed > 14f) speed = a.vel.Len; // teleports (set pieces)
-            lastPos = world;
             float yaw = -Mathf.LerpAngle(a.prevFacing * Mathf.Rad2Deg, a.facing * Mathf.Rad2Deg, alpha) + 90f;
-            transform.SetPositionAndRotation(world, Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, yaw, 0), 1f - Mathf.Exp(-dt * 14f)));
-            Animate(a, speed, dt);
+            Pose(p.x, p.y, yaw, a.anim, a.animT, a.vel.Len);
         }
 
-        void Animate(Agent a, float speed, float dt)
+        /// <summary>Replay: pose from two recorded frames.</summary>
+        public void ReplayPose(FramePlayer f0, FramePlayer f1, float k)
         {
-            if (a.anim != lastAnim || a.animT < lastAnimT) { lastAnim = a.anim; }
-            lastAnimT = a.animT;
+            if (f1.off) { gameObject.SetActive(false); return; }
+            float x = Mathf.Lerp(f0.x, f1.x, k), y = Mathf.Lerp(f0.y, f1.y, k);
+            float yaw = -Mathf.LerpAngle(f0.f * Mathf.Rad2Deg, f1.f * Mathf.Rad2Deg, k) + 90f;
+            Pose(x, y, yaw, f1.anim, Mathf.Lerp(f0.animT, f1.animT, k), -1f);
+        }
+
+        void Pose(float x, float y, float yaw, string anim, float animT, float simSpeed)
+        {
+            if (!gameObject.activeSelf) gameObject.SetActive(true);
+            var world = Look.World(x, y);
+            float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+            float speed = (new Vector3(world.x - lastPos.x, 0, world.z - lastPos.z)).magnitude / dt;
+            if (speed > 14f) speed = simSpeed >= 0 ? simSpeed : 0f; // teleports (set pieces, replay cuts)
+            lastPos = world;
+            transform.SetPositionAndRotation(world, Quaternion.Slerp(transform.rotation, Quaternion.Euler(0, yaw, 0), 1f - Mathf.Exp(-dt * 14f)));
+            Animate(anim, animT, speed, dt);
+        }
+
+        void Animate(string anim, float t, float speed, float dt)
+        {
+            var a = agent;
+            lastAnim = anim; lastAnimT = t;
             float run = Mathf.Clamp01(speed / 8.5f);
             phase += dt * (2.2f + speed * 1.05f);
             float sw = Mathf.Sin(phase), cw = Mathf.Cos(phase);
@@ -116,8 +130,7 @@ namespace FM27.View
             float lHipX = sw * legAmp, rHipX = -sw * legAmp;
             float lKneeX = Mathf.Max(0, -cw) * legAmp * 1.6f + 6f, rKneeX = Mathf.Max(0, cw) * legAmp * 1.6f + 6f;
             float lShX = -sw * armAmp, rShX = sw * armAmp, lShZ = -6f, rShZ = 6f, elbowX = -20f - run * 50f;
-            float t = a.animT;
-            switch (a.anim)
+            switch (anim)
             {
                 case "kick":
                     {
@@ -179,7 +192,7 @@ namespace FM27.View
             rHip.localRotation = Quaternion.Slerp(rHip.localRotation, Quaternion.Euler(rHipX, 0, 0), s);
             lKnee.localRotation = Quaternion.Slerp(lKnee.localRotation, Quaternion.Euler(lKneeX, 0, 0), s);
             rKnee.localRotation = Quaternion.Slerp(rKnee.localRotation, Quaternion.Euler(rKneeX, 0, 0), s);
-            if (head != null && a.anim != "dive") head.localRotation = Quaternion.Slerp(head.localRotation, Quaternion.Euler(-lean * 0.6f, 0, 0), s);
+            if (head != null && anim != "dive") head.localRotation = Quaternion.Slerp(head.localRotation, Quaternion.Euler(-lean * 0.6f, 0, 0), s);
         }
     }
 }

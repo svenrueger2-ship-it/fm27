@@ -44,13 +44,16 @@ AFM27MatchActor::AFM27MatchActor()
 // ======================================================================= setup
 void AFM27MatchActor::LoadSetup()
 {
-	FString SetupPath, Json, Camera, Quality;
+	FString SetupPath, Json;
+	FM27Json::FHostOptions Opt;
 	FParse::Value(FCommandLine::Get(), TEXT("setup="), SetupPath);
 	FParse::Value(FCommandLine::Get(), TEXT("result="), ResultPath);
-	FParse::Value(FCommandLine::Get(), TEXT("userside="), UserSide);
 	bool bOk = false;
 	if (!SetupPath.IsEmpty() && FFileHelper::LoadFileToString(Json, *SetupPath))
-		bOk = FM27Json::ParseSetup(Json, Setup, bNight, Speed, Camera, Quality);
+		bOk = FM27Json::ParseSetup(Json, Setup, Opt);
+	bNight = Opt.bNight; Speed = Opt.Speed; bReplays = Opt.bReplays; bHighlights = Opt.bHighlights; UserSide = Opt.UserSide;
+	FParse::Value(FCommandLine::Get(), TEXT("userside="), UserSide);
+	const FString Camera = Opt.Camera;
 	if (!bOk)
 	{
 		// demo match (started without the launcher)
@@ -70,7 +73,8 @@ void AFM27MatchActor::LoadSetup()
 		Setup.seed = (unsigned)FDateTime::Now().GetTicks();
 		StatusText = TEXT("Demo-Spiel (ohne Launcher gestartet)");
 	}
-	CamMode = Camera == TEXT("bird") ? 3 : Camera == TEXT("behind") ? 2 : Camera == TEXT("wide") ? 1 : 0;
+	CamMode = LiveCamMode = Camera == TEXT("bird") ? 3 : Camera == TEXT("behind") ? 2 : Camera == TEXT("wide") ? 1 : 0;
+	if (UserSide >= 0) { const float P = UserTeam().pressing; PressIdx = P < 0.38f ? 0 : P > 0.68f ? 2 : 1; }
 	CameraName = CamNames[CamMode];
 	HomeShort = FM27Json::Str(Setup.home.shortName); AwayShort = FM27Json::Str(Setup.away.shortName);
 	HomeColor = FM27Look::Hex(Setup.home.primary, FLinearColor::Red); AwayColor = FM27Look::Hex(Setup.away.primary, FLinearColor::Blue);
@@ -315,6 +319,8 @@ void AFM27MatchActor::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	if (!Sim) return;
 	const float Dt = FMath::Min(DeltaSeconds, 0.1f);
+	if (PlayingClip < 0 && QueuedClip >= 0) { ReplayDelay -= Dt; if (ReplayDelay <= 0.f) { const int32 Q = QueuedClip; QueuedClip = -1; StartReplay(Q); } }
+	if (PlayingClip >= 0) { ReplayTick(Dt); UpdateCrowd(Dt); return; }
 	if (!bPaused && !Sim->finished) Sim->Advance(Dt * Speed);
 	const float Alpha = FMath::Clamp(Sim->Alpha(), 0.f, 1.f);
 	for (AFM27PlayerActor* P : Players) if (P) P->Sync(Alpha, Dt);
@@ -336,6 +342,18 @@ void AFM27MatchActor::Tick(float DeltaSeconds)
 	if (Sim->finished)
 	{
 		if (!bResultWritten) { WriteResult(); EndTimer = 6.f; }
+		if (!bHighlightsDone)
+		{
+			bHighlightsDone = true;
+			if (bHighlights && !Sim->clips.empty())
+			{
+				for (int32 i = 0; i < (int32)Sim->clips.size(); i++) if (Sim->clips[i].type == "goal") HlQueue.Add(i);
+				for (int32 i = 0; i < (int32)Sim->clips.size() && HlQueue.Num() < 8; i++) if (Sim->clips[i].type != "goal") HlQueue.Add(i);
+				if (HlQueue.Num() > 8) HlQueue.SetNum(8);
+				bHighlightsMode = true; HlIndex = 0; StartReplay(HlQueue[0]);
+				return;
+			}
+		}
 		EndTimer -= DeltaSeconds;
 		if (EndTimer <= 0.f && !ResultPath.IsEmpty()) FPlatformMisc::RequestExit(false);
 	}
@@ -352,6 +370,14 @@ void AFM27MatchActor::UpdateCamera(const FVector& Ball, const FVector& BallVel, 
 	{
 		Target = Focus->GetActorLocation() + FVector(0, 0, 120);
 		Pos = Focus->GetActorLocation() + FVector(FMath::Sin(GetWorld()->GetTimeSeconds() * 0.3f) * 300.f, -900.f, 320.f); Fov = 32.f;
+	}
+	else if (CamMode == 10 || CamMode == 11)
+	{
+		const float GX = Sim->clips.empty() || PlayingClip < 0 ? 0.f : (Sim->clips[PlayingClip].goalX - 52.5f) * 100.f;
+		const float Sgn = GX >= 0.f ? 1.f : -1.f;
+		Target = Ball;
+		if (CamMode == 10) { Pos = FVector(Ball.X - Sgn * 900.f, FMath::Clamp(Ball.Y, -3000.f, 3000.f) - 1700.f, 260.f); Fov = 30.f; }
+		else { Pos = FVector(GX + Sgn * 1300.f, Ball.Y * 0.25f, 550.f); Fov = 38.f; }
 	}
 	else
 	{
@@ -403,6 +429,8 @@ void AFM27MatchActor::OnSimEvent(const fm27::MatchEvent& E)
 	else if (E.type == "post") { Line = FString::Printf(TEXT("%d'  Aluminium!"), E.minute); Cheer = FMath::Max(Cheer, 0.6f); }
 	else if (E.type == "halftime" || E.type == "fulltime") Line = FM27Json::Str(E.text);
 	else if (E.type == "shot") Cheer = FMath::Max(Cheer, 0.25f);
+	else if (E.type == "clip" && E.text == "goal" && bReplays && E.assist >= 0) { QueuedClip = E.assist; ReplayDelay = 1.6f; }
+	else if (E.type == "formation" || E.type == "sub") Line = FString::Printf(TEXT("%d'  %s"), E.minute, *FM27Json::Str(E.text));
 	if (!Line.IsEmpty()) { Feed.Insert({ Line, GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f, bGoal }, 0); if (Feed.Num() > 5) Feed.SetNum(5); }
 }
 
@@ -424,7 +452,7 @@ void AFM27MatchActor::WriteResult()
 }
 
 // ======================================================================= controls / HUD data
-void AFM27MatchActor::CycleCamera() { CamMode = (CamMode + 1) % 4; CameraName = CamNames[CamMode]; }
+void AFM27MatchActor::CycleCamera() { LiveCamMode = (LiveCamMode + 1) % 4; if (PlayingClip < 0) CamMode = LiveCamMode; CameraName = CamNames[LiveCamMode]; }
 void AFM27MatchActor::ChangeMentality(int Delta)
 {
 	if (!Sim || UserSide < 0) return;
@@ -436,3 +464,143 @@ int32 AFM27MatchActor::HomeGoals() const { return Sim ? Sim->score[0] : 0; }
 int32 AFM27MatchActor::AwayGoals() const { return Sim ? Sim->score[1] : 0; }
 FString AFM27MatchActor::Clock() const { return Sim ? FM27Json::Str(Sim->Clock()) : TEXT("00:00"); }
 bool AFM27MatchActor::IsFinished() const { return Sim && Sim->finished; }
+
+// ======================================================================= replays & highlights (v3.3)
+void AFM27MatchActor::StartReplay(int32 ClipIdx)
+{
+	if (!Sim || ClipIdx < 0 || ClipIdx >= (int32)Sim->clips.size() || Sim->clips[ClipIdx].frames.size() < 2) { PlayingClip = -1; EndReplay(); return; }
+	PlayingClip = ClipIdx; PlayT = 0.f; CamMode = 10; Focus.Reset();
+	const fm27::Clip& C = Sim->clips[ClipIdx];
+	ReplayLabel = bHighlightsMode ? FString::Printf(TEXT("HIGHLIGHTS %d/%d   %d'  %s"), HlIndex + 1, HlQueue.Num(), C.minute, *FM27Json::Str(C.text))
+	                              : FString::Printf(TEXT("WIEDERHOLUNG   %d'  %s"), C.minute, *FM27Json::Str(C.text));
+	Cheer = FMath::Max(Cheer, C.type == "goal" ? 0.6f : 0.3f);
+}
+
+void AFM27MatchActor::ReplayTick(float Dt)
+{
+	const fm27::Clip& C = Sim->clips[PlayingClip];
+	const float Dur = C.Duration();
+	const float Rate = (PlayT > Dur - 4.2f && PlayT < Dur - 1.6f) ? 0.42f : 1.f; // slow motion around the decisive moment
+	PlayT += Dt * Rate;
+	if (PlayT >= Dur) { EndReplay(); return; }
+	if (PlayT > Dur * 0.5f) CamMode = 11;
+	const float T = C.frames.front().t + PlayT;
+	size_t i = 0; while (i + 2 < C.frames.size() && C.frames[i + 1].t <= T) i++;
+	const fm27::Frame& A = C.frames[i]; const fm27::Frame& B = C.frames[i + 1];
+	const float K = FMath::Clamp((T - A.t) / FMath::Max(1e-4f, B.t - A.t), 0.f, 1.f);
+	for (int32 n = 0; n < Players.Num() && n < 22; n++) if (Players[n]) Players[n]->ReplayPose(A.p[n], B.p[n], K, Dt);
+	const FVector BallW = FM27Look::World(FMath::Lerp(A.bx, B.bx, K), FMath::Lerp(A.by, B.by, K), FMath::Lerp(A.bz, B.bz, K)) + FVector(0, 0, 11);
+	if (BallMesh)
+	{
+		const FVector Move = BallW - LastBall;
+		if (Move.Size2D() > 0.1f && Move.Size2D() < 300.f) BallMesh->AddWorldRotation(FQuat(FVector::CrossProduct(FVector::UpVector, Move.GetSafeNormal2D()), Move.Size2D() / 11.f));
+		BallMesh->SetWorldLocation(BallW); LastBall = BallW;
+	}
+	UpdateCamera(BallW, FVector::ZeroVector, Dt);
+}
+
+void AFM27MatchActor::EndReplay()
+{
+	PlayingClip = -1; ReplayLabel.Reset();
+	if (bHighlightsMode)
+	{
+		HlIndex++;
+		if (HlIndex < HlQueue.Num()) { StartReplay(HlQueue[HlIndex]); return; }
+		bHighlightsMode = false; EndTimer = 2.f;
+	}
+	CamMode = LiveCamMode;
+}
+
+void AFM27MatchActor::SkipReplay()
+{
+	if (PlayingClip < 0) { QueuedClip = -1; return; }
+	if (bHighlightsMode) HlIndex = HlQueue.Num();
+	EndReplay();
+}
+
+// ======================================================================= live tactics & substitutions
+static const char* GFormations[] = { "4-4-2", "4-3-3", "4-2-3-1", "3-5-2", "5-3-2", "4-1-4-1", "3-4-3", "4-5-1" };
+static const float GPress[] = { 0.25f, 0.5f, 0.85f };
+static const TCHAR* GPressName[] = { TEXT("niedrig"), TEXT("mittel"), TEXT("hoch") };
+
+FString AFM27MatchActor::FormationName() const { return UserSide >= 0 ? FM27Json::Str(UserTeam().formation) : FString(); }
+FString AFM27MatchActor::PressingName() const { return GPressName[FMath::Clamp(PressIdx, 0, 2)]; }
+
+void AFM27MatchActor::CycleFormation()
+{
+	if (!Sim || UserSide < 0) return;
+	const std::string Cur = UserTeam().formation; int32 Idx = 0;
+	for (int32 i = 0; i < 8; i++) if (Cur == GFormations[i]) Idx = i;
+	Sim->SetFormation(UserSide, GFormations[(Idx + 1) % 8]);
+	(UserSide == 1 ? Setup.away : Setup.home).formation = GFormations[(Idx + 1) % 8];
+}
+
+void AFM27MatchActor::CyclePressing()
+{
+	if (!Sim || UserSide < 0) return;
+	PressIdx = (PressIdx + 1) % 3; Sim->SetPressing(UserSide, GPress[PressIdx]);
+	Feed.Insert({ FString::Printf(TEXT("Pressing: %s"), GPressName[PressIdx]), GetWorld()->GetTimeSeconds(), false }, 0); if (Feed.Num() > 5) Feed.SetNum(5);
+}
+
+void AFM27MatchActor::ToggleSubMenu()
+{
+	if (!Sim || UserSide < 0 || Sim->finished || PlayingClip >= 0) return;
+	if (bSubMenu) { MenuBack(); return; }
+	if (SubsUsed >= 5) { Feed.Insert({ TEXT("Alle 5 Wechsel aufgebraucht"), GetWorld()->GetTimeSeconds(), false }, 0); if (Feed.Num() > 5) Feed.SetNum(5); return; }
+	bSubMenu = true; MenuStage = 0; MenuIndex = 0; OutSlot = -1; bPausedBeforeMenu = bPaused; bPaused = true;
+}
+
+TArray<FString> AFM27MatchActor::MenuLines() const
+{
+	TArray<FString> L;
+	if (!Sim || UserSide < 0) return L;
+	if (MenuStage == 0)
+		for (const fm27::Agent& A : Sim->teams[UserSide])
+			L.Add(FString::Printf(TEXT("%-3s %s   (%d, Kraft %d%%)%s"), *FM27Json::Str(A.p.pos), *FM27Json::Str(A.p.name), A.p.ovr, (int32)(A.stamina * 100.f), A.sentOff ? TEXT("  - vom Platz") : TEXT("")));
+	else
+		for (const fm27::PlayerSetup& P : UserTeam().bench)
+			if (!SubbedOut.Contains(P.id)) L.Add(FString::Printf(TEXT("%-3s %s   (%d)"), *FM27Json::Str(P.pos), *FM27Json::Str(P.name), P.ovr));
+	return L;
+}
+
+void AFM27MatchActor::MenuMove(int32 Delta)
+{
+	const int32 N = MenuLines().Num();
+	if (N > 0) MenuIndex = (MenuIndex + Delta + N) % N;
+}
+
+void AFM27MatchActor::MenuConfirm()
+{
+	if (!bSubMenu || !Sim) return;
+	if (MenuStage == 0)
+	{
+		if (MenuIndex >= (int32)Sim->teams[UserSide].size() || Sim->teams[UserSide][MenuIndex].sentOff) return;
+		OutSlot = MenuIndex; MenuStage = 1; MenuIndex = 0;
+		if (MenuLines().Num() == 0) MenuBack();
+		return;
+	}
+	TArray<const fm27::PlayerSetup*> Avail;
+	for (const fm27::PlayerSetup& P : UserTeam().bench) if (!SubbedOut.Contains(P.id)) Avail.Add(&P);
+	if (!Avail.IsValidIndex(MenuIndex) || OutSlot < 0) return;
+	const fm27::PlayerSetup In = *Avail[MenuIndex];
+	const int32 OutId = Sim->teams[UserSide][OutSlot].p.id;
+	Sim->Substitute(UserSide, OutId, In);
+	SubbedOut.Add(In.id); SubbedOut.Add(OutId); SubsUsed++;
+	const int32 Idx = UserSide * 11 + OutSlot;
+	if (Players.IsValidIndex(Idx))
+	{
+		// a fresh actor for the new player (components can't be re-created on the old one)
+		const fm27::Agent& A = Sim->teams[UserSide][OutSlot];
+		if (Players[Idx]) Players[Idx]->Destroy();
+		AFM27PlayerActor* P = GetWorld()->SpawnActor<AFM27PlayerActor>(AFM27PlayerActor::StaticClass(), FM27Look::World(A.pos.x, A.pos.y, 0), FRotator::ZeroRotator);
+		if (P) P->Init(&A, UserTeam(), MeshCube, MeshSphere, MeshCylinder, BaseMaterial);
+		Players[Idx] = P;
+	}
+	bSubMenu = false; bPaused = bPausedBeforeMenu;
+}
+
+void AFM27MatchActor::MenuBack()
+{
+	if (MenuStage == 1) { MenuStage = 0; MenuIndex = FMath::Max(0, OutSlot); return; }
+	bSubMenu = false; bPaused = bPausedBeforeMenu;
+}

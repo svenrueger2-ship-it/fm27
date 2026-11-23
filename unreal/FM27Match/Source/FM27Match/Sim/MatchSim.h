@@ -43,6 +43,11 @@ struct SideStats { int goals = 0, shots = 0, onTarget = 0, passes = 0, passesOk 
 struct PlayerRating { int id = 0, side = 0; float rating = 6; int goals = 0, assists = 0; float minutes = 0; };
 struct MatchSummary { int homeGoals = 0, awayGoals = 0; SideStats home, away; std::vector<MatchEvent> events; std::vector<PlayerRating> ratings; };
 
+// ---- replays (v3.3)
+struct FramePlayer { float x = 0, y = 0, f = 0, animT = 0; std::string anim = "idle"; bool off = false; };
+struct Frame { float t = 0, bx = 0, by = 0, bz = 0; FramePlayer p[22]; };
+struct Clip { std::string type, text; int minute = 0, side = 0, player = 0; float goalX = 0; std::vector<Frame> frames; float Duration() const { return frames.size() > 1 ? frames.back().t - frames.front().t : 0.f; } };
+
 enum class Phase { Kickoff, Play, ThrowIn, GoalKick, Corner, FreeKick, Penalty, Celebration, HalfTime, FullTime };
 
 struct Slot { float depth = 0.5f, lat = 0.5f; std::string role = "MID", pos; };
@@ -74,6 +79,8 @@ public:
     int Minute() const;
     std::string Clock() const;
     void SetMentality(int side, int v);
+    void SetPressing(int side, float v) { pressing[side == 1 ? 1 : 0] = Clamp(v, 0.f, 1.f); }
+    void SetFormation(int side, const std::string& formation);
     void Substitute(int side, int outId, const PlayerSetup& in);
 
     MatchSetup setup;
@@ -84,6 +91,7 @@ public:
     float time = 0; int half = 1; int score[2] = {0, 0}; int mentality[2] = {0, 0}; float pressing[2] = {0.5f, 0.5f};
     bool finished = false;
     std::function<void(const MatchEvent&)> onEvent;
+    std::vector<Clip> clips;
 
 private:
     std::mt19937 rng; std::uniform_real_distribution<double> uni{0.0, 1.0};
@@ -96,6 +104,11 @@ private:
     V2 restartPos;
     Agent *taker = nullptr, *lastScorer = nullptr, *shotKeeper = nullptr, *shooter = nullptr, *cornerHeader = nullptr, *clearer = nullptr, *lastPasser[2] = {nullptr, nullptr};
     std::string shotOutcome; bool wideHold = false; int tickParity = 0;
+    std::vector<Frame> recBuf = std::vector<Frame>(280); int recHead = 0, recCount = 0; float simClock = 0;
+    bool hasPending = false; Clip pending; int pendingSteps = 0;
+    void Record();
+    void MarkClip(const std::string& type, int side, int player, const std::string& text);
+    std::vector<Frame> LastFrames(float seconds) const;
 
     const TeamSetup& T(int s) const { return s == 0 ? setup.home : setup.away; }
     float U(int side, V2 p) const { return Dir(side) > 0 ? p.x : FieldX - p.x; }

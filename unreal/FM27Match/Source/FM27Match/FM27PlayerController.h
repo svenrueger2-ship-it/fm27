@@ -1,4 +1,4 @@
-// Keyboard controls: 1-4 speed, C camera, Space pause, Up/Down mentality, Esc/Enter finish the match.
+// Keyboard: 1-4 speed, C camera, Space pause, Up/Down mentality, W substitutions, F formation, P pressing, R skip replay, Esc finish.
 #pragma once
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"

@@ -5,7 +5,8 @@
 
 namespace FM27Json
 {
-	bool ParseSetup(const FString& Json, fm27::MatchSetup& Out, bool& bNight, float& Speed, FString& Camera, FString& Quality);
+	struct FHostOptions { bool bNight = true; float Speed = 1.f; FString Camera = TEXT("tv"); FString Quality = TEXT("hoch"); bool bReplays = true; bool bHighlights = true; int32 UserSide = -1; };
+	bool ParseSetup(const FString& Json, fm27::MatchSetup& Out, FHostOptions& Opt);
 	FString WriteSummary(const fm27::MatchSummary& S);
 	FString EventToJson(const fm27::MatchEvent& E);
 	inline FString Str(const std::string& S) { return FString(UTF8_TO_TCHAR(S.c_str())); }

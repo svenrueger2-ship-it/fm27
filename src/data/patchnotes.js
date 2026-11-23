@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.3.0', date: '23.11.2026', title: 'Wiederholungen & Live-Taktik',
+    neu: ['Unity/Unreal: Wiederholung nach jedem Tor – Seitenkamera, Hintertor-Kamera, Zeitlupe', 'Highlights nach dem Abpfiff: Tore, Aluminium, Glanzparaden', 'Wechsel, Formation und Pressing live im 3D-Spiel (bis zu 5 Wechsel)'],
+    verbessert: ['Einwechselspieler bekommen eigene Minuten und Noten', 'Neue Einstellung „Highlights nach dem Abpfiff“'],
+    behoben: ['Unity/Unreal-Auswahl auf dem Handy ausgeblendet – dort läuft der klassische 3D-Modus'],
+    geplant: ['Spielerpersönlichkeiten in der KI', 'Spieleranalyse aus den 3D-Spielen'],
+  },
+  {
     version: '3.2.0', date: '23.11.2026', title: 'Unreal Engine 5 (Beta)',
     neu: ['3D-Modus mit Unreal Engine 5 (Windows, Beta): Lumen-Licht, Flutlicht-Spots, Schatten, 16.000 Fans', 'Neue Spieler-KI jetzt auch in C++ – gleiche Regeln wie im Unity-Modus', 'Einstellung „3D-Engine“: Klassisch, Unity oder Unreal'],
     verbessert: ['Spieler-KI fairer: kein Vorteil mehr für die Gastmannschaft'],

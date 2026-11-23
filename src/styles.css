@@ -1174,3 +1174,10 @@ html.mobile .mc-o { padding: .2rem .5rem; font-size: .75rem; }
 html.mobile .u-ctrl { padding: .3rem .45rem; gap: .3rem; } html.mobile .u-ctrl .seg button { padding: .3rem .5rem; font-size: .75rem; }
 .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: var(--acc); animation: spin 1s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* v3.3 Unity replays + subs */
+.u-replay { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: .6rem; padding: .4rem .5rem .4rem .8rem; border-radius: 12px; background: rgba(10,8,22,.86); color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.u-replay b { color: #ffd24a; letter-spacing: .14em; font-size: .8rem; } .u-replay span { font-weight: 700; }
+.sub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; max-height: 60vh; overflow: auto; } .sub-grid h4 { margin: .2rem 0 .4rem; color: var(--muted); letter-spacing: .12em; font-size: .75rem; text-transform: uppercase; }
+.sub-row { display: grid; grid-template-columns: 38px 1fr; grid-template-rows: auto auto; column-gap: .5rem; width: 100%; text-align: left; padding: .4rem .5rem; margin-bottom: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.03); color: inherit; font: inherit; cursor: pointer; }
+.sub-row .pos { grid-row: span 2; align-self: center; text-align: center; font-weight: 800; font-size: .75rem; background: rgba(var(--acc-rgb),.25); border-radius: 6px; padding: .2rem 0; }
+.sub-row small { color: var(--muted); font-size: .72rem; } .sub-row.on, .sub-row:hover { border-color: var(--acc); background: rgba(var(--acc-rgb),.14); }

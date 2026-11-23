@@ -2,6 +2,7 @@
 import { crest, esc, modal } from '../dom.js';
 import { ensureLineup } from '../../match/tactics.js';
 import { UNITY_URL, buildUnitySetup, unityResult } from '../../match/unityBridge.js';
+import { FORMATIONS } from '../../match/tactics.js';
 import { conditions, commitResult, currentFixture } from './match.js';
 
 const LOAD_TIMEOUT = 60000;
@@ -18,11 +19,14 @@ export function unityMatch(app, el, params) {
   const pl = (id) => w.players[id];
   let frame = null, sent = false, done = false, speed = setup.speed || 1, mentality = userSide >= 0 ? setup.match[userSide ? 'away' : 'home'].mentality : 0;
   const ticker = [];
+  const mine = () => setup.match[userSide === 1 ? 'away' : 'home'];
+  const subs = { used: 0, max: 5, out: new Set() };
 
   el.innerHTML = `<div class="u-match">
     <div class="u-stage"><iframe id="u-frame" title="Unity 3D" allow="autoplay; fullscreen" src="${(() => { try { return localStorage.getItem('fm27UnityUrl') || UNITY_URL; } catch { return UNITY_URL; } })()}?v=${Date.now() >> 22}"></iframe>
       <div class="u-bug"><span>${crest(H, 26)}<b>${esc(H.short)}</b></span><em id="u-score">0 : 0</em><span><b>${esc(A.short)}</b>${crest(A, 26)}</span><i id="u-clock">00:00</i></div>
       <div class="u-feed" id="u-feed"></div>
+      <div class="u-replay" id="u-replay" hidden><b id="u-rtag">WIEDERHOLUNG</b><span id="u-rtext"></span><button class="btn sm" id="u-skip">⏭ Überspringen</button></div>
       <div class="u-load" id="u-load"><div><b>Unity-3D-Engine wird geladen …</b><div class="u-bar"><i id="u-prog"></i></div><small id="u-hint">Beim ersten Mal einmalig ca. 15–30 MB, danach aus dem Zwischenspeicher.</small>
         <div class="row-actions center"><button class="btn ghost sm" id="u-classic">Klassisch spielen</button></div></div></div>
     </div>
@@ -30,6 +34,9 @@ export function unityMatch(app, el, params) {
       <div class="seg" id="u-speed">${[1, 2, 4, 8].map((v) => `<button data-sp="${v}" class="${v === speed ? 'on' : ''}">${v}x</button>`).join('')}</div>
       <select id="u-cam" class="input"><option value="tv">TV-Kamera</option><option value="wide">Weit</option><option value="behind">Hinter dem Tor</option><option value="bird">Vogelperspektive</option></select>
       ${userSide >= 0 ? `<div class="seg" id="u-ment" title="Ausrichtung">${[[-2, 'Mauern'], [-1, 'Defensiv'], [0, 'Normal'], [1, 'Offensiv'], [2, 'Alles nach vorn']].map(([v, l]) => `<button data-m="${v}" class="${v === mentality ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
+      ${userSide >= 0 ? `<button class="btn sm" id="u-subs">🔁 Wechsel <span id="u-subn">0/5</span></button>
+      <select id="u-form" class="input" title="Formation">${Object.keys(FORMATIONS).map((f) => `<option ${f === mine().formation ? 'selected' : ''}>${f}</option>`).join('')}</select>
+      <select id="u-press" class="input" title="Pressing"><option value="0.25">Pressing: niedrig</option><option value="0.5">Pressing: mittel</option><option value="0.85">Pressing: hoch</option></select>` : ''}
       <button class="btn sm ghost" id="u-pause">⏸ Pause</button>
       <button class="btn sm" id="u-end">⏭ Spiel beenden</button>
     </div></div>`;
@@ -59,7 +66,11 @@ export function unityMatch(app, el, params) {
       case 'progress': { const p = $('#u-prog'); if (p) p.style.width = `${m.text}%`; break; }
       case 'ready': case 'loaded': startMatch(); break;
       case 'error': fail(m.text || 'Unbekannter Fehler'); break;
-      case 'state': if (m.state) { $('#u-score').textContent = `${m.state.home} : ${m.state.away}`; $('#u-clock').textContent = m.state.clock; } break;
+      case 'state': if (m.state) {
+        $('#u-score').textContent = `${m.state.home} : ${m.state.away}`; $('#u-clock').textContent = m.state.clock;
+        const rb = $('#u-replay'); rb.hidden = !m.state.replay;
+        if (m.state.replay) { $('#u-rtag').textContent = m.state.phase === 'Highlights' ? `HIGHLIGHTS ${m.state.hlIndex}/${m.state.hlCount}` : 'WIEDERHOLUNG'; $('#u-rtext').textContent = m.state.replayText || ''; }
+      } break;
       case 'event': {
         const e = m.ev; if (!e) break;
         const club = e.side === 0 ? H : e.side === 1 ? A : null;
@@ -79,6 +90,28 @@ export function unityMatch(app, el, params) {
   el.querySelectorAll('#u-speed [data-sp]').forEach((b) => (b.onclick = () => { speed = +b.dataset.sp; cmd({ type: 'speed', fvalue: speed }); el.querySelectorAll('#u-speed button').forEach((x) => x.classList.toggle('on', x === b)); }));
   $('#u-cam').onchange = (e) => cmd({ type: 'camera', text: e.target.value });
   el.querySelectorAll('#u-ment [data-m]').forEach((b) => (b.onclick = () => { mentality = +b.dataset.m; cmd({ type: 'mentality', value: mentality }); feed(`📣 Ausrichtung: ${esc(b.textContent)}`); el.querySelectorAll('#u-ment button').forEach((x) => x.classList.toggle('on', x === b)); }));
+  $('#u-skip').onclick = () => cmd({ type: 'skip' });
+  $('#u-form')?.addEventListener('change', (e) => { cmd({ type: 'formation', text: e.target.value }); mine().formation = e.target.value; feed(`📋 Formation: ${esc(e.target.value)}`); });
+  $('#u-press')?.addEventListener('change', (e) => { cmd({ type: 'pressing', fvalue: +e.target.value }); feed(`⚡ ${esc(e.target.selectedOptions[0].textContent)}`); });
+  $('#u-press') && ($('#u-press').value = String([0.25, 0.5, 0.85].reduce((b, v) => (Math.abs(v - mine().pressing) < Math.abs(b - mine().pressing) ? v : b), 0.5)));
+  $('#u-subs')?.addEventListener('click', () => {
+    if (!sent) return;
+    if (subs.used >= subs.max) { feed('🔁 Alle Wechsel aufgebraucht'); return; }
+    const T = mine(); let outId = null;
+    const row = (p, attr) => `<button class="sub-row" ${attr}="${p.id}"><span class="pos">${esc(p.pos)}</span><b>${esc(p.name)}</b><small>${p.ovr} · Fitness ${Math.round(p.fitness ?? 100)}</small></button>`;
+    const m = modal(`<h3>🔁 Auswechslung (${subs.used}/${subs.max})</h3><div class="sub-grid"><div><h4>Raus</h4>${T.players.map((p) => row(p, 'data-out')).join('')}</div><div><h4>Rein</h4>${T.bench.filter((p) => !subs.out.has(p.id)).map((p) => row(p, 'data-in')).join('') || '<p class="muted">Keine Ersatzspieler.</p>'}</div></div><p class="muted small">Erst den Spieler wählen, der raus soll, dann den Einwechselspieler.</p>`);
+    m.el.querySelectorAll('[data-out]').forEach((b) => (b.onclick = () => { outId = +b.dataset.out; m.el.querySelectorAll('[data-out]').forEach((x) => x.classList.toggle('on', x === b)); }));
+    m.el.querySelectorAll('[data-in]').forEach((b) => (b.onclick = () => {
+      if (outId == null) return;
+      const inP = T.bench.find((p) => p.id === +b.dataset.in), oi = T.players.findIndex((p) => p.id === outId);
+      if (!inP || oi < 0) return;
+      const outP = T.players[oi];
+      cmd({ type: 'sub', outId, player: inP });
+      T.players[oi] = inP; T.bench = T.bench.filter((p) => p.id !== inP.id); subs.out.add(outP.id); subs.used++;
+      $('#u-subn').textContent = `${subs.used}/${subs.max}`;
+      feed(`🔁 ${esc(inP.name)} für ${esc(outP.name)}`); m.close();
+    }));
+  });
   let paused = false;
   $('#u-pause').onclick = () => { paused = !paused; cmd({ type: paused ? 'pause' : 'resume' }); $('#u-pause').textContent = paused ? '▶ Weiter' : '⏸ Pause'; };
   $('#u-end').onclick = () => { if (!sent) return; const m = modal(`<h3>Spiel sofort beenden?</h3><p class="muted">Der Rest wird in Sekundenbruchteilen von der KI zu Ende gespielt.</p><div class="row-actions end"><button class="btn ghost" id="no">Abbrechen</button><button class="btn primary" id="yes">Beenden</button></div>`); m.el.querySelector('#no').onclick = () => m.close(); m.el.querySelector('#yes').onclick = () => { m.close(); cmd({ type: 'finish' }); }; };
@@ -125,7 +158,7 @@ export function unrealMatch(app, el) {
   const fallbackBtns = '<button class="btn primary" id="un-classic">Klassisch spielen</button><button class="btn ghost" id="un-retry">Erneut starten</button>';
   const bindFallback = () => { el.querySelector('#un-classic')?.addEventListener('click', () => app.go('match', { mode: '3d' })); el.querySelector('#un-retry')?.addEventListener('click', () => app.go('match', { mode: 'unreal' })); };
   if (!B?.unrealPlay) { el.innerHTML = box('Unreal Engine nur in der Windows-App', 'Der Unreal-3D-Modus läuft als eigenes Programm und wird vom FM27-Launcher gestartet.', fallbackBtns); bindFallback(); return; }
-  el.innerHTML = box('Das Spiel läuft im Unreal-Fenster …', 'Steuerung dort: <b>1–4</b> Tempo · <b>C</b> Kamera · <b>Leertaste</b> Pause · <b>Pfeil hoch/runter</b> Ausrichtung · <b>Esc</b> Spiel beenden.<br>Nach dem Abpfiff geht es hier automatisch weiter.', '<span class="spinner"></span>');
+  el.innerHTML = box('Das Spiel läuft im Unreal-Fenster …', 'Steuerung dort: <b>1–4</b> Tempo · <b>C</b> Kamera · <b>Leertaste</b> Pause · <b>Pfeile</b> Ausrichtung · <b>W</b> Wechsel · <b>F</b> Formation · <b>P</b> Pressing · <b>R</b> Wiederholung überspringen · <b>Esc</b> Spiel beenden.<br>Nach dem Abpfiff geht es hier automatisch weiter.', '<span class="spinner"></span>');
   let alive = true;
   B.unrealPlay(JSON.stringify(setup), { userSide, fullscreen: !!S.fullscreenStart }).then((res) => {
     if (!alive) return;

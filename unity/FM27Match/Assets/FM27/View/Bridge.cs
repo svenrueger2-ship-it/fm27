@@ -9,8 +9,8 @@ using FM27.Sim;
 
 namespace FM27.View
 {
-    [Serializable] public class HostSetup { public MatchSetup match = new MatchSetup(); public float speed = 1f; public string camera = "tv"; public string quality = "hoch"; public bool night = true; }
-    [Serializable] public class StateMsg { public string clock = "00:00"; public int minute, home, away, half = 1; public string phase = ""; public float homePoss = 50; public float speed = 1; }
+    [Serializable] public class HostSetup { public MatchSetup match = new MatchSetup(); public float speed = 1f; public string camera = "tv"; public string quality = "hoch"; public bool night = true; public bool replays = true, highlights = true; public int userSide = -1; }
+    [Serializable] public class StateMsg { public string clock = "00:00"; public int minute, home, away, half = 1; public string phase = ""; public float homePoss = 50; public float speed = 1; public bool replay; public string replayText = ""; public int hlIndex, hlCount; public string formation = ""; }
     [Serializable] public class OutMsg { public string type; public MatchEvent ev; public StateMsg state; public MatchSummary summary; public string text = ""; }
 
     public class Bridge : MonoBehaviour
@@ -29,6 +29,8 @@ namespace FM27.View
         float speed = 1f, stateTimer;
         bool paused, sentSummary;
         Transform world;
+        // replays & highlights (v3.3)
+        Clip playing, queued; float playT, replayDelay; bool highlightsMode, highlightsDone; readonly List<Clip> hlQueue = new List<Clip>(); int hlIndex, hlCount; string liveCamera = "tv";
 
         void Awake()
         {
@@ -65,7 +67,8 @@ namespace FM27.View
                 case "speed": speed = Mathf.Clamp(c.fvalue, 0.25f, 16f); break;
                 case "pause": paused = true; break;
                 case "resume": paused = false; break;
-                case "camera": if (rig != null) rig.mode = c.text; break;
+                case "camera": liveCamera = c.text; if (rig != null && playing == null) rig.mode = c.text; break;
+                case "skip": SkipReplay(); break;
                 case "finish": while (engine != null && !engine.finished) engine.Step(); break;
                 default:
                     engine?.Command(c);
@@ -78,7 +81,7 @@ namespace FM27.View
         void Build()
         {
             if (world != null) Destroy(world.gameObject);
-            views.Clear(); sentSummary = false; paused = false;
+            views.Clear(); sentSummary = false; paused = false; playing = null; queued = null; highlightsMode = false; highlightsDone = false; hlQueue.Clear();
             speed = Mathf.Clamp(host.speed, 0.25f, 16f);
             world = new GameObject("World").transform;
             bool low = host.quality == "niedrig";
@@ -93,7 +96,7 @@ namespace FM27.View
             stadium = new GameObject("Stadium").AddComponent<StadiumBuilder>(); stadium.transform.SetParent(world, false);
             stadium.Build(Look.Hex(m.home.primary, Color.red), Look.Hex(m.away.primary, Color.blue), host.night || m.weather == "night", m.weather);
             if (rig == null) rig = CameraRig.Create(host.night);
-            rig.mode = string.IsNullOrEmpty(host.camera) ? "tv" : host.camera;
+            rig.mode = liveCamera = string.IsNullOrEmpty(host.camera) ? "tv" : host.camera;
             rig.Snap(Vector3.zero);
             for (int s = 0; s < 2; s++) foreach (var a in engine.teams[s]) views.Add(PlayerView.Create(world, a, s == 0 ? m.home : m.away));
             ballView = BallView.Create(world);
@@ -109,6 +112,7 @@ namespace FM27.View
                 var scorer = views.Find(v => v.agent.p.id == e.player);
                 if (scorer != null && rig != null) { rig.focus = scorer.transform; rig.closeUpUntil = Time.time + 4.5f / Mathf.Max(1f, speed * 0.5f); }
             }
+            else if (e.type == "clip" && e.text == "goal" && host.replays && e.assist >= 0 && e.assist < engine.clips.Count) { queued = engine.clips[e.assist]; replayDelay = 1.6f; }
             else if (e.type == "save" || e.type == "post") stadium?.Cheer(0.5f);
             else if (e.type == "shot") stadium?.Cheer(0.25f);
         }
@@ -118,6 +122,8 @@ namespace FM27.View
         {
             if (engine == null) return;
             float dt = Mathf.Min(Time.deltaTime, 0.1f);
+            if (playing == null && queued != null) { replayDelay -= dt; if (replayDelay <= 0) { StartReplay(queued); queued = null; } }
+            if (playing != null) { ReplayTick(dt); SendState(dt); return; }
             if (!paused && !engine.finished) engine.Advance(dt * speed);
             float alpha = Mathf.Clamp01(engine.Alpha);
             foreach (var v in views) v.Sync(engine, alpha);
@@ -127,14 +133,77 @@ namespace FM27.View
             ballView.Place(ballWorld);
             int dir = engine.ball.owner != null ? engine.Dir(engine.ball.owner.side) : 1;
             rig.Follow(ballWorld, new Vector3(b.vel.x, 0, b.vel.y), dir, dt);
-
-            stateTimer -= dt;
-            if (stateTimer <= 0)
+            SendState(dt);
+            if (engine.finished && !highlightsDone && !sentSummary)
             {
-                stateTimer = 0.25f;
-                Post(new OutMsg { type = "state", state = new StateMsg { clock = engine.Clock, minute = engine.Minute, home = engine.score[0], away = engine.score[1], half = engine.half, phase = engine.phase.ToString(), speed = speed } });
+                highlightsDone = true;
+                if (host.highlights && engine.clips.Count > 0)
+                {
+                    // goals first in match order, then the best chances – at most 8 clips
+                    foreach (var c in engine.clips) if (c.type == "goal") hlQueue.Add(c);
+                    foreach (var c in engine.clips) if (c.type != "goal" && hlQueue.Count < 8) hlQueue.Add(c);
+                    if (hlQueue.Count > 8) hlQueue.RemoveRange(8, hlQueue.Count - 8);
+                    highlightsMode = true; hlIndex = 0; hlCount = hlQueue.Count;
+                    StartReplay(hlQueue[0]);
+                    return;
+                }
             }
-            if (engine.finished && !sentSummary) { sentSummary = true; Post(new OutMsg { type = "summary", summary = engine.summary }); }
+            if (engine.finished && !sentSummary && playing == null && !highlightsMode) { sentSummary = true; Post(new OutMsg { type = "summary", summary = engine.summary }); }
+        }
+
+        void SendState(float dt)
+        {
+            stateTimer -= dt;
+            if (stateTimer > 0) return;
+            stateTimer = 0.25f;
+            string ph = playing != null ? (highlightsMode ? "Highlights" : "Replay") : engine.phase.ToString();
+            Post(new OutMsg { type = "state", state = new StateMsg { clock = engine.Clock, minute = engine.Minute, home = engine.score[0], away = engine.score[1], half = engine.half, phase = ph, speed = speed,
+                replay = playing != null, replayText = playing != null ? $"{playing.minute}' {playing.text}" : "", hlIndex = hlIndex + 1, hlCount = hlCount,
+                formation = host.userSide == 1 ? host.match.away.formation : host.match.home.formation } });
+        }
+
+        void StartReplay(Clip c)
+        {
+            if (c == null || c.frames.Count < 2) { EndReplay(); return; }
+            playing = c; playT = 0f;
+            rig.replayGoalX = c.goalX - 52.5f; rig.mode = "rside"; rig.focus = null;
+            stadium?.Cheer(c.type == "goal" ? 0.6f : 0.3f);
+        }
+
+        void ReplayTick(float dt)
+        {
+            var f = playing.frames; float dur = playing.Duration;
+            // normal speed, slow motion around the decisive moment (~2.2 s before the clip ends)
+            float rate = playT > dur - 4.2f && playT < dur - 1.6f ? 0.42f : 1f;
+            playT += dt * rate;
+            if (playT >= dur) { EndReplay(); return; }
+            if (playT > dur * 0.5f) rig.mode = "rgoal";
+            float t = f[0].t + playT;
+            int i = 0; while (i < f.Count - 2 && f[i + 1].t <= t) i++;
+            var a = f[i]; var b = f[i + 1]; float k = Mathf.Clamp01((t - a.t) / Mathf.Max(1e-4f, b.t - a.t));
+            for (int n = 0; n < views.Count && n < 22; n++) views[n].ReplayPose(a.p[n], b.p[n], k);
+            var ball = Look.World(Mathf.Lerp(a.bx, b.bx, k), Mathf.Lerp(a.by, b.by, k), Mathf.Lerp(a.bz, b.bz, k));
+            ballView.Place(ball);
+            rig.Follow(ball, Vector3.zero, 1, dt);
+        }
+
+        void EndReplay()
+        {
+            playing = null;
+            if (highlightsMode)
+            {
+                hlIndex++;
+                if (hlIndex < hlQueue.Count) { StartReplay(hlQueue[hlIndex]); return; }
+                highlightsMode = false;
+            }
+            rig.mode = liveCamera;
+        }
+
+        void SkipReplay()
+        {
+            if (playing == null) { queued = null; return; }
+            if (highlightsMode) { hlIndex = hlQueue.Count; }
+            EndReplay();
         }
 
         // ------------------------------------------------------------------ demo (editor / standalone test)

@@ -18,6 +18,7 @@ public:
 	AFM27PlayerActor();
 	void Init(const fm27::Agent* InAgent, const fm27::TeamSetup& Team, UStaticMesh* Cube, UStaticMesh* Sphere, UStaticMesh* Cylinder, UMaterialInterface* BaseMat);
 	void Sync(float Alpha, float DeltaSeconds);
+	void ReplayPose(const fm27::FramePlayer& F0, const fm27::FramePlayer& F1, float K, float DeltaSeconds);
 	const fm27::Agent* Agent = nullptr;
 
 private:
@@ -53,5 +54,6 @@ private:
 
 	USceneComponent* Pivot(USceneComponent* Parent, const FVector& Loc, const TCHAR* Name);
 	UStaticMeshComponent* Part(USceneComponent* Parent, UStaticMesh* Mesh, const FVector& Loc, const FVector& SizeCm, const FLinearColor& Color, const TCHAR* Name);
-	void Animate(float Speed, float Dt);
+	void Pose(float X, float Y, float YawDeg, const std::string& Anim, float AnimT, float SimSpeed, float Dt);
+	void Animate(const std::string& Anim, float T, float Speed, float Dt);
 };

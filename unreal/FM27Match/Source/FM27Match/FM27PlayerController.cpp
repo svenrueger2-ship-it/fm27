@@ -24,6 +24,15 @@ void AFM27PlayerController::PlayerTick(float DeltaTime)
 	// keep the broadcast camera as view target
 	if (GetViewTarget() == this || GetViewTarget() == nullptr)
 		for (TActorIterator<ACameraActor> It(GetWorld()); It; ++It) { SetViewTarget(*It); break; }
+	if (M->IsMenuOpen())
+	{
+		if (WasInputKeyJustPressed(EKeys::Up)) M->MenuMove(-1);
+		if (WasInputKeyJustPressed(EKeys::Down)) M->MenuMove(1);
+		if (WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::SpaceBar)) M->MenuConfirm();
+		if (WasInputKeyJustPressed(EKeys::Escape) || WasInputKeyJustPressed(EKeys::BackSpace)) M->MenuBack();
+		if (WasInputKeyJustPressed(EKeys::W)) M->ToggleSubMenu();
+		return;
+	}
 	if (WasInputKeyJustPressed(EKeys::One)) M->SetSpeed(1.f);
 	if (WasInputKeyJustPressed(EKeys::Two)) M->SetSpeed(2.f);
 	if (WasInputKeyJustPressed(EKeys::Three)) M->SetSpeed(4.f);
@@ -32,5 +41,9 @@ void AFM27PlayerController::PlayerTick(float DeltaTime)
 	if (WasInputKeyJustPressed(EKeys::SpaceBar)) M->TogglePause();
 	if (WasInputKeyJustPressed(EKeys::Up)) M->ChangeMentality(1);
 	if (WasInputKeyJustPressed(EKeys::Down)) M->ChangeMentality(-1);
-	if (WasInputKeyJustPressed(EKeys::Escape) || WasInputKeyJustPressed(EKeys::Enter)) M->FinishNow();
+	if (WasInputKeyJustPressed(EKeys::W)) M->ToggleSubMenu();
+	if (WasInputKeyJustPressed(EKeys::F)) M->CycleFormation();
+	if (WasInputKeyJustPressed(EKeys::P)) M->CyclePressing();
+	if (WasInputKeyJustPressed(EKeys::R) || (M->IsReplaying() && WasInputKeyJustPressed(EKeys::Enter))) M->SkipReplay();
+	if (WasInputKeyJustPressed(EKeys::Escape)) M->FinishNow();
 }

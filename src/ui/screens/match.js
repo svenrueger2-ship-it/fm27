@@ -1,3 +1,4 @@
+import { IS_MOBILE } from '../../core/device.js';
 import { prefetchCrowd } from '../../render/audio.js';
 // Matchday: pre-match, live 3D match with HUD (speed, cameras, subs, tactics, stats), instant sim, report.
 import { recordLive } from '../../manager/analysisHub.js';
@@ -91,7 +92,7 @@ export function matchdayScreen(app, el, params = {}) {
     ${simAheadButton()}
   </div>`;
   bindSimAhead(app, el);
-  el.querySelector('#play3d').onclick = () => app.go('match', { mode: app.settings.engine3d === 'unity' ? 'unity' : app.settings.engine3d === 'unreal' && window.bakusa?.unrealPlay ? 'unreal' : '3d' });
+  el.querySelector('#play3d').onclick = () => app.go('match', { mode: IS_MOBILE ? '3d' : app.settings.engine3d === 'unity' ? 'unity' : app.settings.engine3d === 'unreal' && window.bakusa?.unrealPlay ? 'unreal' : '3d' });
   el.querySelector('#instant').onclick = () => app.go('match', { mode: 'instant' });
   el.querySelector('#tac').onclick = () => app.go('tactics');
   el.querySelector('#scoutopp').onclick = () => {

@@ -22,7 +22,7 @@ Gebaut wird er **einmalig auf deinem PC** (Unreal ist zu groß für den Build au
 - **Einstellungen → 3D-Spiel → 3D-Engine: „Unreal Engine 5 (Windows, Beta)“**.
 - „Live im 3D-Stadion“ öffnet jetzt das Unreal-Fenster. Nach dem Abpfiff geht es automatisch im Manager weiter.
 
-**Steuerung im Unreal-Fenster:** `1`–`4` Tempo · `C` Kamera · `Leertaste` Pause · `Pfeil hoch/runter` Ausrichtung · `Esc` Spiel sofort beenden.
+**Steuerung im Unreal-Fenster:** `1`–`4` Tempo · `C` Kamera · `Leertaste` Pause · `Pfeil hoch/runter` Ausrichtung · `W` Wechsel · `F` Formation · `P` Pressing · `R` Wiederholung überspringen · `Esc` Spiel sofort beenden.
 
 ## Updates
 Neue Unreal-Versionen: Ordner neu herunterladen (oder `git pull`) und `build_unreal.bat` erneut starten – spätere Builds gehen deutlich schneller.

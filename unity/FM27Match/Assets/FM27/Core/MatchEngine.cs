@@ -65,6 +65,10 @@ namespace FM27.Sim
         public Agent taker, lastScorer;
         public bool finished;
         public event Action<MatchEvent> OnEvent;
+        // replays (v3.3): last ~14 s of play, clips for goals and big chances
+        public readonly Recorder rec = new Recorder(280);
+        public readonly List<Clip> clips = new List<Clip>();
+        Clip pendingClip; int pendingSteps; float simClock;
         public static readonly Dictionary<string, double> Dbg = new Dictionary<string, double>();
         static void D(string k, double v = 1) { double o; Dbg.TryGetValue(k, out o); Dbg[k] = o + v; }
         readonly Random rng;
@@ -135,12 +139,28 @@ namespace FM27.Sim
             int s = c.side == 1 ? 1 : 0;
             if (c.type == "mentality") mentality[s] = Math.Max(-2, Math.Min(2, c.value));
             else if (c.type == "pressing") pressing[s] = Math.Max(0f, Math.Min(1f, c.fvalue));
+            else if (c.type == "formation" && !string.IsNullOrEmpty(c.text))
+            {
+                var slots = Formation.Slots(c.text);
+                var list = new List<PlayerSetup>(); foreach (var a in teams[s]) list.Add(a.p);
+                var map = Formation.Assign(list, slots);
+                for (int i = 0; i < teams[s].Count; i++)
+                {
+                    var a = teams[s][i]; if (a.gk) continue;
+                    var sl = map[i] >= 0 && map[i] < slots.Count ? slots[map[i]] : slots[Math.Min(i, slots.Count - 1)];
+                    if (sl.role == "GK") continue;
+                    a.depth = sl.depth; a.lat = sl.lat; a.role = sl.role;
+                }
+                T(s).formation = c.text;
+                Emit("formation", s, 0, 0, 0, "Neue Formation: " + c.text);
+            }
             else if (c.type == "sub" && c.player != null)
             {
                 var a = teams[s].Find(x => x.p.id == c.outId && !x.sentOff);
                 if (a == null) return;
                 Emit("sub", s, c.player.id, a.p.id, 0, $"{c.player.name} für {a.p.name}");
-                a.p = c.player; a.stamina = 1f; a.rating = 6.2f; a.goals = 0; a.assists = 0; a.yellow = 0;
+                summary.ratings.Add(new PlayerRating { id = a.p.id, side = s, rating = (float)Math.Round(Clamp(a.rating, 3f, 10f) * 10) / 10f, goals = a.goals, assists = a.assists, minutes = (float)Math.Round(a.minutes) });
+                a.p = c.player; a.stamina = 1f; a.rating = 6.2f; a.goals = 0; a.assists = 0; a.yellow = 0; a.minutes = 0;
             }
         }
 
@@ -166,13 +186,13 @@ namespace FM27.Sim
             float dt = Dt;
             if (phase == Phase.HalfTime)
             {
-                phaseTimer -= dt; MovePlayers(dt);
+                phaseTimer -= dt; MovePlayers(dt); Record();
                 if (phaseTimer <= 0) { half = 2; time = HalfSeconds; foreach (var t in teams) foreach (var a in t) a.stamina = Math.Min(1f, a.stamina + 0.12f); SetupKickoff(1 - kickoffSide); Emit("kickoff", -1, 0, 0, 0, "Anpfiff 2. Halbzeit"); }
                 return;
             }
             if (phase != Phase.Celebration) time += dt;
             if (ball.owner != null) possTime[ball.owner.side] += dt;
-            for (int s = 0; s < 2; s++) foreach (var a in teams[s]) if (!a.sentOff) a.minutes += dt / HalfSeconds * 45f;
+            if (phase != Phase.Celebration) for (int s = 0; s < 2; s++) foreach (var a in teams[s]) if (!a.sentOff) a.minutes += dt / HalfSeconds * 45f;
 
             if (half == 1 && time >= HalfSeconds && IsDeadOrSafe()) { phase = Phase.HalfTime; phaseTimer = 3f; Emit("halftime", -1, 0, 0, 0, $"Halbzeit {score[0]}:{score[1]}"); return; }
             if (half == 2 && time >= 2 * HalfSeconds && IsDeadOrSafe()) { Finish(); return; }
@@ -190,6 +210,28 @@ namespace FM27.Sim
             }
             MovePlayers(dt);
             BallTick(dt);
+            Record();
+        }
+
+        void Record()
+        {
+            simClock += Dt;
+            rec.Push(this, simClock);
+            if (pendingClip != null && ++pendingSteps >= 44)
+            {
+                // the clip ends ~2 s after the moment: ball in the net, first steps of the celebration
+                pendingClip.frames = rec.Last(pendingClip.type == "goal" ? 10f : 7f, Dt);
+                clips.Add(pendingClip);
+                var c = pendingClip; pendingClip = null;
+                Emit("clip", c.side, c.player, clips.Count - 1, 0, c.type);
+            }
+        }
+
+        void MarkClip(string type, int side, int player, string text)
+        {
+            if (pendingClip != null) return;
+            pendingClip = new Clip { type = type, side = side, player = player, text = text, minute = Math.Max(1, (int)Math.Ceiling(time / HalfSeconds * 45f)), goalX = Dir(side) > 0 ? FieldX : 0f };
+            pendingSteps = 0;
         }
 
         bool IsDeadOrSafe() => phase != Phase.Play || ball.owner == null || Math.Abs(ball.pos.x - FieldX / 2) < 30;
@@ -860,6 +902,7 @@ namespace FM27.Sim
             {
                 k.anim = "dive"; k.animT = 0; Stats(k.side).saves++; k.rating += 0.35f;
                 Emit("save", k.side, k.p.id, shooter?.p.id ?? 0, shotXg, $"Parade von {k.p.name}");
+                if (shotXg >= 0.28f) MarkClip("save", 1 - k.side, shooter?.p.id ?? 0, $"Glanzparade {k.p.name}");
                 ball.shot = false;
                 if (rng.NextDouble() < 0.5) { ball.owner = k; ball.vel = new V2(0, 0); ball.z = 0; ball.vz = 0; ball.lastTouch = k; k.decide = 1.2f; }
                 else if (rng.NextDouble() < 0.55) { ball.vel = new V2(Dir(att) * 7f, (ball.pos.y < FieldY / 2 ? -1 : 1) * 6f); ball.vz = 3f; ball.lastTouch = k; } // tipped wide
@@ -877,7 +920,7 @@ namespace FM27.Sim
                 int defSide = p.x < 0 ? (Dir(0) > 0 ? 0 : 1) : (Dir(0) > 0 ? 1 : 0); // side defending this goal
                 int attSide = 1 - defSide;
                 bool inGoal = Math.Abs(p.y - FieldY / 2) < GoalHalf && ball.z < 2.44f;
-                if (shotOutcome == "post" && ball.shot) { Emit("post", attSide, shooter?.p.id ?? 0, 0, shotXg, "Aluminium!"); ball.vel = new V2(-ball.vel.x * 0.4f, ball.vel.y * 0.6f); ball.pos = new V2(Clamp(p.x, 0.2f, FieldX - 0.2f), p.y); ball.shot = false; shotOutcome = null; return false; }
+                if (shotOutcome == "post" && ball.shot) { Emit("post", attSide, shooter?.p.id ?? 0, 0, shotXg, "Aluminium!"); MarkClip("post", attSide, shooter?.p.id ?? 0, "Aluminium!"); ball.vel = new V2(-ball.vel.x * 0.4f, ball.vel.y * 0.6f); ball.pos = new V2(Clamp(p.x, 0.2f, FieldX - 0.2f), p.y); ball.shot = false; shotOutcome = null; return false; }
                 if (inGoal && ball.shot && shotOutcome == "goal") { Goal(attSide); return true; }
                 if (inGoal && !ball.shot && ball.lastTouch != null && rng.NextDouble() < 0.3) { Goal(attSide); return true; } // own goal / scramble
                 if (ball.shot && shotOutcome == "miss") Emit("miss", attSide, shooter?.p.id ?? 0, 0, shotXg, "Vorbei");
@@ -911,6 +954,7 @@ namespace FM27.Sim
             var keeper = teams[1 - side].Find(x => x.gk); if (keeper != null) keeper.rating -= 0.25f;
             lastScorer = sc ?? ball.lastTouch;
             Emit("goal", side, sc?.p.id ?? 0, assist?.p.id ?? 0, shotXg, sc != null ? $"TOR! {sc.p.name}" : "TOR! (Eigentor)");
+            MarkClip("goal", side, sc?.p.id ?? 0, sc != null ? $"TOR! {sc.p.name}" : "Eigentor");
             phase = Phase.Celebration; phaseTimer = 6f; restartSide = 1 - side;
             ball.shot = false; shotOutcome = null; ball.owner = null; ball.vel = ball.vel * 0.15f; ball.intended = null;
             if (lastScorer != null) lastScorer.target = Clamp(new V2(lastScorer.pos.x, lastScorer.pos.y < FieldY / 2 ? 1 : FieldY - 1));
@@ -934,6 +978,7 @@ namespace FM27.Sim
         {
             int min = Math.Max(0, Math.Min(half == 1 ? 45 : 90, (int)Math.Ceiling(time / HalfSeconds * 45f)));
             var e = new MatchEvent { type = type, minute = Math.Max(1, min), side = side, player = player, assist = assist, xg = (float)Math.Round(xg * 100) / 100f, text = text };
+            if (type == "clip" || type == "formation") { OnEvent?.Invoke(e); return; }
             if (type != "shot" && type != "miss") summary.events.Add(e); else if (type == "shot" && xg > 0.25f) summary.events.Add(e);
             OnEvent?.Invoke(e);
         }

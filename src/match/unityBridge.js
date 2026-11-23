@@ -35,6 +35,8 @@ export function buildUnitySetup(w, H, A, S, cond, seed) {
   return {
     match: { home: teamSetup(H, w.players), away: teamSetup(A, w.players), seed: seed >>> 0, neutral: false, weather: cond?.weather === 'regen' ? 'rain' : cond?.weather === 'schnee' ? 'snow' : 'clear', homeAdvantage: 0.03 },
     speed: typeof S.speed === 'number' ? S.speed : 1, camera: 'tv', quality: S.quality || 'hoch', night: cond?.tod ? /abend|nacht|flutlicht/i.test(cond.tod) : true,
+    replays: S.replays !== false, highlights: S.highlights !== false,
+    userSide: w.userClubId === H.id ? 0 : w.userClubId === A.id ? 1 : -1,
   };
 }
 
@@ -45,13 +47,13 @@ export function unityResult(summary, setup, w) {
   const subs = { h: [], a: [] };
   const events = [];
   for (const e of summary.events || []) {
-    if (e.type === 'sub' && e.player) subs[side(e.side)].push(e.player);
+    if (e.type === 'sub' && e.player) { subs[side(e.side)].push(e.player); if (e.assist) subs[side(e.side)].push(e.assist); } // in + out both played
     if (!['goal', 'yellow', 'red'].includes(e.type)) continue;
     events.push({ type: e.type, side: side(e.side), player: e.player || null, assist: e.assist || null, minute: e.minute, own: e.type === 'goal' && !e.player });
   }
   const ratings = {}, minutes = {};
   for (const r of summary.ratings || []) { ratings[r.id] = r.rating; minutes[r.id] = r.minutes; }
-  const played = { h: [...ids.h, ...subs.h], a: [...ids.a, ...subs.a] };
+  const played = { h: [...new Set([...ids.h, ...subs.h])], a: [...new Set([...ids.a, ...subs.a])] };
   const fitness = {};
   for (const id of [...played.h, ...played.a]) {
     const p = w.players[id]; if (!p) continue;

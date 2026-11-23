@@ -91,17 +91,27 @@ void AFM27PlayerActor::Sync(float Alpha, float Dt)
 	if (!Agent) return;
 	if (Agent->sentOff) { SetActorHiddenInGame(true); return; }
 	const fm27::V2 P = fm27::V2::Lerp(Agent->prev, Agent->pos, Alpha);
-	const FVector World = FM27Look::World(P.x, P.y, 0.f);
-	float Speed = bFirst ? 0.f : FVector::Dist2D(World, LastPos) / FMath::Max(Dt, 1e-4f) / 100.f;
-	if (Speed > 14.f) Speed = Agent->vel.Len(); // teleports at set pieces
-	bFirst = false; LastPos = World;
-	const float Yaw = FMath::RadiansToDegrees(FMath::Lerp(Agent->prevFacing, Agent->facing, Alpha));
-	const FRotator Want(0, Yaw, 0);
-	SetActorLocationAndRotation(World, FMath::RInterpTo(GetActorRotation(), Want, Dt, 14.f));
-	Animate(Speed, Dt);
+	Pose(P.x, P.y, FMath::RadiansToDegrees(FMath::Lerp(Agent->prevFacing, Agent->facing, Alpha)), Agent->anim, Agent->animT, Agent->vel.Len(), Dt);
 }
 
-void AFM27PlayerActor::Animate(float Speed, float Dt)
+void AFM27PlayerActor::ReplayPose(const fm27::FramePlayer& F0, const fm27::FramePlayer& F1, float K, float Dt)
+{
+	if (F1.off) { SetActorHiddenInGame(true); return; }
+	Pose(FMath::Lerp(F0.x, F1.x, K), FMath::Lerp(F0.y, F1.y, K), FMath::RadiansToDegrees(FMath::Lerp(F0.f, F1.f, K)), F1.anim, FMath::Lerp(F0.animT, F1.animT, K), -1.f, Dt);
+}
+
+void AFM27PlayerActor::Pose(float X, float Y, float YawDeg, const std::string& Anim, float AnimT, float SimSpeed, float Dt)
+{
+	SetActorHiddenInGame(false);
+	const FVector World = FM27Look::World(X, Y, 0.f);
+	float Speed = bFirst ? 0.f : FVector::Dist2D(World, LastPos) / FMath::Max(Dt, 1e-4f) / 100.f;
+	if (Speed > 14.f) Speed = SimSpeed >= 0.f ? SimSpeed : 0.f; // teleports at set pieces / replay cuts
+	bFirst = false; LastPos = World;
+	SetActorLocationAndRotation(World, FMath::RInterpTo(GetActorRotation(), FRotator(0, YawDeg, 0), Dt, 14.f));
+	Animate(Anim, AnimT, Speed, Dt);
+}
+
+void AFM27PlayerActor::Animate(const std::string& Anim, float T, float Speed, float Dt)
 {
 	const fm27::Agent& A = *Agent;
 	const float Run = FMath::Clamp(Speed / 8.5f, 0.f, 1.f);
@@ -109,25 +119,25 @@ void AFM27PlayerActor::Animate(float Speed, float Dt)
 	const float Sw = FMath::Sin(Phase), Cw = FMath::Cos(Phase);
 	const float LegAmp = FMath::Lerp(6.f, 52.f, Run), ArmAmp = FMath::Lerp(4.f, 42.f, Run), Lean = FMath::Lerp(2.f, 14.f, Run);
 	const float Bob = FMath::Abs(Sw) * 5.f * Run;
-	const float T = A.animT, Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+	const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
 	// UE: positive pitch swings a hanging limb forward, negative pitch leans the torso forward
 	FVector HipsPos(0, 0, 93 + Bob); FRotator HipsRot = FRotator::ZeroRotator, TorsoRot(-Lean, Sw * 4.f * Run, 0);
 	float LHipP = Sw * LegAmp, RHipP = -Sw * LegAmp, LKneeP = -(FMath::Max(0.f, -Cw) * LegAmp * 1.6f + 6.f), RKneeP = -(FMath::Max(0.f, Cw) * LegAmp * 1.6f + 6.f);
 	float LShP = -Sw * ArmAmp, RShP = Sw * ArmAmp, LShR = -6.f, RShR = 6.f, ElbP = 20.f + Run * 50.f;
-	if (A.anim == "kick")
+	if (Anim == "kick")
 	{
 		const float K = FMath::Clamp(T / 0.42f, 0.f, 1.f);
 		const float Swing = K < 0.45f ? FMath::Lerp(0.f, -55.f, K / 0.45f) : FMath::Lerp(-55.f, 75.f, (K - 0.45f) / 0.55f);
 		RHipP = Swing; RKneeP = -(K < 0.5f ? 70.f * (K / 0.5f) : FMath::Lerp(70.f, 5.f, (K - 0.5f) / 0.5f));
 		LHipP = -8.f; LKneeP = -15.f; LShP = 35.f; RShP = -25.f; LShR = -35.f; RShR = 30.f; TorsoRot = FRotator(6.f - K * 12.f, 0, 0);
 	}
-	else if (A.anim == "tackle")
+	else if (Anim == "tackle")
 	{
 		const float K = FMath::Clamp(T / 0.6f, 0.f, 1.f), Down = FMath::Sin(K * UE_PI);
 		HipsPos = FVector(20.f * Down, 0, 93 - 55.f * Down); HipsRot = FRotator(55.f * Down, 0, 0);
 		LHipP = 80.f * Down; LKneeP = -10.f; RHipP = 40.f * Down; RKneeP = -70.f * Down; LShP = -40.f * Down; RShP = -60.f * Down; LShR = -40.f; RShR = 40.f;
 	}
-	else if (A.anim == "dive")
+	else if (Anim == "dive")
 	{
 		const float K = FMath::Clamp(T / 0.9f, 0.f, 1.f), Up = FMath::Sin(FMath::Min(1.f, K * 1.4f) * UE_PI);
 		const float Dir = (A.p.id & 1) == 0 ? 1.f : -1.f;
@@ -135,20 +145,20 @@ void AFM27PlayerActor::Animate(float Speed, float Dt)
 		HipsRot = FRotator(0, 0, Dir * 85.f * FMath::Min(1.f, K * 1.8f));
 		LShP = 170.f; RShP = 170.f; LShR = -10.f; RShR = 10.f; ElbP = 5.f; LHipP = -10.f; RHipP = 10.f; LKneeP = -20.f; RKneeP = -10.f;
 	}
-	else if (A.anim == "header")
+	else if (Anim == "header")
 	{
 		const float K = FMath::Clamp(T / 0.6f, 0.f, 1.f), Jump = FMath::Sin(K * UE_PI) * 55.f;
 		HipsPos = FVector(0, 0, 93 + Jump); TorsoRot = FRotator(20.f - 45.f * K, 0, 0);
 		LShP = 60.f; RShP = 60.f; LShR = -45.f; RShR = 45.f; LKneeP = -50.f; RKneeP = -35.f; LHipP = 10.f; RHipP = -15.f;
 	}
-	else if (A.anim == "celebrate")
+	else if (Anim == "celebrate")
 	{
 		const float J = FMath::Abs(FMath::Sin(Now * 6.f + A.slot));
 		HipsPos = FVector(0, 0, 93 + J * 25.f * (1.f - Run) + Bob);
 		LShP = 165.f - FMath::Sin(Now * 9.f) * 15.f; RShP = 165.f + FMath::Sin(Now * 9.f) * 15.f; LShR = -25.f; RShR = 25.f; ElbP = 15.f;
 		if (Run < 0.3f) { LHipP = J * 20.f; RHipP = -J * 10.f; LKneeP = -(J * 40.f + 5.f); RKneeP = -(J * 30.f + 5.f); }
 	}
-	else if (A.anim == "idle")
+	else if (Anim == "idle")
 	{
 		const float Br = FMath::Sin(Now * 2.f + A.slot) * 1.5f;
 		TorsoRot = FRotator(-3.f - Br, 0, 0); LShR = -8.f; RShR = 8.f; ElbP = 12.f; LHipP = -2.f; RHipP = 2.f; LKneeP = -6.f; RKneeP = -6.f;
@@ -162,5 +172,5 @@ void AFM27PlayerActor::Animate(float Speed, float Dt)
 	Blend(LElbow, FRotator(ElbP, 0, 0)); Blend(RElbow, FRotator(ElbP, 0, 0));
 	Blend(LHip, FRotator(LHipP, 0, 0)); Blend(RHip, FRotator(RHipP, 0, 0));
 	Blend(LKnee, FRotator(LKneeP, 0, 0)); Blend(RKnee, FRotator(RKneeP, 0, 0));
-	if (A.anim != "dive") Blend(Head, FRotator(Lean * 0.6f, 0, 0));
+	if (Anim != "dive") Blend(Head, FRotator(Lean * 0.6f, 0, 0));
 }

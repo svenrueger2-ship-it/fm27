@@ -9,6 +9,7 @@ namespace FM27.View
         public string mode = "tv";
         public Transform focus;           // optional close-up target (scorer)
         public float closeUpUntil;
+        public float replayGoalX = 52.5f; // world x of the goal the replayed move went to
         Vector3 look, vel;
 
         public static CameraRig Create(bool night)
@@ -33,6 +34,10 @@ namespace FM27.View
             }
             else switch (mode)
             {
+                case "rside": // low touchline camera during replays
+                    target = ball; pos = new Vector3(ball.x - Mathf.Sign(replayGoalX) * 9f, 2.6f, Mathf.Clamp(ball.z, -30f, 30f) - 17f); fov = 30f; break;
+                case "rgoal": // behind the goal during replays
+                    target = ball; pos = new Vector3(replayGoalX + Mathf.Sign(replayGoalX) * 13f, 5.5f, ball.z * 0.25f); fov = 38f; break;
                 case "behind":
                     pos = new Vector3(target.x - attackDir * 24f, 11f, target.z * 0.6f); fov = 46f; break;
                 case "bird":

@@ -35,7 +35,7 @@ namespace
 	}
 }
 
-bool FM27Json::ParseSetup(const FString& Json, fm27::MatchSetup& Out, bool& bNight, float& Speed, FString& Camera, FString& Quality)
+bool FM27Json::ParseSetup(const FString& Json, fm27::MatchSetup& Out, FHostOptions& Opt)
 {
 	TSharedPtr<FJsonObject> Root;
 	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
@@ -47,10 +47,13 @@ bool FM27Json::ParseSetup(const FString& Json, fm27::MatchSetup& Out, bool& bNig
 	Out.home = Team(*H); Out.away = Team(*A);
 	Out.seed = (unsigned)I(*M, TEXT("seed"), 1); Out.weather = S(*M, TEXT("weather"), "clear"); Out.homeAdvantage = F(*M, TEXT("homeAdvantage"), 0.03f);
 	bool bNeutral = false; (*M)->TryGetBoolField(TEXT("neutral"), bNeutral); Out.neutral = bNeutral;
-	bNight = true; Root->TryGetBoolField(TEXT("night"), bNight);
-	Speed = F(Root, TEXT("speed"), 1.f);
-	Camera = TEXT("tv"); Root->TryGetStringField(TEXT("camera"), Camera);
-	Quality = TEXT("hoch"); Root->TryGetStringField(TEXT("quality"), Quality);
+	Root->TryGetBoolField(TEXT("night"), Opt.bNight);
+	Opt.Speed = F(Root, TEXT("speed"), 1.f);
+	Root->TryGetStringField(TEXT("camera"), Opt.Camera);
+	Root->TryGetStringField(TEXT("quality"), Opt.Quality);
+	Root->TryGetBoolField(TEXT("replays"), Opt.bReplays);
+	Root->TryGetBoolField(TEXT("highlights"), Opt.bHighlights);
+	Opt.UserSide = I(Root, TEXT("userSide"), -1);
 	return Out.home.players.size() >= 11 && Out.away.players.size() >= 11;
 }
 

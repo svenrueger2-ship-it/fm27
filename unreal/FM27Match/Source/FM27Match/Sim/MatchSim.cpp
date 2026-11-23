@@ -127,7 +127,12 @@ void MatchSim::SetMentality(int side, int v) { mentality[side == 1 ? 1 : 0] = st
 void MatchSim::Substitute(int side, int outId, const PlayerSetup& in)
 {
     for (auto& a : teams[side == 1 ? 1 : 0])
-        if (a.p.id == outId && !a.sentOff) { Emit("sub", side, in.id, a.p.id, 0, in.name + " für " + a.p.name); a.p = in; a.stamina = 1; a.rating = 6.2f; a.goals = a.assists = a.yellow = 0; return; }
+        if (a.p.id == outId && !a.sentOff)
+        {
+            Emit("sub", side, in.id, a.p.id, 0, in.name + " für " + a.p.name);
+            summary.ratings.push_back({a.p.id, side == 1 ? 1 : 0, std::round(Clamp(a.rating, 3.f, 10.f) * 10.f) / 10.f, a.goals, a.assists, std::round(a.minutes)});
+            a.p = in; a.stamina = 1; a.rating = 6.2f; a.goals = a.assists = a.yellow = 0; a.minutes = 0; return;
+        }
 }
 
 void MatchSim::Advance(float seconds)
@@ -147,13 +152,13 @@ void MatchSim::Step()
     const float dt = Dt;
     if (phase == Phase::HalfTime)
     {
-        phaseTimer -= dt; MovePlayers(dt);
+        phaseTimer -= dt; MovePlayers(dt); Record();
         if (phaseTimer <= 0) { half = 2; time = HalfSeconds; for (auto& t : teams) for (auto& a : t) a.stamina = std::min(1.f, a.stamina + 0.12f); SetupKickoff(1 - kickoffSide); Emit("kickoff", -1, 0, 0, 0, "Anpfiff 2. Halbzeit"); }
         return;
     }
     if (phase != Phase::Celebration) time += dt;
     if (ball.owner) possTime[ball.owner->side] += dt;
-    for (auto& t : teams) for (auto& a : t) if (!a.sentOff) a.minutes += dt / HalfSeconds * 45.f;
+    if (phase != Phase::Celebration) for (auto& t : teams) for (auto& a : t) if (!a.sentOff) a.minutes += dt / HalfSeconds * 45.f;
     if (half == 1 && time >= HalfSeconds && IsDeadOrSafe()) { phase = Phase::HalfTime; phaseTimer = 3.f; Emit("halftime", -1, 0, 0, 0, "Halbzeit " + std::to_string(score[0]) + ":" + std::to_string(score[1])); return; }
     if (half == 2 && time >= 2 * HalfSeconds && IsDeadOrSafe()) { Finish(); return; }
     switch (phase)
@@ -164,6 +169,56 @@ void MatchSim::Step()
     }
     MovePlayers(dt);
     BallTick(dt);
+    Record();
+}
+
+// ======================================================================= replays
+void MatchSim::Record()
+{
+    simClock += Dt;
+    Frame& f = recBuf[recHead]; recHead = (recHead + 1) % (int)recBuf.size(); if (recCount < (int)recBuf.size()) recCount++;
+    f.t = simClock; f.bx = ball.pos.x; f.by = ball.pos.y; f.bz = ball.z;
+    int i = 0;
+    for (auto& t : teams) for (auto& a : t) { if (i >= 22) break; f.p[i++] = FramePlayer{a.pos.x, a.pos.y, a.facing, a.animT, a.anim, a.sentOff}; }
+    if (hasPending && ++pendingSteps >= 44)
+    {
+        pending.frames = LastFrames(pending.type == "goal" ? 10.f : 7.f);
+        clips.push_back(pending); hasPending = false;
+        Emit("clip", pending.side, pending.player, (int)clips.size() - 1, 0, pending.type);
+    }
+}
+
+std::vector<Frame> MatchSim::LastFrames(float seconds) const
+{
+    int n = std::min(recCount, (int)(seconds / Dt)); const int cap = (int)recBuf.size();
+    std::vector<Frame> res; res.reserve(n);
+    for (int k = n; k >= 1; k--) res.push_back(recBuf[(recHead - k + cap * 2) % cap]);
+    return res;
+}
+
+void MatchSim::MarkClip(const std::string& type, int side, int player, const std::string& text)
+{
+    if (hasPending) return;
+    pending = Clip(); pending.type = type; pending.side = side; pending.player = player; pending.text = text;
+    pending.minute = std::max(1, (int)std::ceil(time / HalfSeconds * 45.f)); pending.goalX = Dir(side) > 0 ? FieldX : 0.f;
+    hasPending = true; pendingSteps = 0;
+}
+
+void MatchSim::SetFormation(int side, const std::string& formation)
+{
+    side = side == 1 ? 1 : 0;
+    auto slots = FormationSlots(formation);
+    std::vector<PlayerSetup> list; for (auto& a : teams[side]) list.push_back(a.p);
+    auto map = AssignSlots(list, slots);
+    for (size_t i = 0; i < teams[side].size(); i++)
+    {
+        Agent& a = teams[side][i]; if (a.gk) continue;
+        const Slot& sl = (map[i] >= 0 && map[i] < (int)slots.size()) ? slots[map[i]] : slots[std::min(i, slots.size() - 1)];
+        if (sl.role == "GK") continue;
+        a.depth = sl.depth; a.lat = sl.lat; a.role = sl.role;
+    }
+    (side == 0 ? setup.home : setup.away).formation = formation;
+    Emit("formation", side, 0, 0, 0, "Neue Formation: " + formation);
 }
 
 bool MatchSim::IsDeadOrSafe() const { return phase != Phase::Play || !ball.owner || std::fabs(ball.pos.x - FieldX / 2) < 30; }
@@ -770,6 +825,7 @@ void MatchSim::ShotFlight()
     {
         k->anim = "dive"; k->animT = 0; Stats(k->side).saves++; k->rating += 0.35f;
         Emit("save", k->side, k->p.id, shooter ? shooter->p.id : 0, shotXg, "Parade von " + k->p.name);
+        if (shotXg >= 0.28f) MarkClip("save", 1 - k->side, shooter ? shooter->p.id : 0, "Glanzparade " + k->p.name);
         ball.shot = false;
         if (R() < 0.5) { ball.owner = k; ball.vel = V2(); ball.z = 0; ball.vz = 0; ball.lastTouch = k; k->decide = 1.2f; }
         else if (R() < 0.55) { ball.vel = V2(Dir(att) * 7.f, (ball.pos.y < FieldY / 2 ? -1.f : 1.f) * 6.f); ball.vz = 3.f; ball.lastTouch = k; }
@@ -787,7 +843,7 @@ bool MatchSim::CheckGoalOrOut()
         int defSide = p.x < 0 ? (Dir(0) > 0 ? 0 : 1) : (Dir(0) > 0 ? 1 : 0);
         int attSide = 1 - defSide;
         bool inGoal = std::fabs(p.y - FieldY / 2) < GoalHalf && ball.z < 2.44f;
-        if (shotOutcome == "post" && ball.shot) { Emit("post", attSide, shooter ? shooter->p.id : 0, 0, shotXg, "Aluminium!"); ball.vel = V2(-ball.vel.x * 0.4f, ball.vel.y * 0.6f); ball.pos = V2(Clamp(p.x, 0.2f, FieldX - 0.2f), p.y); ball.shot = false; shotOutcome.clear(); return false; }
+        if (shotOutcome == "post" && ball.shot) { Emit("post", attSide, shooter ? shooter->p.id : 0, 0, shotXg, "Aluminium!"); MarkClip("post", attSide, shooter ? shooter->p.id : 0, "Aluminium!"); ball.vel = V2(-ball.vel.x * 0.4f, ball.vel.y * 0.6f); ball.pos = V2(Clamp(p.x, 0.2f, FieldX - 0.2f), p.y); ball.shot = false; shotOutcome.clear(); return false; }
         if (inGoal && ball.shot && shotOutcome == "goal") { Goal(attSide); return true; }
         if (inGoal && !ball.shot && ball.lastTouch && R() < 0.3) { Goal(attSide); return true; }
         if (ball.shot && shotOutcome == "miss") Emit("miss", attSide, shooter ? shooter->p.id : 0, 0, shotXg, "Vorbei");
@@ -819,6 +875,7 @@ void MatchSim::Goal(int side)
     for (auto& x : teams[1 - side]) if (x.gk) { x.rating -= 0.25f; break; }
     lastScorer = sc ? sc : ball.lastTouch;
     Emit("goal", side, sc ? sc->p.id : 0, assist ? assist->p.id : 0, shotXg, sc ? "TOR! " + sc->p.name : std::string("TOR! (Eigentor)"));
+    MarkClip("goal", side, sc ? sc->p.id : 0, sc ? "TOR! " + sc->p.name : std::string("Eigentor"));
     phase = Phase::Celebration; phaseTimer = 6.f; restartSide = 1 - side;
     ball.shot = false; shotOutcome.clear(); ball.owner = nullptr; ball.vel = ball.vel * 0.15f; ball.intended = nullptr;
     if (lastScorer) lastScorer->target = ClampP(V2(lastScorer->pos.x, lastScorer->pos.y < FieldY / 2 ? 1.f : FieldY - 1.f));
@@ -840,6 +897,7 @@ void MatchSim::Emit(const std::string& type, int side, int player, int assist, f
 {
     int mn = std::max(0, std::min(half == 1 ? 45 : 90, (int)std::ceil(time / HalfSeconds * 45.f)));
     MatchEvent e{type, std::max(1, mn), side, player, assist, std::round(xg * 100.f) / 100.f, text};
+    if (type == "clip" || type == "formation") { if (onEvent) onEvent(e); return; }
     if ((type != "shot" && type != "miss") || (type == "shot" && xg > 0.25f)) summary.events.push_back(e);
     if (onEvent) onEvent(e);
 }

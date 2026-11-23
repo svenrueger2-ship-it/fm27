@@ -299,11 +299,12 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
       ${tog('s-story', 'Saison-Story am Saisonende', '', s.story !== false)}
       ${tog('s-acht', 'Meldungen für Erfolge & Level-Ups', '', s.achToasts !== false)}`,
     spiel3d: () => `
-      ${sel('s-eng', '3D-Engine', 'Unity/Unreal: neue Grafik & Spieler-KI (Beta). Unreal nur in der Windows-App, einmalig auf dem PC bauen', ['unity', 'unreal'].includes(s.engine3d) ? s.engine3d : 'klassisch', [['klassisch', 'Klassisch (Three.js)'], ['unity', 'Unity (Beta)'], ...(window.bakusa?.unrealPlay ? [['unreal', 'Unreal Engine 5 (Windows, Beta)']] : [])])}
+      ${IS_MOBILE ? '' : sel('s-eng', '3D-Engine', 'Unity/Unreal: neue Grafik & Spieler-KI (Beta). Unreal nur in der Windows-App, einmalig auf dem PC bauen', ['unity', 'unreal'].includes(s.engine3d) ? s.engine3d : 'klassisch', [['klassisch', 'Klassisch (Three.js)'], ['unity', 'Unity (Beta)'], ...(window.bakusa?.unrealPlay ? [['unreal', 'Unreal Engine 5 (Windows, Beta)']] : [])])}
       ${sel('s-q', 'Grafikqualität', 'Auf schwächeren PCs „Niedrig“ oder „Mittel“', s.quality, [['niedrig', 'Niedrig'], ['mittel', 'Mittel'], ['hoch', 'Hoch'], ['ultra', 'Ultra']])}
       ${sel('s-sp', 'Standard-Spielgeschwindigkeit', '', s.speed, [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x'], ['highlights', 'Nur Highlights']])}
       ${sel('s-cam', 'Standard-Kamera', '', s.camera, CAMERA_MODES)}
       ${tog('s-rep', 'Wiederholungen nach Toren', 'Multi-Kamera-Replay nach jedem Treffer', s.replays !== false)}
+      ${tog('s-hl', 'Highlights nach dem Abpfiff', 'Unity/Unreal: Tore und Großchancen als Zusammenschnitt', s.highlights !== false)}
       ${tog('s-wfx', 'Wetter-Effekte', 'Regen, Schnee und Nebel im Stadion', s.weatherFx !== false)}
       ${tog('s-pyro', 'Pyrotechnik & Rauch', 'Bengalos und Rauch in den Fankurven', s.pyro !== 'aus')}
       ${tog('s-var', 'VAR-Überprüfungen', '', s.var !== false)}
@@ -337,7 +338,7 @@ function bindSettings(app, root, redraw) {
     's-q': (v) => (s.quality = v), 's-sp': (v) => (s.speed = v === 'highlights' ? v : +v), 's-cam': (v) => (s.camera = v), 's-ui': (v) => (s.uiScale = +v),
     's-theme': (v) => (s.theme = v), 's-ev': (v) => { s.events = v; if (window.ufm?.world) window.ufm.world.eventRate = v; }, 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v), 's-eng': (v) => (s.engine3d = v),
   };
-  const bools = { 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
+  const bools = { 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-hl': 'highlights', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
   const commit = () => { saveSettings(s); applyTheme(s, window.ufm?.world ? window.ufm.club : null); toast('Einstellungen gespeichert', 1200); };
   for (const [id, fn] of Object.entries(map)) { const el = $(`#${id}`); if (!el) continue; el.addEventListener(el.type === 'range' ? 'input' : 'change', () => { fn(el.value); if (el.nextElementSibling?.tagName === 'OUTPUT') el.nextElementSibling.textContent = `${Math.round(el.value * 100)} %`; }); el.addEventListener('change', commit); }
   for (const [id, key] of Object.entries(bools)) { const el = $(`#${id}`); if (el) el.addEventListener('change', () => { s[key] = el.checked; commit(); }); }
