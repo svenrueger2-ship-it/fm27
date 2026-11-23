@@ -31,6 +31,8 @@ import { openInbox } from '../manager/staff.js';
 import { applyTheme } from './theme.js';
 import { animateNumbers, runCeremonies } from './fx.js';
 import { mobileFit } from './mobileFit.js';
+import { hotTurnScreen } from './screens/hotseat.js';
+import { isHot, humanName } from '../manager/hotseat.js';
 import { windowInfo } from '../manager/transfers.js';
 
 const NAV = [
@@ -38,7 +40,7 @@ const NAV = [
   ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion bauen', '🏟️', 'Stadion'],
   ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
 ];
-const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen };
+const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen };
 
 export class App {
   constructor(root) {
@@ -61,7 +63,7 @@ export class App {
     // after a sacking the user has to pick a new club first
     if (this.world?.career?.pendingSack && !['career', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'career';
     // v3.0.4: no career without your own manager – old saves get the editor once too
-    if (mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'mgrCreate';
+    if (mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings', 'hotTurn'].includes(screen)) screen = 'mgrCreate';
     this.screen = screen; this.params = params;
     if (this.pendingLive && screen !== 'match') setTimeout(() => this.applyLive?.(), 800);
     document.body.classList.toggle('no-anim', this.settings.animations === false);
@@ -101,7 +103,7 @@ export class App {
       <div class="shell">
         <header class="topbar">
           <div class="brand"><span class="logo">FM<b>2027</b><small class="by">© BAKUSA</small></span></div>
-          <div class="club-chip">${crest(club, 30)}<div><strong>${esc(club.name)}</strong><small>${esc(league.name)} · ${isUserSeasonOver(w) ? 'Saisonende' : `Spieltag ${md}`} · <button class="linkish date-chip" id="top-date">📅 ${esc(fmtDate(dateOf(w)))}</button></small></div></div>
+          <div class="club-chip">${crest(club, 30)}<div><strong>${isHot(w) ? `<span class="hot-chip">👤 ${esc(humanName(w, w.hot.active))}</span> ` : ''}${esc(club.name)}</strong><small>${esc(league.name)} · ${isUserSeasonOver(w) ? 'Saisonende' : `Spieltag ${md}`} · <button class="linkish date-chip" id="top-date">📅 ${esc(fmtDate(dateOf(w)))}</button></small></div></div>
           <button class="top-search" id="top-search">${icon('search', 16)}<span>Suchen …</span><kbd>Strg K</kbd></button>
           <div class="top-stats"><span class="win ${win.open ? 'open' : ''}">${win.open ? `🔓 Transferfenster · noch ${win.closesIn} Wo.` : '🔒 Transferfenster zu'}</span><span>Kontostand <b>${money(club.budget)}</b></span><button class="btn primary sm" id="top-next">${isUserSeasonOver(w) && !isMatchToday(w) ? 'Saison abschließen' : isMatchToday(w) ? 'Zum Spieltag ▶' : 'Weiter ▶'}</button></div>
         </header>

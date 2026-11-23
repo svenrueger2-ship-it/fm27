@@ -1,9 +1,10 @@
+import { isHumanClub, forEachHuman, isHot } from './hotseat.js';
 import { weeklySkills, gainXp } from './progress.js';
 // Season logic: fixtures, tables, quick simulation of AI matches, week/season progression.
 import { RNG, clamp } from '../core/rng.js';
 import { teamStrength, ensureLineup, FORMATIONS } from '../match/tactics.js';
 import { computeOverall, OUTFIELD_ATTRS, GK_ATTRS, POS_WEIGHTS } from '../data/attributes.js';
-import { generatePlayer, marketValue } from '../data/generator.js';
+import { generatePlayer, marketValue, addMissingLeagues } from '../data/generator.js';
 import { weeklyFinance, seasonFinanceClose } from './economy.js';
 import { weeklyTraining, recoverInjury } from './training.js';
 import { weeklyStyleTrain } from '../data/styles.js';
@@ -157,7 +158,7 @@ export function applyMatchResult(world, m, result, rng) {
 }
 
 // ---- v3.0.2 daily background world: the calendar runs these on their weekday, finishWeek catches up the rest ----
-const involvesUser = (world, m) => m.h === world.userClubId || m.a === world.userClubId;
+const involvesUser = (world, m) => isHumanClub(world, m.h) || isHumanClub(world, m.a);
 const DAY_TASKS = [
   { day: 1, id: 'market', run: (world, rng) => { weeklyTransfers(world, rng); return '📰 Transfermarkt & Gerüchte aktualisiert'; } },
   { day: 2, id: 'cups', run: (world, rng) => { // the other cup / European games of the evening (yours you play yourself)
@@ -165,7 +166,7 @@ const DAY_TASKS = [
     for (const f of cupFixturesOfWeek(world)) { if (involvesUser(world, f)) continue; ensureLineup(world.clubs[f.h], world.players); ensureLineup(world.clubs[f.a], world.players); quickSim(world, f, rng, { cup: true }); resolveCupFixture(world, f, rng); n++; }
     return n ? `🏆 ${n} Pokal-/Europapokalspiele gespielt` : null; } },
   { day: 3, id: 'cupdraw', run: (world, rng) => { if (!cupFixturesOfWeek(world).length) advanceCups(world, rng); return null; } },
-  { day: 3, id: 'scouts', run: (world, rng) => { if (world.userClubId != null) weeklyNet(world, rng); updateValues(world); return '🔭 Scoutberichte & Marktwerte aktualisiert'; } },
+  { day: 3, id: 'scouts', run: (world, rng) => { forEachHuman(world, () => { if (world.userClubId != null) weeklyNet(world, rng); }); updateValues(world); return '🔭 Scoutberichte & Marktwerte aktualisiert'; } },
   { day: 5, id: 'saturday', run: (world, rng) => { // all league games without you are played on Saturday
     let n = 0;
     for (const league of world.leagues) for (const m of league.fixtures[world.week] || []) {
@@ -194,7 +195,7 @@ export function finishWeek(world, rng) {
   ensureClubAI(world, rng);
   if (!world.cups) { createCups(world, rng); catchUpCups(world, rng, quickSim); }
   dailyTick(world, rng, 1); dailyTick(world, rng, 3); // market + scouting if the calendar skipped them
-  if (isDirector(world)) { ensureCoach(world, rng); coachDecides(world); world.clubs[world.userClubId].coachFactor = coachTrainingFactor(world, world.clubs[world.userClubId]); }
+  forEachHuman(world, () => { if (isDirector(world)) { ensureCoach(world, rng); coachDecides(world); world.clubs[world.userClubId].coachFactor = coachTrainingFactor(world, world.clubs[world.userClubId]); } });
   weeklyCups(world, rng, quickSim);
   for (const league of world.leagues) {
     const md = league.fixtures[world.week];
@@ -221,21 +222,20 @@ export function finishWeek(world, rng) {
       const rank = table.findIndex((r) => r.id === id) + 1;
       weeklyFinance(world, club, league, { homeGame: md.some((m) => m.h === id), rank });
       const rep = weeklyTraining(world, club, rng);
-      if (id === world.userClubId) { for (const t of weeklyStyleTrain(world, club, rng)) { rep.unshift({ type: 'up', text: t }); world.news.unshift({ season: world.season, week: world.week, text: t }); } world.trainingReport = { season: world.season, week: world.week + 1, items: rep }; }
+      if (isHumanClub(world, id)) forEachHuman(world, () => { if (world.userClubId !== id) return; for (const t of weeklyStyleTrain(world, club, rng)) { rep.unshift({ type: 'up', text: t }); world.news.unshift({ season: world.season, week: world.week, text: t }); } world.trainingReport = { season: world.season, week: world.week + 1, items: rep }; });
     }
   }
   ensureIntl(world); intlBreak(world, rng);
-  if (world.userClubId != null) {
+  forEachHuman(world, () => { if (world.userClubId != null) {
     ensureYouth(world, rng); weeklyYouth(world, rng); rollEvent(world, rng);
     const fam = world.clubs[world.userClubId].stadium.layout?.family || 0; if (fam && rng.chance(fam * 0.3)) moodChange(world, 0, 1); // family stand wins young fans
-  }
+  } });
   updateValues(world);
   weeklyCoaches(world, rng); tickBounce(world);
   world.week++;
   world.day = 0; // calendar (v2.9): a new week starts on Monday
-  for (const c of Object.values(world.clubs)) if (c.id !== world.userClubId) c.lineup = null; // AI re-picks
-  weeklyStaff(world, rng);
-  if (world.userClubId != null) { weeklyPlayers(world, rng); weeklyLoans(world); weeklyCareer(world, rng); weeklyBiz(world, rng); weeklyMedia(world, rng); weeklyKabine(world, rng); weeklySkills(world); checkAchievements(world); }
+  for (const c of Object.values(world.clubs)) if (!isHumanClub(world, c.id)) c.lineup = null; // AI re-picks
+  forEachHuman(world, () => { weeklyStaff(world, rng); if (world.userClubId != null) { weeklyPlayers(world, rng); weeklyLoans(world); weeklyCareer(world, rng); weeklyBiz(world, rng); weeklyMedia(world, rng); weeklyKabine(world, rng); weeklySkills(world); checkAchievements(world); } });
 }
 
 export function seasonLength(world) {
@@ -313,9 +313,13 @@ export function endSeason(world, rng) {
     const c = world.clubs[r.id];
     (c.history ||= []).push({ season: world.season, league: l.name, tier: l.tier, rank: i + 1, of: tables[l.id].length, pts: r.pts, w: r.w, d: r.d, l: r.l, gf: r.gf, ga: r.ga, champion: i === 0 });
   });
+  // v5.0: the manager part of the season end runs once per hotseat human (own career, sponsors, records …)
+  const perH = [];
+  let cupWins = [];
+  const partA = () => {
   const ul = userLeague(world);
   summary.user = { league: ul.name, rank: tables[ul.id].findIndex((r) => r.id === world.userClubId) + 1 };
-  const cupWins = (world.cups || []).filter((c) => c.winner === world.userClubId).map((c) => c.name);
+  cupWins = (world.cups || []).filter((c) => c.winner === world.userClubId).map((c) => c.name);
   summary.career = careerSeasonEnd(world, rng, { rank: summary.user.rank, cupWins, tournament });
   seasonRecords(world, summary.user.rank, tables[ul.id][summary.user.rank - 1].pts);
   seasonKabine(world, world.career?.seasons?.slice(-1)[0]?.reached);
@@ -326,6 +330,9 @@ export function endSeason(world, rng) {
   for (const t of summary.bizNotes) world.news.unshift({ season: world.season + 1, week: 0, text: t });
   for (const t of summary.sponsorNotes) world.news.unshift({ season: world.season + 1, week: 0, text: `🤝 ${t}` });
   const md = ensureMood(world); md.board = Math.round(md.board * 0.7 + 18); md.fans = Math.round(md.fans * 0.7 + 20);
+  };
+  forEachHuman(world, (w, hi) => { partA(); perH[hi] = { user: summary.user, career: summary.career, sponsorNotes: summary.sponsorNotes, bizNotes: summary.bizNotes, cupWins }; });
+  const useH = (hi) => { Object.assign(summary, { user: perH[hi].user, career: perH[hi].career, sponsorNotes: perH[hi].sponsorNotes, bizNotes: perH[hi].bizNotes }); cupWins = perH[hi].cupWins; };
   // promotion / relegation between linked leagues (rules researched for 2026/27, see PROMO_RULES)
   summary.playoffs = [];
   for (const l of world.leagues) {
@@ -380,7 +387,7 @@ export function endSeason(world, rng) {
         const y = generatePlayer(rng, world.nextPlayerId++, p.pos, Math.round(clamp(40 + club.rep * 0.25 + rng.normal(0, 4), 35, 75)), rng.int(16, 18), country, club.rep);
         y.clubId = club.id; y.number = p.number; y.pot = clamp(y.pot + rng.int(0, 10), y.ovr, 96);
         world.players[y.id] = y; club.squad.push(y.id);
-        if (club.id === world.userClubId) world.news.unshift({ week: 0, season: world.season + 1, text: `${p.firstName} ${p.lastName} beendet seine Karriere. Jugendspieler ${y.firstName} ${y.lastName} (${y.age}) rückt in den Kader.` });
+        if (isHumanClub(world, club.id)) world.news.unshift({ week: 0, season: world.season + 1, text: `${p.firstName} ${p.lastName} beendet seine Karriere. Jugendspieler ${y.firstName} ${y.lastName} (${y.age}) rückt in den Kader.` });
       }
     }
     club.lineup = null;
@@ -388,6 +395,8 @@ export function endSeason(world, rng) {
   seasonTransfers(world, rng);
   seasonCoaches(world, rng);
   // youth academy: U19 season, ageing and the new intake (they start in the U19, not in the pro squad)
+  forEachHuman(world, (w, hi) => {
+    useH(hi);
   summary.youth = [];
   summary.youthLeague = seasonYouth(world, rng);
   if (world.coach) world.coach.years = Math.max(1, world.coach.years - 1);
@@ -396,10 +405,17 @@ export function endSeason(world, rng) {
     gainXp(world, xp, `Saisonabschluss ${world.season}/${String((world.season + 1) % 100).padStart(2, '0')}: Platz ${r}`); }
   seasonChallenge(world, summary);
   checkAchievements(world);
+    perH[hi].youth = summary.youth; perH[hi].youthLeague = summary.youthLeague;
+  });
+  useH(isHot(world) ? world.hot.active : 0); if (perH[0]) { summary.youth = perH[isHot(world) ? world.hot.active : 0].youth; summary.youthLeague = perH[isHot(world) ? world.hot.active : 0].youthLeague; }
+  if (isHot(world)) summary.humans = perH.map((x) => ({ user: x.user, cupWins: x.cupWins, delta: x.career?.delta }));
   world.history.push(summary);
   world.season++;
   world.week = 0;
-  for (const l of world.leagues) l.fixtures = buildFixtures(l.clubIds, rng);
+  for (const l of world.leagues) l.fixtures = leagueFixtures(l, rng);
+  // v5.0: leagues that did not exist when the save was started join now (fixtures are built inside)
+  summary.newLeagues = addMissingLeagues(world, rng);
+  for (const n of summary.newLeagues) world.news.unshift({ season: world.season, week: 0, text: `🌍 Neu im Spiel: ${n} – ab sofort mit Transfermarkt, Pokal und Europacup-Plätzen.` });
   // cups: archive winners, new competitions qualified via the final tables
   summary.cups = (world.cups || []).map((c) => ({ name: c.name, winner: c.winner }));
   (world.cupHistory ||= []).push({ season: world.season - 1, cups: summary.cups });
@@ -408,3 +424,11 @@ export function endSeason(world, rng) {
 }
 
 export function newRng(world) { return new RNG((world.seed + world.season * 1000 + world.week * 17 + Date.now()) >>> 0); }
+
+/** v5.0: league fixtures – the Scottish Premiership plays three rounds (33 matchdays) like the real league before its split. */
+export function leagueFixtures(league, rng) {
+  const f = buildFixtures(league.clubIds, rng);
+  if (league.id !== 'sc1') return f;
+  const n = league.clubIds.length - 1;
+  return f.concat(f.slice(0, n).map((md) => md.map((m) => ({ ...m, h: m.a, a: m.h, hg: null, ag: null }))));
+}

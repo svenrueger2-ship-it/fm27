@@ -4,6 +4,7 @@ import { prefetchCrowd } from '../../render/audio.js';
 import { recordLive } from '../../manager/analysisHub.js';
 import { taskEvent } from '../../manager/progress.js';
 import { MatchEngine } from '../../match/engine.js';
+import { endWeek } from '../turn.js';
 import { unityMatch, unrealMatch } from './unityMatch.js';
 import { ensureLineup, teamStrength, FORMATIONS, PRESETS, effectiveRating } from '../../match/tactics.js';
 import { simAheadButton, bindSimAhead } from './simAhead.js';
@@ -64,7 +65,7 @@ export function matchdayScreen(app, el, params = {}) {
   if (!fx) {
     el.innerHTML = `<div class="page"><div class="card"><h3>Spielfrei</h3><button class="btn primary" id="sim">Spieltag simulieren</button></div>${simAheadButton()}</div>`;
     bindSimAhead(app, el);
-    el.querySelector('#sim').onclick = async () => { finishWeek(w, newRng(w)); await app.autosave(); app.go('home'); };
+    el.querySelector('#sim').onclick = () => endWeek(app, 'home');
     return;
   }
   const H = w.clubs[fx.h], A = w.clubs[fx.a];
@@ -537,16 +538,14 @@ export async function commitResult(app, { r, H, A, friendly, record }) {
   if (m.cup) {
     // cup game played – the league match of this week is still to come
     resolveCupFixture(w, m, rng);
-    if (!userFixture(w) && !userCupFixture(w)) { finishWeek(w, rng); await app.autosave(); app.go('home'); return; }
+    if (!userFixture(w) && !userCupFixture(w)) { await endWeek(app, 'home'); return; }
     await app.autosave();
     w.day = Math.max(w.day || 0, 3);
     toast('Weiter geht es mit dem Ligaspiel am Sonntag');
     app.go('calendar');
     return;
   }
-  finishWeek(w, rng);
-  await app.autosave();
-  app.go('calendar');
+  await endWeek(app, 'calendar');
 }
 
 // ------------------------------------------------------------------ v4.0 team talk

@@ -1,5 +1,7 @@
 import { IS_MOBILE } from '../../core/device.js';
 // Start menu, new game / club selection, save slots, settings, season end.
+import { isHot, allSeasonsOver, setupHotseat, humanName } from '../../manager/hotseat.js';
+import { endWeek } from '../turn.js';
 import { buildStory, showStory } from '../story.js';
 import { ceremony } from '../fx.js';
 import { generateWorld } from '../../data/generator.js';
@@ -247,13 +249,36 @@ export function confirmClub(app, w, id) {
       <label><input type="radio" name="mode" value="manager" checked><span><b>Trainer & Manager</b><small>Du machst alles: Aufstellung, Taktik, Wechsel, Transfers, Finanzen.</small></span></label>
       <label><input type="radio" name="mode" value="director"><span><b>Sportdirektor</b><small>Du planst Kader, Transfers, Finanzen und Stadion. Ein KI-Cheftrainer stellt auf, wählt die Taktik und wechselt ein – du kannst ihn entlassen.</small></span></label></div>
     <label class="field">Herausforderung (optional)<select id="chal" class="input">${CHALLENGES.map((c) => `<option value="${c.id}" title="${esc(c.desc)}">${esc(c.name)}${c.id !== 'none' ? ` – ${esc(c.desc)}` : ''}</option>`).join('')}</select></label>
+    <details class="hot-setup"><summary>👥 Mehrspieler auf einem Gerät (Hotseat)</summary>
+      <p class="muted small">2–4 Manager, abwechselnd am selben Gerät. Jeder hat eigenen Verein, Karriere, Stab und Posteingang. Direkte Duelle sind möglich.</p>
+      <label class="field">Dein Name<input id="hp0" class="input" maxlength="18" value="Spieler 1"></label>
+      <div id="hot-rows"></div><button class="btn sm" id="hot-add">+ Mitspieler</button></details>
     <div class="row-actions end"><button class="btn primary" id="go">Weiter: Manager erstellen ▶</button></div></div>`);
+  const clubOpts = (sel) => w.leagues.map((L) => `<optgroup label="${esc(L.name)}">${L.clubIds.map((cid) => w.clubs[cid]).sort((a, b) => b.rep - a.rep).map((c2) => `<option value="${c2.id}" ${c2.id === sel ? 'selected' : ''}>${esc(c2.name)}</option>`).join('')}</optgroup>`).join('');
+  const rows = m.el.querySelector('#hot-rows');
+  m.el.querySelector('#hot-add').onclick = () => {
+    const n = rows.children.length; if (n >= 3) return toast('Maximal 4 Manager');
+    const pick = w.leagues.find((l) => l.id === c.leagueId).clubIds.map((x) => w.clubs[x]).filter((x) => x.id !== id).sort((a, b) => Math.abs(a.rep - c.rep) - Math.abs(b.rep - c.rep))[n]?.id;
+    const r = document.createElement('div'); r.className = 'hot-row';
+    r.innerHTML = `<input class="input" maxlength="18" value="Spieler ${n + 2}"><select class="input">${clubOpts(pick)}</select><button class="btn sm ghost" title="Entfernen">✕</button>`;
+    r.querySelector('button').onclick = () => r.remove();
+    rows.appendChild(r);
+  };
   m.el.querySelector('#go').onclick = async () => {
     w.userClubId = id;
     w.manager = { name: 'Manager', goal }; // the manager himself is created in the next step (v3.0.4)
     w.mode = m.el.querySelector('input[name=mode]:checked')?.value || 'manager';
     if (w.mode === 'director') { const rng = newRng(w); ensureCoach(w, rng); coachDecides(w); }
     w.news = [{ season: w.season, week: 0, text: `Willkommen bei ${c.name}! Der Vorstand erwartet: ${goal}.` }];
+    const extra = [...rows.children].map((r) => ({ name: r.querySelector('input').value.trim() || 'Spieler', clubId: +r.querySelector('select').value }));
+    if (extra.length) {
+      const ids = new Set([id]);
+      for (const e of extra) { if (ids.has(e.clubId)) { toast('Jeder Manager braucht einen eigenen Verein'); return; } ids.add(e.clubId); }
+      setupHotseat(w, [{ name: m.el.querySelector('#hp0').value.trim() || 'Spieler 1', clubId: id }, ...extra]);
+      for (let i = 1; i < w.hot.humans.length; i++) { const hc = w.clubs[w.hot.humans[i].clubId], hl = w.leagues.find((l) => l.id === hc.leagueId);
+        w.hot.humans[i].st.manager = { name: w.hot.humans[i].name, goal: hc.rep > 85 ? 'Meisterschaft' : hc.rep > 74 ? 'Internationale Plätze' : hc.rep > 62 ? 'Gesichertes Mittelfeld' : hl.tier > 1 && hc.rep > 55 ? 'Aufstiegsplätze' : 'Klassenerhalt' };
+        w.hot.humans[i].st.mode = 'manager'; }
+    }
     startChallenge(w, m.el.querySelector('#chal').value);
     checkAchievements(w);
     app.world = w; app.pendingWorld = null; app.slot = 'slot1';
@@ -378,6 +403,11 @@ function settingsModal(app) {
 export function seasonEndScreen(app, el) {
   const w = app.world;
   if (!isUserSeasonOver(w)) { el.innerHTML = '<div class="page"><p>Die Saison läuft noch.</p></div>'; return; }
+  if (isHot(w) && !allSeasonsOver(w, isUserSeasonOver)) { // v5.0: wait for the other hotseat managers
+    el.innerHTML = `<div class="page narrow"><div class="card md-gate"><h3>🏁 Deine Saison ist beendet</h3><p class="muted">Die anderen Manager spielen ihre Saison noch zu Ende. Danach wird die Saison für alle gemeinsam abgeschlossen.</p><div class="row-actions center"><button class="btn primary lg" id="hot-pass">➡️ Zug beenden</button></div></div></div>`;
+    el.querySelector('#hot-pass').onclick = () => endWeek(app, null);
+    return;
+  }
   const L = userLeague(w);
   const table = computeTable(L);
   const rank = table.findIndex((r) => r.id === w.userClubId) + 1;
@@ -402,9 +432,10 @@ export function seasonEndScreen(app, el) {
     el.querySelector('#sum').innerHTML = `<div class="card"><h3>Meister</h3><ul>${champs}</ul><h3>Aufsteiger</h3><p>${esc(promo.join(', ') || '–')}</p><h3>Absteiger</h3><p>${esc(rel.join(', ') || '–')}</p>
       ${s.tournament ? `<h3>🌍 ${esc(s.tournament.name)}</h3><p>${flag(s.tournament.winner)} <b>${esc(nationName(s.tournament.winner))}</b> gewinnt das Turnier gegen ${esc(nationName(s.tournament.runnerUp))}.${s.tournament.topScorer ? ` Torschützenkönig: ${esc(s.tournament.topScorer.name)} (${s.tournament.topScorer.goals} Tore).` : ''}</p>` : ''}
       ${s.playoffs?.length ? `<h3>Relegation & Play-offs</h3><ul class="po-list">${s.playoffs.map((po) => `<li><span>${esc(po.name)}</span><b>${esc(w.clubs[po.first].short)} – ${esc(w.clubs[po.second].short)}</b> <em>${esc(po.text)}</em> → <strong>${esc(w.clubs[po.winner].name)}</strong></li>`).join('')}</ul>` : ''}
+      ${s.humans ? `<h3>👥 Hotseat</h3><ul>${s.humans.map((x, i) => `<li>${esc(humanName(w, i))} (${esc(w.clubs[w.hot.humans[i].clubId].short)}): Platz <b>${x.user.rank}</b> in der ${esc(x.user.league)}${x.cupWins.length ? ` · 🏆 ${esc(x.cupWins.join(', '))}` : ''}</li>`).join('')}</ul>` : ''}
       <button class="btn primary" id="cont">Weiter zur neuen Saison</button></div>`;
     el.querySelector('#end').disabled = true;
     await app.autosave();
-    el.querySelector('#cont').onclick = () => app.go('home');
+    el.querySelector('#cont').onclick = () => app.go(isHot(w) ? 'hotTurn' : 'home', { reason: 'season' });
   };
 }

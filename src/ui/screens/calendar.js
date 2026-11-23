@@ -1,5 +1,7 @@
 // Kalender (v2.9): month view with all matches, a day-by-day stepper with auto mode (1x/2x/4x), stop,
 // "to the next match" and a daily log. Match days stop the clock – you play the game, then it goes on.
+import { endWeek } from '../turn.js';
+import { isHot } from '../../manager/hotseat.js';
 import { esc, crest, toast } from '../dom.js';
 import { finishWeek, newRng, isUserSeasonOver, userLeague, dailyTick } from '../../manager/season.js';
 import { dateOf, fmtDate, dayInfo, nextUserMatchDay, trainingOfDay, seasonStart, weekOfDate, WD, MONTHS, CUP_DAY, LEAGUE_DAY } from '../../manager/calendar.js';
@@ -24,6 +26,7 @@ export function calendarScreen(app, el) {
     if (matchToday()) { stop(); draw(); return false; }
     w.day++;
     if (w.day > 6) {
+      if (isHot(w)) { stop(); await endWeek(app, null); return false; } // v5.0: hotseat – next manager or new week
       finishWeek(w, newRng(w)); // a week without a match of yours (e.g. international break)
       await app.autosave();
       log('🗓️', `Neue Woche · ${w.week + 1}. Spielwoche`);

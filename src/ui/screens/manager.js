@@ -1,4 +1,5 @@
 import { isMatchToday, daysToMatch } from '../../manager/calendar.js';
+import { tickerAvailable, runDeadline } from '../../manager/deadline.js';
 import { mgrPortrait } from './managerCreate.js';
 import { styleOf, STYLES } from '../../data/styles.js';
 import { anaSummary, heatSvg } from '../../manager/playerAna.js';
@@ -26,6 +27,25 @@ import { userCupFixture, cupById } from '../../manager/cups.js';
 import { isDirector, coachCandidates, hireCoach } from '../../manager/director.js';
 import { ensureMood, ensureSponsors, resolveEvent, isDeadlineDay } from '../../manager/events.js';
 
+function deadlineTicker(app) {
+  const w = app.world;
+  const ev = tickerAvailable(w) ? runDeadline(w, newRng(w)) : (w.deadlineTicker?.events || []);
+  app.autosave?.();
+  const m = modal(`<div class="dl-head"><h3>⏰ Deadline Day · Liveticker</h3><b class="dl-clock" id="dl-clock">09:00</b></div><div class="dl-feed" id="dl-feed"></div>
+    <div class="row-actions end"><button class="btn ghost" id="dl-skip">Alles zeigen</button><button class="btn primary" id="dl-tm">Zum Transfermarkt</button></div>`, { wide: true, onClose: () => clearInterval(tm) });
+  const feed = m.el.querySelector('#dl-feed'), clock = m.el.querySelector('#dl-clock');
+  let i = 0, min = 9 * 60;
+  const hhmm = (x) => `${String(Math.floor(x / 60) % 24).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+  const show = (e) => { const d = document.createElement('div'); d.className = `dl-item ${e.kind}${e.mine ? ' mine' : ''}`; d.innerHTML = `<small>${hhmm(e.t)}</small><span>${esc(e.text)}</span>`; feed.prepend(d); };
+  const tm = setInterval(() => {
+    min = Math.min(24 * 60 - 1, min + 12); clock.textContent = hhmm(min);
+    while (i < ev.length && ev[i].t <= min) show(ev[i++]);
+    if (min >= 24 * 60 - 1) { clearInterval(tm); clock.textContent = '23:59 · Fenster zu'; if (!ev.length) feed.innerHTML = '<p class="muted">Ein ruhiger Deadline Day – keine Wechsel.</p>'; }
+  }, 120);
+  m.el.querySelector('#dl-skip').onclick = () => { clearInterval(tm); while (i < ev.length) show(ev[i++]); clock.textContent = '23:59 · Fenster zu'; };
+  m.el.querySelector('#dl-tm').onclick = () => { m.close(); app.go('transfers'); };
+}
+
 export function dashboardScreen(app, el) {
   const w = app.world, club = app.club;
   const L = userLeague(w);
@@ -49,7 +69,7 @@ export function dashboardScreen(app, el) {
   const sc = w.scenario && !w.scenario.done ? w.scenario : null;
   el.innerHTML = `<div class="page">
     ${sc ? `<div class="scenario-bar"><span>🎬</span><div class="grow"><small class="muted">SZENARIO · ${esc(sc.name)}</small><b>Ziel: ${esc(sc.goal)}</b></div><div><small class="muted">Aktuell</small><b>Platz ${rank}</b></div><div><small class="muted">Spiele übrig</small><b>${Math.max(0, L.fixtures.length - w.week)}</b></div>${sc.id === 'pleite' ? `<div><small class="muted">Kontostand</small><b class="${club.budget >= 0 ? 'good' : 'bad'}">${money(club.budget)}</b></div>` : ''}</div>` : ''}
-    ${isDeadlineDay(win) ? `<div class="deadline"><b>⏰ DEADLINE DAY</b><span>Das ${esc(win.name)} schließt nach diesem Spieltag. Die Gerüchteküche brodelt – letzte Chance für Transfers!</span><button class="btn sm primary" data-nav2="transfers">Zum Transfermarkt</button></div>` : ''}
+    ${isDeadlineDay(win) ? `<div class="deadline"><b>⏰ DEADLINE DAY</b><span>Das ${esc(win.name)} schließt nach diesem Spieltag. Die Gerüchteküche brodelt – letzte Chance für Transfers!</span><button class="btn sm" id="dl-ticker">📺 ${tickerAvailable(w) ? 'Liveticker starten' : 'Liveticker ansehen'}</button> <button class="btn sm primary" data-nav2="transfers">Zum Transfermarkt</button></div>` : ''}
     <div class="grid-2">
       <div class="card club-hero" style="--c1:${club.colors.primary}">
         <div class="wm">${crest(club, 300)}</div>
@@ -122,6 +142,7 @@ export function dashboardScreen(app, el) {
   if (w.pendingEvent && !app._evShown?.[w.week]) { (app._evShown ||= {})[w.week] = true; setTimeout(showEvent, 300); }
   el.querySelector('#club-hist')?.addEventListener('click', () => clubModal(app, club, { onPlayer: (p) => playerModal(app, p) }));
   el.querySelector('#go-end')?.addEventListener('click', () => app.go('seasonEnd'));
+  el.querySelector('#dl-ticker')?.addEventListener('click', () => deadlineTicker(app));
   el.querySelectorAll('[data-nav2]').forEach((b) => b.addEventListener('click', () => app.go(b.dataset.nav2)));
   el.querySelectorAll('[data-p]').forEach((d) => d.addEventListener('click', () => playerModal(app, w.players[d.dataset.p])));
 }

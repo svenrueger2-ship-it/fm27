@@ -2,6 +2,7 @@
 // quality, and plans its squad like a real sporting director: it analyses gaps (depth, quality, age,
 // expiring contracts), scouts fitting targets, bids, gets refused or countered, fights bidding wars,
 // sells surplus players, loans out talents and sacks its coach when results do not match expectations.
+import { isHumanClub, forEachHuman, isHot } from './hotseat.js';
 import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { PRESETS, FORMATIONS, autoLineup, teamStrength } from '../match/tactics.js';
@@ -29,7 +30,7 @@ export const groupOf = (pos) => Object.keys(GROUPS).find((g) => GROUPS[g].pos.in
 const GROUP_LABEL = { TW: 'Torhüter', IV: 'Innenverteidiger', AV: 'Außenverteidiger', ZM: 'zentrale Mittelfeldspieler', OFF: 'Offensivspieler', ST: 'Stürmer' };
 const GROUP_DAT = { TW: 'Torhütern', IV: 'Innenverteidigern', AV: 'Außenverteidigern', ZM: 'zentralen Mittelfeldspielern', OFF: 'Offensivspielern', ST: 'Stürmern' };
 
-const isUser = (world, club) => club.id === world.userClubId;
+const isUser = (world, club) => isHumanClub(world, club.id);
 const leagueOf = (world, club) => world.leagues.find((l) => l.id === club.leagueId);
 
 // ------------------------------------------------------------------ identity
@@ -113,7 +114,7 @@ function findTargets(world, rng, buyer, need) {
   const ids = Object.keys(world.players);
   const out = [];
   const consider = (p) => {
-    if (!p || p.youthOf || p.loan || p.clubId === buyer.id || p.clubId === world.userClubId) return;
+    if (!p || p.youthOf || p.loan || p.clubId === buyer.id || isHumanClub(world, p.clubId)) return;
     if (!require_compat(need.pos, p.pos) || p.ovr < need.minOvr || p.ovr > cap) return;
     if (p.clubId && world.clubs[p.clubId].squad.length <= 20) return;
     const fee = p.clubId ? askingPrice(world, p, true) : 0;

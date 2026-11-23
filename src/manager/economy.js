@@ -1,5 +1,6 @@
 // Finances & club development: weekly income/expenses for every club, ledger + balance history,
 // facilities (training ground, youth academy, medical department, stadium expansion).
+import { isHumanClub } from './hotseat.js';
 import { clamp } from '../core/rng.js';
 import { skillRank } from './progress.js';
 import { ensureStadium, weeklyConstruction, hospitalityIncome, standingShare, screensBonus, lightsBonus, awayIncome, familyBonus } from './stadiumBuild.js';
@@ -64,7 +65,7 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
   if (club.id === world.userClubId && skillRank(world, 'finanzen')) { const base = rows.filter((r) => ['tickets', 'sponsors', 'merch'].includes(r.key)).reduce((s, r) => s + r.amount, 0); if (base > 0) add('sponsors', 'Vermarktungsgeschick (Manager-Skill)', base * 0.025 * skillRank(world, 'finanzen')); }
   add('wages', 'Gehälter', -weeklyWages(world, club) / W);
   if (world.mode === 'director' && world.coach && club.id === world.userClubId) add('wages', `Cheftrainer ${world.coach.name}`, -world.coach.wage / W);
-  if (club.id === world.userClubId) {
+  if (isHumanClub(world, club.id)) {
     const staff = Object.values(world.staff?.members || {}).reduce((a, m) => a + m.wage, 0) + (world.scoutNet?.scouts || []).reduce((a, s) => a + s.wage, 0);
     add('wages', 'Trainerstab & Scouts', -staff / W);
   }
@@ -73,7 +74,7 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
   weeklyConstruction(world, club);
   const net = rows.reduce((s, r) => s + r.amount, 0);
   club.budget = Math.round(club.budget + net);
-  if (club.id === world.userClubId) {
+  if (isHumanClub(world, club.id)) {
     F.ledger.unshift({ season: world.season, week: world.week + 1, rows, net: Math.round(net) });
     F.ledger = F.ledger.slice(0, 60);
   }
@@ -87,7 +88,7 @@ export function bookTransfer(club, amount, label, world) {
   if (!F) return;
   if (amount > 0) F.season.transfersIn += amount; else F.season.transfersOut += amount;
   club.budget = Math.round(club.budget + amount);
-  if (world && club.id === world.userClubId) F.ledger.unshift({ season: world.season, week: world.week + 1, rows: [{ key: 'transfer', label, amount: Math.round(amount) }], net: Math.round(amount) });
+  if (world && isHumanClub(world, club.id)) F.ledger.unshift({ season: world.season, week: world.week + 1, rows: [{ key: 'transfer', label, amount: Math.round(amount) }], net: Math.round(amount) });
 }
 
 export function facilityCost(club, key, league) {
@@ -127,7 +128,7 @@ export function seasonFinanceClose(world, club, league, rank) {
   const income = s.tickets + (s.hospitality || 0) + s.tv + s.sponsors + s.merch + s.prize;
   // naming-rights contract runs out
   const nm = club.stadium.naming;
-  if (nm && --nm.yearsLeft <= 0) { club.stadium.naming = null; club.stadium.name = club.stadium.baseName || club.stadium.name; if (club.id === world.userClubId) world.news.unshift({ season: world.season + 1, week: 0, text: `Der Namensrechte-Vertrag mit ${nm.brand} ist ausgelaufen.` }); }
+  if (nm && --nm.yearsLeft <= 0) { club.stadium.naming = null; club.stadium.name = club.stadium.baseName || club.stadium.name; if (isHumanClub(world, club.id)) world.news.unshift({ season: world.season + 1, week: 0, text: `Der Namensrechte-Vertrag mit ${nm.brand} ist ausgelaufen.` }); }
   club.wageBudget = Math.round(Math.max(club.wageBudget * 0.9, income * 0.72) / 1e5) * 1e5;
   club.finance.lastSeason = { ...s, season: world.season };
   club.finance.season = emptySeason();

@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.0.0', date: '23.11.2026', title: 'Hotseat, 4 neue Ligen & Deadline Day',
+    neu: ['Hotseat-Mehrspieler: 2–4 Manager abwechselnd auf einem Gerät, offline, mit direkten Duellen', '4 neue Ligen mit echten Vereinen 2026/27: Eredivisie, Liga Portugal, Süper Lig, Scottish Premiership – mit Pokal', 'Deadline-Day-Liveticker mit Uhr, Breaking News und Last-Minute-Angeboten', 'Europapokal-Plätze neu verteilt auf 12 Ligen'],
+    verbessert: ['Alte Spielstände bekommen die neuen Ligen zur nächsten Saison', 'Schottland spielt drei Runden (33 Spieltage)'],
+    behoben: [],
+    geplant: ['Zweite Ligen für Spanien, Italien, Frankreich'],
+  },
+  {
     version: '4.0.0', date: '23.11.2026', title: 'Kabine, Stil-Schule & Legenden',
     neu: ['Kabinenansprache vor dem Spiel und in der Halbzeit – die Mannschaft reagiert je nach Lage und Persönlichkeiten', 'Stil-Training: Spielern einen Spielstil antrainieren, U19-Talente mit Stil-Begabung', 'Taktik-Vorschlag aus der Gegneranalyse mit einem Tipp übernehmen', 'Legendenstatus und Karriere-Chronik nach Jahrzehnten'],
     verbessert: ['Android: fast alle Tabs passen auf eine Seite, lange Listen scrollen in ihrer Karte', 'Stadion-Tab 10× schneller, Transfermarkt und Training flotter'],

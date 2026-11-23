@@ -1,3 +1,4 @@
+import { isHot } from '../../manager/hotseat.js';
 // "Vorspulen": simulate several matchdays at once (5 Spieltage, rest of the first half, whole season).
 // Deliberately tucked away behind a small button + confirmation so it is not triggered by accident.
 import { finishWeek, newRng, userLeague, computeTable, isUserSeasonOver } from '../../manager/season.js';
@@ -9,6 +10,7 @@ export function simAheadButton() {
 }
 
 export function bindSimAhead(app, root) {
+  if (isHot(app.world)) { root.querySelector('.sim-ahead')?.remove(); return; } // v5.0: no fast-forward in hotseat
   const b = root.querySelector('#sim-ahead');
   if (b) b.onclick = () => openSimAhead(app);
 }

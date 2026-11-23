@@ -2,6 +2,7 @@
 // and European cups (Champions League, Europa League). Knock-out format; European rounds are
 // two-legged (final single match on neutral ground), national cups single matches with extra time
 // and penalties. The lower-league side gets home advantage in the DFB-Pokal.
+import { isHumanClub } from './hotseat.js';
 import { clamp } from '../core/rng.js';
 import { teamStrength, ensureLineup } from '../match/tactics.js';
 
@@ -10,6 +11,10 @@ export const NATIONAL = {
   EN: { name: 'FA Cup', short: 'FAC', leagues: ['en1', 'en2'], size: 64, prize: [0.1e6, 0.2e6, 0.4e6, 0.8e6, 1.5e6, 3.6e6] },
   ES: { name: 'Copa del Rey', short: 'CDR', leagues: ['es1'], size: 32, prize: [0.3e6, 0.6e6, 1.2e6, 2.4e6, 4e6] },
   IT: { name: 'Coppa Italia', short: 'CIT', leagues: ['it1'], size: 32, prize: [0.3e6, 0.6e6, 1.2e6, 2.4e6, 4e6] },
+  NL: { name: 'KNVB Beker', short: 'KNVB', leagues: ['nl1'], size: 16, prize: [0.15e6, 0.3e6, 0.6e6, 1.2e6] },
+  PT: { name: 'Taça de Portugal', short: 'TDP', leagues: ['pt1'], size: 16, prize: [0.15e6, 0.3e6, 0.6e6, 1.2e6] },
+  TR: { name: 'Türkiye Kupası', short: 'TK', leagues: ['tr1'], size: 16, prize: [0.15e6, 0.3e6, 0.6e6, 1.2e6] },
+  SC: { name: 'Scottish Cup', short: 'SCUP', leagues: ['sc1'], size: 16, prize: [0.08e6, 0.16e6, 0.3e6, 0.6e6] },
   FR: { name: 'Coupe de France', short: 'CDF', leagues: ['fr1'], size: 32, prize: [0.2e6, 0.4e6, 0.8e6, 1.6e6, 3e6] },
 };
 // European places (season 1 by reputation, afterwards by final league position)
@@ -17,12 +22,14 @@ export const NATIONAL = {
 const CL_PLACES = { de1: 6, en1: 7, es1: 7, it1: 7, fr1: 5 };
 const EL_PLACES = { de1: 3, en1: 3, es1: 3, it1: 3, fr1: 4 };
 const ECL_PLACES = { de1: 3, en1: 3, es1: 3, it1: 3, fr1: 4 };
+// v5.0 places [CL, EL, ECL] per league – 32 / 16 / 16
+const EURO_V5 = { de1: [6, 2, 2], en1: [6, 2, 2], es1: [6, 2, 2], it1: [6, 2, 2], fr1: [3, 2, 2], nl1: [2, 2, 1], pt1: [2, 2, 2], tr1: [0, 2, 2], sc1: [1, 0, 1] };
 // Europa League and Conference League (v1.0): 16 teams each, 4 groups, then quarter-finals
 const SMALL_WEEKS = [[3, 5, 9, 11, 14, 16], [25, 27], [29, 31], [33]];
 const SMALL_NAMES = ['Gruppenphase', 'Viertelfinale', 'Halbfinale', 'Finale'];
 const CL_WEEKS = [[3, 5, 9, 11, 14, 16], [20, 22], [25, 27], [29, 31], [33]];
 const CL_NAMES = ['Gruppenphase', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'];
-const NAT_WEEKS = { 64: [2, 7, 12, 18, 24, 30], 32: [7, 12, 18, 24, 30] };
+const NAT_WEEKS = { 64: [2, 7, 12, 18, 24, 30], 32: [7, 12, 18, 24, 30], 16: [12, 18, 24, 30] };
 const EURO_WEEKS = [[8, 10], [14, 16], [20, 22], [28]];
 const ROUND_NAMES = { 64: ['1. Runde', '2. Runde', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'], 32: ['1. Runde', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'], 16: ['Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'] };
 
@@ -55,9 +62,13 @@ export function createCups(world, rng, tables = null) {
   }
   // European cups – ranking of the previous season
   const cl = [], el = [], ecl = [];
-  for (const [lid, n] of Object.entries(CL_PLACES)) {
+  // v5.0: with the Eredivisie, Liga Portugal, Süper Lig and Scottish Premiership the places are shared out anew
+  const big = world.leagues.some((l) => l.id === 'nl1');
+  const P = big ? EURO_V5 : Object.fromEntries(Object.keys(CL_PLACES).map((lid) => [lid, [CL_PLACES[lid], EL_PLACES[lid], ECL_PLACES[lid]]]));
+  for (const [lid, [n, e, c]] of Object.entries(P)) {
+    if (!world.leagues.some((l) => l.id === lid)) continue;
     const r = ranking(world, lid, tables).filter((id) => world.clubs[id].leagueId === lid);
-    cl.push(...r.slice(0, n)); el.push(...r.slice(n, n + EL_PLACES[lid])); ecl.push(...r.slice(n + EL_PLACES[lid], n + EL_PLACES[lid] + ECL_PLACES[lid]));
+    cl.push(...r.slice(0, n)); el.push(...r.slice(n, n + e)); ecl.push(...r.slice(n + e, n + e + c));
   }
   cups.push(newGroupCup({ id: 'cl', name: 'Champions League', short: 'CL', type: 'euro', entrants: cl.slice(0, 32), weeks: CL_WEEKS, names: CL_NAMES, legs: 2, prize: [0, 11e6, 12.5e6, 15e6, 18.5e6, 20e6], start: 18.6e6, groupWin: 2.1e6, groupDraw: 0.7e6 }, world, rng));
   cups.push(newGroupCup({ id: 'el', name: 'Europa League', short: 'EL', type: 'euro', entrants: el.slice(0, 16), weeks: SMALL_WEEKS, names: SMALL_NAMES, legs: 2, prize: [0, 2.6e6, 4.6e6, 6e6, 8.6e6], start: 4.3e6, groupWin: 0.63e6, groupDraw: 0.21e6 }, world, rng));
@@ -207,7 +218,7 @@ function payout(world, clubId, amount, label) {
   c.budget += amount;
   if (c.finance) {
     c.finance.season.prize = (c.finance.season.prize || 0) + amount;
-    if (clubId === world.userClubId) c.finance.ledger.unshift({ season: world.season, week: world.week + 1, rows: [{ key: 'prize', label, amount }], net: amount });
+    if (isHumanClub(world, clubId)) c.finance.ledger.unshift({ season: world.season, week: world.week + 1, rows: [{ key: 'prize', label, amount }], net: amount });
   }
 }
 

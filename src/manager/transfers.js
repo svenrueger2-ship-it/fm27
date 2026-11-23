@@ -1,6 +1,7 @@
 // Transfer market: windows, asking prices, bids & counter offers, contract negotiations, release clauses,
 // loans with buy option, incoming offers for own players, contract extensions, free agents,
 // scouting knowledge/reports and AI-to-AI transfers.
+import { isHumanClub, forEachHuman, isHot } from './hotseat.js';
 import { money, eur } from '../core/fmt.js';
 import { rollRumours, confirmRumour, isDeadlineDay } from './events.js';
 import { clamp } from '../core/rng.js';
@@ -282,7 +283,7 @@ export function toggleListed(world, playerId) {
   return T.listed.includes(playerId);
 }
 
-function generateOffers(world, rng) {
+export function generateOffers(world, rng) {
   const T = world.transfer, uc = world.clubs[world.userClubId];
   T.offers = T.offers.filter((o) => world.week - o.week < 2 && world.players[o.playerId]?.clubId === uc.id);
   if (!windowInfo(world).open) return;
@@ -337,24 +338,24 @@ function weakestSlot(world, club) {
 // ----------------------------------------------------------------- weekly & seasonal hooks
 export function weeklyTransfers(world, rng) {
   ensureTransferState(world);
-  weeklyScouting(world);
-  if (world.userClubId != null) weeklyAgents(world, rng);
-  generateOffers(world, rng);
-  aiMarket(world, rng);
   const win = windowInfo(world);
-  if (win.open) rollRumours(world, rng, isDeadlineDay(win) ? 5 : 2);
-  if (isDeadlineDay(win)) {
-    // Deadline Day: the market goes wild – extra AI deals and late offers for the user's players
+  // v5.0: everything that concerns a manager runs for every hotseat human with his own state
+  forEachHuman(world, () => {
+    ensureTransferState(world);
+    weeklyScouting(world);
+    if (world.userClubId != null) weeklyAgents(world, rng);
     generateOffers(world, rng);
-    news(world, `⏰ DEADLINE DAY! Heute schließt das ${win.name}. Letzte Chance für Transfers – die Gerüchteküche brodelt.`);
-  }
-  // contract expiry warnings
-  const uc = world.clubs[world.userClubId];
-  const len = userLeagueLen(world);
-  if (world.week === len - 6) {
-    const exp = uc.squad.map((id) => world.players[id]).filter((p) => p.contract <= 1 && !p.loan);
-    if (exp.length) news(world, `Vertragsende im Sommer: ${exp.map((p) => p.lastName).join(', ')}. Verlängere rechtzeitig unter „Transfers → Verträge“.`);
-  }
+    if (win.open) rollRumours(world, rng, isDeadlineDay(win) ? 5 : 2);
+    if (isDeadlineDay(win)) generateOffers(world, rng); // Deadline Day: late offers for the user's players
+    // contract expiry warnings
+    const uc = world.clubs[world.userClubId];
+    if (uc && world.week === userLeagueLen(world) - 6) {
+      const exp = uc.squad.map((id) => world.players[id]).filter((p) => p.contract <= 1 && !p.loan);
+      if (exp.length) news(world, `${isHot(world) ? `${uc.short}: ` : ''}Vertragsende im Sommer: ${exp.map((p) => p.lastName).join(', ')}. Verlängere rechtzeitig unter „Transfers → Verträge“.`);
+    }
+  });
+  aiMarket(world, rng);
+  if (isDeadlineDay(win)) news(world, `⏰ DEADLINE DAY! Heute schließt das ${win.name}. Letzte Chance für Transfers – die Gerüchteküche brodelt.`);
 }
 
 // Season end: loans return, contracts expire → free agents, AI renewals, old free agents retire.
@@ -367,7 +368,7 @@ export function seasonTransfers(world, rng) {
       const p = world.players[id];
       p.contract--;
       if (p.contract > 0) continue;
-      const user = club.id === world.userClubId;
+      const user = isHumanClub(world, club.id);
       if (!user && !p.preContract && aiRenews(world, club, p, rng)) { p.contract = rng.int(1, p.age > 31 ? 1 : 4); p.wage = Math.round(p.wage * 1.08 / 1000) * 1000; continue; }
       club.squad = club.squad.filter((x) => x !== id); club.lineup = null;
       p.clubId = null; p.faSince = world.season; p.contract = 0;
@@ -378,7 +379,7 @@ export function seasonTransfers(world, rng) {
   seasonPreContracts(world);
   // AI clubs refill thin squads with free agents (or youth if nobody fits)
   for (const club of Object.values(world.clubs)) {
-    if (club.id === world.userClubId) continue;
+    if (isHumanClub(world, club.id)) continue;
     let guard = 0;
     while (club.squad.length < 23 && guard++ < 8) {
       const need = weakestSlot(world, club);
@@ -392,6 +393,12 @@ export function seasonTransfers(world, rng) {
   }
   // v2.9: the user's squad must never be unplayable after expiring contracts / retirements:
   // below 16 players the U19 talents move up first, then cheap free agents are signed as cover
+  forEachHuman(world, () => userSeasonSquad(world));
+}
+
+// the user's squad must stay playable (also for every hotseat human)
+function userSeasonSquad(world) {
+  ensureTransferState(world);
   const me = world.clubs[world.userClubId];
   if (me && me.squad.length < 16) {
     const before = me.squad.length;

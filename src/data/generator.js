@@ -4,7 +4,7 @@ import { NATIONS, NATION_MIX } from './names.js';
 import { LEAGUES, KIT_COLORS } from './leagues.js';
 import { OUTFIELD_ATTRS, GK_ATTRS, POS_WEIGHTS, computeOverall } from './attributes.js';
 import { defaultTactic } from '../match/tactics.js';
-import { buildFixtures } from '../manager/season.js';
+import { buildFixtures, leagueFixtures } from '../manager/season.js';
 import { migrateWorld } from '../manager/migrate.js';
 import { REAL_SQUADS } from './realSquads.js';
 import { NATION_SKIN } from './nationsExtra.js';
@@ -116,7 +116,29 @@ export function generateWorld(seed = (Math.random() * 1e9) | 0) {
   const rng = new RNG(seed);
   const world = { version: 1, seed, season: 2026, week: 0, userClubId: null, leagues: [], clubs: {}, players: {}, news: [], history: [], nextPlayerId: 1 };
   let clubId = 1;
+  for (const L of LEAGUES) clubId = buildLeague(world, L, rng, clubId);
+  migrateWorld(world);
+  createCups(world, rng);
+  ensureClubAI(world, rng);
+  updateValues(world);
+  return world;
+}
+
+/** v5.0: old saves get the leagues added later (Eredivisie, Liga Portugal, Süper Lig, Premiership) at the next season start. */
+export function addMissingLeagues(world, rng) {
+  const added = [];
+  let id = Math.max(0, ...Object.keys(world.clubs).map(Number)) + 1;
   for (const L of LEAGUES) {
+    if (world.leagues.some((l) => l.id === L.id)) continue;
+    id = buildLeague(world, L, rng, id);
+    added.push(L.name);
+  }
+  if (added.length) ensureClubAI(world, rng);
+  return added;
+}
+
+function buildLeague(world, L, rng, clubId) {
+  {
     const league = { id: L.id, name: L.name, country: L.country, tier: L.tier, promo: L.promo, releg: L.releg, upper: L.upper, lower: L.lower, tv: L.tv, clubIds: [], fixtures: [] };
     for (const [name, short, rep, fixedKit, stadiumName, stadiumCap] of L.clubs) {
       const kit = fixedKit || KIT_COLORS[(clubId * 7 + short.charCodeAt(0)) % KIT_COLORS.length];
@@ -186,12 +208,8 @@ export function generateWorld(seed = (Math.random() * 1e9) | 0) {
       league.clubIds.push(club.id);
       clubId++;
     }
-    league.fixtures = buildFixtures(league.clubIds, rng);
+    league.fixtures = leagueFixtures(league, rng);
     world.leagues.push(league);
   }
-  migrateWorld(world);
-  createCups(world, rng);
-  ensureClubAI(world, rng);
-  updateValues(world);
-  return world;
+  return clubId;
 }

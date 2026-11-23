@@ -1243,3 +1243,21 @@ html.mobile .tbl tbody tr { content-visibility: auto; contain-intrinsic-size: au
   html.mobile .grid-4 > .card h3 { margin-bottom: .2rem; }
   html.mobile .grid-4 > .card p { margin: .15rem 0; font-size: .8rem; }
 }
+/* v5.0 hotseat */
+.hot-chip{display:inline-block;padding:0 .45rem;margin-right:.3rem;border-radius:8px;background:var(--acc);color:#fff;font-size:.8em}
+.hot-hero{display:flex;align-items:center;gap:1rem;background:linear-gradient(135deg,color-mix(in srgb,var(--c1) 35%,transparent),transparent)}
+.hot-hero>div{flex:1}.hot-hero h2{margin:.1rem 0}
+.hot-duel{padding:.4rem .6rem;border-radius:10px;background:rgba(255,80,80,.12)}
+.hot-setup{margin:.6rem 0;padding:.5rem .7rem;border-radius:12px;background:rgba(255,255,255,.04)}
+.hot-setup summary{cursor:pointer;font-weight:700}
+.hot-row{display:grid;grid-template-columns:1fr 1.6fr auto;gap:6px;margin:6px 0}
+/* v5.0 deadline ticker */
+.dl-head{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.dl-clock{font-family:var(--display);font-size:1.8rem;color:#ff5a5a;font-variant-numeric:tabular-nums}
+.dl-feed{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto;margin:.6rem 0}
+.dl-item{display:flex;gap:10px;align-items:baseline;padding:.45rem .6rem;border-radius:10px;background:rgba(255,255,255,.04);animation:dlIn .35s ease}
+.dl-item small{opacity:.6;font-variant-numeric:tabular-nums;min-width:3rem}
+.dl-item.breaking{background:linear-gradient(90deg,rgba(255,60,60,.25),transparent);font-weight:700}
+.dl-item.offer,.dl-item.mine{border-left:3px solid var(--acc)}
+.dl-item.rumour{opacity:.8}
+@keyframes dlIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
