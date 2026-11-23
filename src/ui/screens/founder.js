@@ -1,12 +1,12 @@
 // Club founder: name, crest editor, kit editor with live previews.
 import { esc, toast } from '../dom.js';
 import { SYMBOLS, SHAPES, DIVISIONS, crestSvg, foundClub, FOUND_TARGETS } from '../../manager/founder.js';
-import { KIT_STYLES, drawPattern } from '../../render/kitTexture.js';
+import { KIT_STYLES_ALL as KIT_STYLES, drawPattern } from '../../render/kitTexture.js';
 import { confirmClub } from './menu.js';
 
-const SYMBOL_NAMES = { none: 'Nur Text', star: 'Stern', ball: 'Ball', crown: 'Krone', bolt: 'Blitz', anchor: 'Anker', tower: 'Turm', wave: 'Welle', eagle: 'Adler', tree: 'Baum' };
-const SHAPE_NAMES = { shield: 'Schild', classic: 'Wappen', round: 'Rund', diamond: 'Raute', badge: 'Abzeichen' };
-const STYLE_NAMES = { plain: 'Uni', stripes: 'Streifen', hoops: 'Ringel', halves: 'Hälften', sash: 'Schärpe', pinstripe: 'Nadelstreifen', chevron: 'Chevron' };
+export const SYMBOL_NAMES = { none: 'Nur Text', star: 'Stern', ball: 'Ball', crown: 'Krone', bolt: 'Blitz', anchor: 'Anker', tower: 'Turm', wave: 'Welle', eagle: 'Adler', tree: 'Baum' };
+export const SHAPE_NAMES = { shield: 'Schild', classic: 'Wappen', round: 'Rund', diamond: 'Raute', badge: 'Abzeichen' };
+export const STYLE_NAMES = { plain: 'Uni', stripes: 'Streifen', hoops: 'Ringel', halves: 'Hälften', sash: 'Schärpe', pinstripe: 'Nadelstreifen', chevron: 'Chevron', band: 'Brustring', quarters: 'Geviertelt', shoulders: 'Schulterpasse' };
 
 export function founderScreen(app, el) {
   const w = app.pendingWorld;
@@ -73,7 +73,7 @@ export function founderScreen(app, el) {
   draw();
 }
 
-function drawShirt(cv, kit) {
+export function drawShirt(cv, kit) {
   const g = cv.getContext('2d');
   g.clearRect(0, 0, cv.width, cv.height);
   const shirt = new Path2D('M70 20 L105 8 Q130 26 155 8 L190 20 L250 70 L220 110 L195 92 L195 200 L65 200 L65 92 L40 110 L10 70 Z');

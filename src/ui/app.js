@@ -12,6 +12,9 @@ import { transfersScreen } from './screens/transfers.js';
 import { financeScreen } from './screens/finance.js';
 import { trainingScreen } from './screens/training.js';
 import { stadiumScreen } from './screens/stadium.js';
+import { clubDesignScreen } from './screens/clubDesign.js';
+import { editorScreen } from './screens/editor.js';
+import { boerseScreen } from './screens/boerse.js';
 import { cupsScreen } from './screens/cups.js';
 import { staffScreen } from './screens/staff.js';
 import { worldScreen } from './screens/world.js';
@@ -39,10 +42,10 @@ import { windowInfo } from '../manager/transfers.js';
 
 const NAV = [
   ['home', 'Vereinszentrale', '🏟️', 'Zentrale'], ['staff', 'Stab & Posteingang', '🧑‍💼', 'Stab'], ['matchday', 'Spieltag', '⚽', 'Spiel'], ['squad', 'Kader', '👥', 'Kader'], ['kabine', 'Kabine', '🛋️', 'Kabine'], ['tactics', 'Taktik', '📋', 'Taktik'],
-  ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion bauen', '🏟️', 'Stadion'],
-  ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
+  ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion', '🏟️', 'Stadion'], ['design', 'Trikot & Wappen', '🎨', 'Design'], ['boerse', 'Börse', '📈', 'Börse'],
+  ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['editor', 'Editor', '✍️', 'Editor'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
 ];
-const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen, wm: wmScreen, wmGroups: wmGroupsScreen, wmKo: wmKoScreen, wmSquad: wmSquadScreen };
+const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen, wm: wmScreen, wmGroups: wmGroupsScreen, wmKo: wmKoScreen, wmSquad: wmSquadScreen, design: clubDesignScreen, editor: editorScreen, boerse: boerseScreen };
 
 export class App {
   constructor(root) {

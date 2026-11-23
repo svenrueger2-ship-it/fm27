@@ -5,6 +5,38 @@
 import { clamp } from '../core/rng.js';
 
 export const STAND_NAMES = ['Haupttribüne', 'Gegengerade', 'Heimkurve', 'Gästekurve'];
+// v5.2: stands can carry their own names (e.g. "Südtribüne", "Uwe-Seeler-Tribüne")
+export const standName = (club, i) => club?.stadium?.layout?.stands?.[i]?.name || STAND_NAMES[i];
+
+// v5.2: interior fit-out (Innenausbau). Each level is a small construction project.
+export const INTERIOR = [
+  { key: 'catering', icon: '🍺', name: 'Gastronomie & Catering', max: 3, cost: 1.4e6, weeks: 3, desc: 'Mehr Kioske, Bierstände und ein Restaurant: Einnahmen an jedem Heimspiel' },
+  { key: 'shop', icon: '🛍️', name: 'Fanshop im Stadion', max: 3, cost: 1.1e6, weeks: 3, desc: 'Trikots und Schals direkt am Spieltag: Matchday- und Merchandising-Einnahmen' },
+  { key: 'fanzone', icon: '🎪', name: 'Fan-Zone & Biergarten', max: 2, cost: 1.8e6, weeks: 4, desc: 'Treffpunkt vor dem Anpfiff: bessere Stimmung, stabilere Zuschauerzahlen' },
+  { key: 'museum', icon: '🏆', name: 'Vereinsmuseum & Stadionführung', max: 2, cost: 2.5e6, weeks: 6, desc: 'Pokale, Geschichte, Führungen: Einnahmen auch ohne Spiel, mehr Stimmung' },
+  { key: 'wlan', icon: '📶', name: 'Stadion-WLAN & Vereins-App', max: 2, cost: 0.9e6, weeks: 2, desc: 'Bezahlen per App, Live-Daten: mehr Sponsoren- und Catering-Erlöse' },
+  { key: 'presse', icon: '🎙️', name: 'Medienzentrum', max: 2, cost: 1.3e6, weeks: 3, desc: 'Moderne Pressekonferenz und TV-Studio: höhere Sponsoren-Einnahmen' },
+  { key: 'kabine', icon: '🚿', name: 'Kabinentrakt & Regeneration', max: 3, cost: 1.6e6, weeks: 4, desc: 'Eisbecken, Sauna, Taktikraum: Spieler regenerieren nach Heimspielen schneller' },
+];
+export const interiorLevel = (club, key) => club.stadium.layout.interior?.[key] || 0;
+export function interiorOptions(club) {
+  const out = [];
+  for (const it of INTERIOR) {
+    const lv = interiorLevel(club, it.key);
+    const busy = club.stadium.projects.some((p) => p.key === 'interior' && p.to === it.key);
+    out.push({ ...it, level: lv, busy, done: lv >= it.max, opt: lv >= it.max || busy ? null : { key: 'interior', to: it.key, label: `${it.name} Stufe ${lv + 1}`, cost: Math.round(it.cost * (lv + 1) * (1 + lv * 0.35) / 1e5) * 1e5, weeks: it.weeks + lv } });
+  }
+  return out;
+}
+// extra income at every home game from the interior
+export function interiorIncome(club) {
+  const L = (k) => interiorLevel(club, k), r = club.rep || 50;
+  return Math.round((L('catering') * 1 + L('shop') * 0.75 + L('fanzone') * 0.5 + L('wlan') * 0.35) * (7000 + r * 260));
+}
+export function interiorWeekly(club) { // museum tours + media centre (every week)
+  const L = (k) => interiorLevel(club, k), r = club.rep || 50;
+  return Math.round(L('museum') * (2500 + r * 90) + L('presse') * (1800 + r * 70));
+}
 const STAND_LEN = [117, 117, 74, 74];
 export const MAX_SIZE = 10, MAX_TIERS = 3;
 export const ROOF_NAMES = ['Kein Dach', 'Teilüberdacht', 'Komplett überdacht'];
@@ -42,7 +74,8 @@ export function standingShare(layout) {
 export function atmosphere(club) {
   const L = club.stadium.layout;
   const roofs = L.stands.reduce((s, x) => s + x.roof, 0) / 8;
-  return Math.round(clamp(45 + standingShare(L) * 70 + roofs * 18 + (club.rep - 50) * 0.25 + ((L.away ?? 1) - 1) * 3, 20, 99));
+  const inner = (L.interior?.fanzone || 0) * 2 + (L.interior?.museum || 0) * 1.5;
+  return Math.round(clamp(45 + standingShare(L) * 70 + roofs * 18 + (club.rep - 50) * 0.25 + ((L.away ?? 1) - 1) * 3 + inner, 20, 99));
 }
 
 // Builds a plausible layout for an existing stadium so that the computed capacity matches the real one.
@@ -119,7 +152,7 @@ export function startProject(world, club, opt, stand = null) {
   if (club.budget < opt.cost) return { ok: false, msg: 'Nicht genug Geld auf dem Konto' };
   const st = club.stadium;
   club.budget -= opt.cost; club.finance.season.construction -= opt.cost;
-  const proj = { key: opt.key, to: opt.to, stand, label: (stand != null ? STAND_NAMES[stand] + ': ' : '') + opt.label, weeks: opt.weeks, total: opt.weeks, cost: opt.cost };
+  const proj = { key: opt.key, to: opt.to, stand, label: (stand != null ? standName(club, stand) + ': ' : '') + opt.label, weeks: opt.weeks, total: opt.weeks, cost: opt.cost };
   st.projects.push(proj);
   if (stand != null) st.layout.stands[stand].building = proj.label;
   recomputeCapacity(club);
@@ -140,6 +173,7 @@ function finishProject(world, club, p) {
   if (p.key === 'pitch') L.pitch = p.to;
   if (p.key === 'away') L.away = (L.away ?? 1) + 1;
   if (p.key === 'family') L.family = (L.family ?? 0) + 1;
+  if (p.key === 'interior') { L.interior ||= {}; L.interior[p.to] = (L.interior[p.to] || 0) + 1; }
   if (s) s.building = null;
   club.stadium.level = (club.stadium.level || 1) + 1;
   recomputeCapacity(club);

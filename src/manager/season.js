@@ -7,6 +7,8 @@ import { computeOverall, OUTFIELD_ATTRS, GK_ATTRS, POS_WEIGHTS } from '../data/a
 import { generatePlayer, marketValue, addMissingLeagues } from '../data/generator.js';
 import { weeklyFinance, seasonFinanceClose } from './economy.js';
 import { weeklyTraining, recoverInjury } from './training.js';
+import { weeklyStock } from './stock.js';
+import { aiEdge } from './difficulty.js';
 import { weeklyStyleTrain } from '../data/styles.js';
 import { weeklyTransfers, seasonTransfers } from './transfers.js';
 import { rollEvent, moodAfterMatch, sponsorSeasonClose, ensureMood, moodChange } from './events.js';
@@ -85,7 +87,9 @@ function pickScorer(rng, ids, players, slots) {
 export function quickSim(world, m, rng) {
   const H = world.clubs[m.h], A = world.clubs[m.a];
   const prepE = (c) => (c.matchPrep && c.matchPrep.week === world.week ? c.matchPrep.prep * 0.5 + c.matchPrep.setpiece * 0.25 : 0) + (c.spirit != null ? (c.spirit - 60) / 25 : 0);
-  const sh = teamStrength(H, world.players) + coachEdge(world, H) + prepE(H), sa = teamStrength(A, world.players) + coachEdge(world, A) + prepE(A);
+  const hH = isHumanClub(world, H.id), hA = isHumanClub(world, A.id), dOn = world.difficulty && world.difficulty !== 'normal' && (hH || hA);
+  const dH = dOn ? aiEdge(world, hH) : 0, dA = dOn ? aiEdge(world, hA) : 0;
+  const sh = teamStrength(H, world.players) + coachEdge(world, H) + prepE(H) + dH, sa = teamStrength(A, world.players) + coachEdge(world, A) + prepE(A) + dA;
   const mh = (H.tactic.mentality - 0.5) * 0.4, ma = (A.tactic.mentality - 0.5) * 0.4;
   const lh = clamp(1.45 * Math.exp((sh - sa) * 0.075) * (1 + mh) * (1 + ma * 0.5), 0.15, 5);
   const la = clamp(1.12 * Math.exp((sa - sh) * 0.075) * (1 + ma) * (1 + mh * 0.5), 0.1, 5);
@@ -209,7 +213,8 @@ export function finishWeek(world, rng) {
   // weekly recovery
   for (const id in world.players) {
     const p = world.players[id];
-    p.fitness = clamp(p.fitness + 22 + p.attrs.ausdauer * 0.08, 0, 100);
+    const kab = world.clubs[p.clubId]?.stadium?.layout?.interior?.kabine || 0; // v5.2 Kabinentrakt
+    p.fitness = clamp(p.fitness + 22 + p.attrs.ausdauer * 0.08 + kab * 2, 0, 100);
     recoverInjury(p, world.clubs[p.clubId], rng);
   }
   // finances & training for every club
@@ -221,6 +226,7 @@ export function finishWeek(world, rng) {
       const club = world.clubs[id];
       const rank = table.findIndex((r) => r.id === id) + 1;
       weeklyFinance(world, club, league, { homeGame: md.some((m) => m.h === id), rank });
+      if (club.stock?.listed) weeklyStock(world, club, league, rank, rng);
       const rep = weeklyTraining(world, club, rng);
       if (isHumanClub(world, id)) forEachHuman(world, () => { if (world.userClubId !== id) return; for (const t of weeklyStyleTrain(world, club, rng)) { rep.unshift({ type: 'up', text: t }); world.news.unshift({ season: world.season, week: world.week, text: t }); } world.trainingReport = { season: world.season, week: world.week + 1, items: rep }; });
     }

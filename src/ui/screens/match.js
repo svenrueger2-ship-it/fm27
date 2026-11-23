@@ -23,6 +23,7 @@ import { userFixture, applyMatchResult, finishWeek, newRng, userLeague, isUserSe
 import { MatchView } from '../../render/matchView.js';
 import { CAMERA_MODES } from '../../render/camera.js';
 import { isMatchToday, daysToMatch, nextUserMatchDay, dateOf, fmtDate } from '../../manager/calendar.js';
+import { aiEdge } from '../../manager/difficulty.js';
 import { crest, esc, shortName, ratingClass, toast, bar, flag, modal, portrait } from '../dom.js';
 
 const TOD_NAME = { tag: '☀️ Nachmittag', abend: '🌇 Abendspiel', nacht: '🌙 Flutlicht' };
@@ -149,7 +150,7 @@ function liveMatch(app, el, params) {
   const H = w.clubs[fx.h], A = w.clubs[fx.a];
   ensureLineup(H, w.players); ensureLineup(A, w.players);
   const director = !friendly && isDirector(w);
-  const userTeam = director ? -1 : H.id === w.userClubId ? 0 : A.id === w.userClubId ? 1 : -1;
+  const userTeam = params.scene ? (params.scene.side === 'a' ? 1 : 0) : director ? -1 : H.id === w.userClubId ? 0 : A.id === w.userClubId ? 1 : -1;
   const engine = new MatchEngine({ home: H, away: A, db: w.players, homeLineup: H.lineup, awayLineup: A.lineup, userTeam, autoSubsUser: director || S.autoSubs !== false });
   const T0 = engine.teams[0], T1 = engine.teams[1];
   const cond0 = friendly ? null : conditions(w, fx);
@@ -159,7 +160,18 @@ function liveMatch(app, el, params) {
   // match preparation from the training week and team spirit (v2.0)
   for (const T of engine.teams) { const c = T.club; if (c.matchPrep?.week === w.week) T.familiarity = Math.min(1, (T.familiarity ?? 0.8) + c.matchPrep.prep * 0.05); if (c.spirit != null) T.familiarity = Math.min(1, Math.max(0.4, (T.familiarity ?? 0.8) + (c.spirit - 60) / 400)); }
   if (!friendly && userTeam >= 0 && talkDone(w)) engine.setFocus(userTeam, w.talk.focus);
+  if (!friendly && userTeam >= 0 && w.difficulty && w.difficulty !== 'normal') { const T = engine.teams[1 - userTeam]; T.familiarity = Math.max(0.45, Math.min(1, (T.familiarity ?? 0.8) + aiEdge(w, false) * 0.025)); } // v5.2
   let htTalk = false;
+  // v5.2 editor: match scene with preset score and minute
+  const scene = params.scene;
+  if (scene) {
+    engine.teams[0].score = scene.hg | 0; engine.teams[1].score = scene.ag | 0;
+    const min = Math.max(1, Math.min(89, scene.minute | 0));
+    if (min > 45) { engine.half = 2; htTalk = true; }
+    engine.time = (min - 1) * 60;
+    for (const T of engine.teams) for (const p of T.players) p.energy = Math.max(0.55, 1 - (min / 90) * 0.32);
+    if (min > 45) engine.startKickoff?.(1 - (engine.firstKickoff ?? 0), true);
+  }
   engine.pyro = S.pyro || 'normal';
   if (S.var === false) engine.varRate = 0;
   // Konferenz: the other matches of this matchday are decided now and revealed minute by minute
@@ -507,7 +519,7 @@ function liveMatch(app, el, params) {
       };
       step();
     });
-    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, wm: params.wm, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
+    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, scene: params.scene, wm: params.wm, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
   }
 
   if (params.mode === 'instant') { runInstant(); }
@@ -516,9 +528,10 @@ function liveMatch(app, el, params) {
 }
 
 // v3.1: shared by the classic 3D mode and the Unity mode – books the result into the season
-export async function commitResult(app, { r, H, A, friendly, record, wm }) {
+export async function commitResult(app, { r, H, A, friendly, record, wm, scene }) {
   const w = app.world;
   if (wm) return wmCommit(app, r, wm);
+  if (scene) { sceneOutcome(w, scene, r); app.go('editor', { tab: 'scene' }); return; }
   if (friendly) { app.world = null; app.go('start'); return; }
   const rng = newRng(w);
   const m = currentFixture(w);
@@ -566,4 +579,14 @@ function talkModal(w, ctx, xi, half, done) {
       <p class="small muted">🤩 ${per.top} · 💪 ${per.gut} · 😐 ${per.neutral} · 😟 ${per.schlecht}</p><button class="btn primary" id="talk-ok">Weiter</button></div>`;
     m.el.querySelector('#talk-ok').onclick = () => { m.close(); done(res); };
   }));
+}
+
+// v5.2: result of an editor match scene (no effect on the season)
+function sceneOutcome(w, scene, r) {
+  const mine = scene.side === 'a' ? r.ag - r.hg : r.hg - r.ag;
+  const ok = scene.goal === 'win' ? mine > 0 : scene.goal === 'draw' ? mine >= 0 : scene.goal === 'hold' ? mine >= (scene.side === 'a' ? scene.ag - scene.hg : scene.hg - scene.ag) : null;
+  const e = (w.editor ||= { articles: [], scenes: [] });
+  const sc = e.scenes.find((x) => x.id === scene.id);
+  if (sc) { sc.played = (sc.played || 0) + 1; sc.last = `${r.hg}:${r.ag}`; if (ok) sc.won = (sc.won || 0) + 1; }
+  toast(ok == null ? `Szene beendet: ${r.hg}:${r.ag}` : ok ? `🏆 Szene geschafft! Endstand ${r.hg}:${r.ag}` : `❌ Szene nicht geschafft – ${r.hg}:${r.ag}`);
 }

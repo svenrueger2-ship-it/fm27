@@ -7,8 +7,8 @@ import { ensureSponsors, sponsorOffers, signSponsor, SPONSOR_SLOTS } from '../..
 import { newRng } from '../../manager/season.js';
 import { ensureBiz, shopCost, memberIncome, upgradeShop, answerInvestor } from '../../manager/clubbiz.js';
 
-const LABELS = { hospitality: 'VIP & Hospitality', tickets: 'Tickets', tv: 'TV-Gelder', sponsors: 'Sponsoren', merch: 'Merchandising', prize: 'Prämien', transfersIn: 'Transfererlöse', wages: 'Gehälter', facilities: 'Unterhalt', construction: 'Bau & Ausbau', transfersOut: 'Transferausgaben' };
-const COLORS = { hospitality: '#ffe08a', tickets: '#3dffa0', tv: '#3fd8ff', sponsors: '#4d8dff', merch: '#b48cff', prize: '#ffd24a', transfersIn: '#7cffcb', wages: '#ff4d6a', facilities: '#ff9a73', construction: '#ffb84d', transfersOut: '#ff6fb0' };
+const LABELS = { stock: 'Börse', hospitality: 'VIP & Hospitality', tickets: 'Tickets', tv: 'TV-Gelder', sponsors: 'Sponsoren', merch: 'Merchandising', prize: 'Prämien', transfersIn: 'Transfererlöse', wages: 'Gehälter', facilities: 'Unterhalt', construction: 'Bau & Ausbau', transfersOut: 'Transferausgaben' };
+const COLORS = { stock: '#9be15d', hospitality: '#ffe08a', tickets: '#3dffa0', tv: '#3fd8ff', sponsors: '#4d8dff', merch: '#b48cff', prize: '#ffd24a', transfersIn: '#7cffcb', wages: '#ff4d6a', facilities: '#ff9a73', construction: '#ffb84d', transfersOut: '#ff6fb0' };
 const ICONS = { training: '🏋️', youth: '🌱', medical: '🩺' };
 
 function lineChart(hist) {
@@ -43,8 +43,8 @@ export function financeScreen(app, el) {
   const draw = () => {
     const club = app.club, F = club.finance, L = userLeague(w);
     const S = F.season || emptySeason();
-    const inc = ['tickets', 'hospitality', 'tv', 'sponsors', 'merch', 'prize', 'transfersIn'].map((k) => ({ k, v: Math.max(0, S[k] || 0) }));
-    const exp = ['wages', 'facilities', 'construction', 'transfersOut'].map((k) => ({ k, v: Math.abs(Math.min(0, S[k] || 0)) }));
+    const inc = ['tickets', 'hospitality', 'tv', 'sponsors', 'merch', 'prize', 'transfersIn', 'stock'].map((k) => ({ k, v: Math.max(0, S[k] || 0) }));
+    const exp = ['wages', 'facilities', 'construction', 'transfersOut', 'stock'].map((k) => ({ k, v: Math.abs(Math.min(0, S[k] || 0)) }));
     const sumI = inc.reduce((s, x) => s + x.v, 0), sumE = exp.reduce((s, x) => s + x.v, 0);
     const wages = weeklyWages(w, club);
     const rank = computeTable(L).findIndex((r) => r.id === club.id) + 1;

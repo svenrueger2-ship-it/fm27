@@ -1,4 +1,5 @@
 // Off-pitch life of the user's club: sponsor deals, board & fan mood, press conferences,
+import { diff } from './difficulty.js';
 // random events with decisions, transfer rumours and Deadline Day.
 import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
@@ -12,6 +13,7 @@ const leagueOf = (world, club) => world.leagues.find((l) => l.id === club.league
 export function ensureMood(world) { world.mood ||= { board: 62, fans: 64 }; return world.mood; }
 export function moodChange(world, board = 0, fans = 0) {
   const m = ensureMood(world);
+  if (board < 0 && world.difficulty) board *= diff(world).board; // v5.2 board patience
   m.board = clamp(Math.round(m.board + board), 0, 100); m.fans = clamp(Math.round(m.fans + fans), 0, 100);
 }
 export function moodAfterMatch(world, diff, strengthGap) {

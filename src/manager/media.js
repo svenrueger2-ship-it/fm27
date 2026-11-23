@@ -2,7 +2,7 @@
 // with fan, journalist and rival posts, quotes from press conferences, plus records & hall of fame.
 import { clamp } from '../core/rng.js';
 
-const PAPERS = ['Sport-Kurier', 'Der Ballblick', 'Kicker-Express', 'Abendpost Sport', 'Fußball Heute'];
+export const PAPERS = ['Sport-Kurier', 'Der Ballblick', 'Kicker-Express', 'Abendpost Sport', 'Fußball Heute'];
 const JOURNOS = [['Mia Lorenz', 'mialorenz_fussball'], ['Tobias Kern', 'kern_reports'], ['Laura Vidal', 'lvidal_insider'], ['Jan Wolters', 'wolters_live']];
 const FIRST = ['Ben', 'Lena', 'Kevin', 'Tom', 'Sarah', 'Mehmet', 'Lukas', 'Jana', 'Dennis', 'Nico', 'Anna', 'Marco', 'Paul', 'Sven'];
 const pick = (rng, a) => a[Math.floor(rng.next() * a.length)];

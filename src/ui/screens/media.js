@@ -11,9 +11,9 @@ export function mediaScreen(app, el) {
     if (tab === 'zeitung') {
       const [top, ...rest] = M.headlines;
       body = top ? `<div class="paper"><div class="paper-head">${esc(top.paper)} <small>Saison ${top.season}/${String((top.season + 1) % 100).padStart(2, '0')} · ${top.cup ? 'Pokal' : `${top.week + 1}. Spieltag`}</small></div>
-        <h1 class="tone-${top.tone}">${esc(top.title)}</h1><p class="paper-sub">${esc(top.sub)} <b>${esc(top.score)}</b></p>
+        <h1 class="tone-${top.tone}">${esc(top.title)}</h1><p class="paper-sub">${esc(top.sub)} <b>${esc(top.score || '')}</b></p>${top.body ? `<p class="paper-body">${esc(top.body)}</p>` : ''}${top.custom ? `<small class="muted">✍️ Eigener Artikel${top.author ? ' von ' + esc(top.author) : ''}</small>` : ''}
         ${M.quotes[0] ? `<blockquote>„${esc(M.quotes[0].text)}“<cite>– der Trainer auf der Pressekonferenz</cite></blockquote>` : ''}
-        <div class="paper-cols">${rest.slice(0, 9).map((h) => `<article><small>${esc(h.paper)} · ${h.cup ? 'Pokal' : `${h.week + 1}. Spieltag`}</small><h3 class="tone-${h.tone}">${esc(h.title)}</h3><p>${esc(h.score)} – ${esc(h.sub)}</p></article>`).join('')}</div></div>`
+        <div class="paper-cols">${rest.slice(0, 9).map((h) => `<article><small>${esc(h.paper)} · ${h.cup ? 'Pokal' : `${h.week + 1}. Spieltag`}</small><h3 class="tone-${h.tone}">${esc(h.title)}</h3><p>${h.score ? esc(h.score) + ' – ' : ''}${esc(h.sub)}</p>${h.body ? `<p class="small">${esc(h.body.slice(0, 180))}${h.body.length > 180 ? '…' : ''}</p>` : ''}</article>`).join('')}</div></div>`
         : '<div class="card"><p class="muted">Noch keine Berichte. Nach deinem ersten Spiel schreibt die Presse über deinen Verein.</p></div>';
     } else if (tab === 'social') {
       body = `<div class="feed">${M.feed.slice(0, 40).map((f) => `<div class="post ${f.kind}"><div class="ava">${f.kind === 'press' ? '📰' : f.club != null ? crest(w.clubs[f.club], 30) : '👤'}</div><div><b>${esc(f.name)}</b>${f.verified ? ' <span class="ver">✔</span>' : ''} <small class="muted">${esc(f.user)} · ${f.cup ? '' : `Woche ${f.week + 1}`}</small><p>${esc(f.text)}</p><small class="muted">❤️ ${f.likes.toLocaleString('de-DE')}</small></div></div>`).join('') || '<p class="muted">Noch keine Beiträge.</p>'}</div>`;

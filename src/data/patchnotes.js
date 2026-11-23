@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.2.0', date: '23.11.2026', title: 'Stadion, Design-Editor, Börse & Schwierigkeitsgrade',
+    neu: ['Stadion neu: Reiter für Übersicht, Tribünen, Innenausbau und Technik, 3D-Großansicht im Vollbild', 'Tribünen umbenennen (z. B. nach Vereinslegenden)', 'Innenausbau: Catering, Fanshop, Fan-Zone, Museum, WLAN & App, Medienzentrum, Kabinentrakt', 'Trikot- & Wappen-Editor für den eigenen Verein: Heim- und Auswärtstrikot, 10 Muster, eigenes Wappen', 'Editor: eigene Zeitungsartikel und Social-Posts, spielbare Spielszenen mit Startstand und Ziel, Spieler- und Vereinseditor', 'Börsengang: bis zu 49 % verkaufen, Kurs pro Woche, Kapitalerhöhung, Rückkauf, Dividende', 'Schwierigkeitsgrade Leicht, Normal, Schwer und Legende'],
+    verbessert: ['Startbildschirm zeigt jetzt korrekt 12 Ligen und 224 Vereine'],
+    behoben: [],
+    geplant: ['Zweite Ligen für Spanien, Italien, Frankreich'],
+  },
+  {
     version: '5.1.0', date: '23.11.2026', title: 'WM 2026 & echte Wappen für alle Ligen',
     neu: ['WM 2026 als eigener Modus: 48 Nationen, echte Gruppen A–L, Sechzehntelfinale bis Finale – jedes Spiel live in 3D oder sofort', 'Offizielle Verbandslogos aller 48 WM-Teilnehmer', 'Echte Vereinswappen für 3. Liga, Championship, Eredivisie, Liga Portugal, Süper Lig und Scottish Premiership'],
     verbessert: ['Alle Wappen der Bundesliga, 2. Liga, Premier League, La Liga, Serie A und Ligue 1 erneuert', 'WM-Kader nominieren aus allen Spielern der Nation, Elfmeterschießen in der K.-o.-Runde'],

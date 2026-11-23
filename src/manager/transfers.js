@@ -1,4 +1,5 @@
 // Transfer market: windows, asking prices, bids & counter offers, contract negotiations, release clauses,
+import { diff } from './difficulty.js';
 // loans with buy option, incoming offers for own players, contract extensions, free agents,
 // scouting knowledge/reports and AI-to-AI transfers.
 import { isHumanClub, forEachHuman, isHot } from './hotseat.js';
@@ -52,6 +53,7 @@ export function askingPrice(world, p, ai = false) {
   if (club.budget < 0) f *= 0.85;
   if (world.transfer?.listed?.includes(p.id)) f *= 0.85;
   if (!ai && p.clubId !== world.userClubId) f *= 1 - 0.04 * skillRank(world, 'verhandlung');
+  if (!ai && p.clubId !== world.userClubId && world.difficulty) f *= diff(world).price; // v5.2
   const v = p.value * f;
   return v > 1e6 ? Math.round(v / 1e5) * 1e5 : Math.round(v / 1e4) * 1e4;
 }

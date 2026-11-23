@@ -3,7 +3,7 @@
 import { isHumanClub } from './hotseat.js';
 import { clamp } from '../core/rng.js';
 import { skillRank } from './progress.js';
-import { ensureStadium, weeklyConstruction, hospitalityIncome, standingShare, screensBonus, lightsBonus, awayIncome, familyBonus } from './stadiumBuild.js';
+import { ensureStadium, weeklyConstruction, hospitalityIncome, interiorIncome, interiorWeekly, standingShare, screensBonus, lightsBonus, awayIncome, familyBonus } from './stadiumBuild.js';
 
 export const FACILITIES = {
   training: { name: 'Trainingsgelände', desc: 'Schnellere Spielerentwicklung im Training.', max: 5 },
@@ -22,7 +22,7 @@ export function ensureEconomy(club, league) {
 }
 
 export function emptySeason() {
-  return { tickets: 0, hospitality: 0, tv: 0, sponsors: 0, merch: 0, transfersIn: 0, transfersOut: 0, wages: 0, facilities: 0, construction: 0, prize: 0 };
+  return { tickets: 0, hospitality: 0, tv: 0, sponsors: 0, merch: 0, transfersIn: 0, transfersOut: 0, wages: 0, facilities: 0, construction: 0, prize: 0, stock: 0 };
 }
 
 export function seasonWeeks(league) { return league.fixtures.length || 34; }
@@ -54,11 +54,13 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
     add('tickets', `Ticketverkauf (${att.toLocaleString('de-DE')} Zuschauer)`, att * F.ticketPrice * (1 - standingShare(club.stadium.layout) * 0.45));
     add('hospitality', 'VIP-Logen & Hospitality', hospitalityIncome(club));
     add('tickets', 'Gästeblock', awayIncome(club));
+    add('hospitality', 'Catering, Fanshop & Fan-Zone', interiorIncome(club));
     F.lastAttendance = att;
   }
   add('tv', 'TV-Gelder', (league.tv * 1e6 * (0.3 + 0.55 * (club.rep / 100)) * lightsBonus(club)) / W);
   add('sponsors', club.sponsorDeals ? 'Kleinere Partner' : 'Sponsoren', (Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf) * (club.sponsorDeals ? 0.35 : 1)) / W);
   add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
+  add('sponsors', 'Museum & Medienzentrum', interiorWeekly(club));
   if (club.biz) add('sponsors', 'Mitgliedsbeiträge', (club.biz.members * (club.biz.fee || 72)) / W);
   if (club.stadium.naming) add('sponsors', `Namensrechte ${club.stadium.naming.brand}`, club.stadium.naming.perSeason / W);
   if (club.sponsorDeals) for (const d of Object.values(club.sponsorDeals)) if (d) add('sponsors', `${d.slotName}: ${d.brand}`, d.perSeason / W);

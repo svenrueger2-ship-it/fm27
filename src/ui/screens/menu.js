@@ -59,8 +59,8 @@ function careerHtml(w, save) {
 function welcomeHtml() {
   return `<div class="sv-welcome"><div class="kicker"><i></i> Live-3D-Matchengine · v${GAME_VERSION}</div>
     <h1><span>Fussball</span><span>Manager</span><b>2027</b></h1><p class="by">© BAKUSA</p>
-    <p class="sub">Übernimm einen von 158 echten Vereinen aus acht Ligen, verhandle Transfers, entwickle Talente – und verfolge jedes Spiel live in einer 3D-Partie, die von der KI gespielt wird.</p>
-    <div class="sv-feat"><div><b>8</b><small>Ligen</small></div><div><b>158</b><small>Vereine</small></div><div><b>3D</b><small>Live-Spiele</small></div><div><b>∞</b><small>Saisons</small></div></div>
+    <p class="sub">Übernimm einen von 224 echten Vereinen aus zwölf Ligen, verhandle Transfers, entwickle Talente – und verfolge jedes Spiel live in einer 3D-Partie, die von der KI gespielt wird.</p>
+    <div class="sv-feat"><div><b>12</b><small>Ligen</small></div><div><b>224</b><small>Vereine</small></div><div><b>3D</b><small>Live-Spiele</small></div><div><b>∞</b><small>Saisons</small></div></div>
     <button class="btn primary lg" data-go="new">▶ Karriere starten</button></div>`;
 }
 
@@ -212,6 +212,7 @@ function bindSaveRows(app, host, refresh) {
   });
 }
 
+import { DIFFICULTIES, applyDifficulty } from '../../manager/difficulty.js';
 export function newGameScreen(app, el) {
   if (!app.pendingWorld) app.pendingWorld = generateWorld();
   const w = app.pendingWorld;
@@ -251,7 +252,8 @@ export function confirmClub(app, w, id) {
     <div class="mode-pick"><b>Spielmodus</b>
       <label><input type="radio" name="mode" value="manager" checked><span><b>Trainer & Manager</b><small>Du machst alles: Aufstellung, Taktik, Wechsel, Transfers, Finanzen.</small></span></label>
       <label><input type="radio" name="mode" value="director"><span><b>Sportdirektor</b><small>Du planst Kader, Transfers, Finanzen und Stadion. Ein KI-Cheftrainer stellt auf, wählt die Taktik und wechselt ein – du kannst ihn entlassen.</small></span></label></div>
-    <label class="field">Herausforderung (optional)<select id="chal" class="input">${CHALLENGES.map((c) => `<option value="${c.id}" title="${esc(c.desc)}">${esc(c.name)}${c.id !== 'none' ? ` – ${esc(c.desc)}` : ''}</option>`).join('')}</select></label>
+    <div class="mode-pick diff-pick"><b>Schwierigkeitsgrad</b>${Object.entries(DIFFICULTIES).map(([k, d]) => `<label><input type="radio" name="diff" value="${k}" ${k === 'normal' ? 'checked' : ''}><span><b>${d.icon} ${d.label}</b><small>${esc(d.desc)}</small></span></label>`).join('')}</div>
+        <label class="field">Herausforderung (optional)<select id="chal" class="input">${CHALLENGES.map((c) => `<option value="${c.id}" title="${esc(c.desc)}">${esc(c.name)}${c.id !== 'none' ? ` – ${esc(c.desc)}` : ''}</option>`).join('')}</select></label>
     <details class="hot-setup"><summary>👥 Mehrspieler auf einem Gerät (Hotseat)</summary>
       <p class="muted small">2–4 Manager, abwechselnd am selben Gerät. Jeder hat eigenen Verein, Karriere, Stab und Posteingang. Direkte Duelle sind möglich.</p>
       <label class="field">Dein Name<input id="hp0" class="input" maxlength="18" value="Spieler 1"></label>
@@ -282,6 +284,7 @@ export function confirmClub(app, w, id) {
         w.hot.humans[i].st.manager = { name: w.hot.humans[i].name, goal: hc.rep > 85 ? 'Meisterschaft' : hc.rep > 74 ? 'Internationale Plätze' : hc.rep > 62 ? 'Gesichertes Mittelfeld' : hl.tier > 1 && hc.rep > 55 ? 'Aufstiegsplätze' : 'Klassenerhalt' };
         w.hot.humans[i].st.mode = 'manager'; }
     }
+    applyDifficulty(w, m.el.querySelector('input[name=diff]:checked')?.value || 'normal');
     startChallenge(w, m.el.querySelector('#chal').value);
     checkAchievements(w);
     app.world = w; app.pendingWorld = null; app.slot = 'slot1';
@@ -393,7 +396,13 @@ function bindSettings(app, root, redraw) {
   $('#s-rset')?.addEventListener('click', async () => { if (await confirmDialog('Alle Einstellungen auf Standard zurücksetzen?', 'Zurücksetzen')) { localStorage.removeItem('ufm3d-settings'); Object.keys(s).forEach((k) => delete s[k]); Object.assign(s, loadSettings()); commit(); redraw(); } });
 }
 export function settingsScreen(app, el) {
-  const draw = () => { el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2><div class="card">${settingsForm(app)}</div></div>`; bindSettings(app, el, draw); };
+  const draw = () => {
+    const w = app.world, cur = w?.difficulty || 'normal';
+    const diffCard = w && w.mode !== 'wm' ? `<div class="card"><h3>🎚️ Schwierigkeitsgrad</h3><p class="muted small">Gilt ab sofort für Transfers, Vorstand und KI-Stärke. Das Startbudget bleibt unverändert.</p><div class="opt-row">${Object.entries(DIFFICULTIES).map(([k, d]) => `<button class="chip-btn ${cur === k ? 'on' : ''}" data-diff="${k}" title="${esc(d.desc)}">${d.icon} ${d.label}</button>`).join('')}</div></div>` : '';
+    el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2>${diffCard}<div class="card">${settingsForm(app)}</div></div>`;
+    el.querySelectorAll('[data-diff]').forEach((b) => (b.onclick = () => { w.difficulty = b.dataset.diff; toast(`Schwierigkeitsgrad: ${DIFFICULTIES[w.difficulty].label}`); draw(); }));
+    bindSettings(app, el, draw);
+  };
   draw();
 }
 function settingsModal(app) {

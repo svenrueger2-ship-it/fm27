@@ -6,6 +6,8 @@ import { crestImage } from './crestImages.js';
 import { KIT_OVERRIDES } from '../data/customRegistry.js';
 
 export const KIT_STYLES = ['plain', 'stripes', 'hoops', 'halves', 'sash', 'pinstripe', 'chevron', 'plain'];
+// v5.2: all patterns selectable in the kit editor (KIT_STYLES stays unchanged so default kits keep their look)
+export const KIT_STYLES_ALL = ['plain', 'stripes', 'pinstripe', 'hoops', 'halves', 'sash', 'chevron', 'band', 'quarters', 'shoulders'];
 const cache = new Map();
 
 export function kitStyleFor(short = '') {
@@ -29,6 +31,9 @@ export function drawPattern(g, W, H, kit, style) {
   else if (style === 'hoops') for (let y = 20; y < H; y += 56) g.fillRect(0, y, W, 24);
   else if (style === 'halves') { g.fillRect(0, 0, W / 4, H); g.fillRect((W * 3) / 4, 0, W / 4, H); g.fillRect(W / 2, 0, W / 4, H); g.fillStyle = kit.primary; g.fillRect(W / 4, 0, W / 4, H); }
   else if (style === 'sash') { g.save(); g.translate(0, H); g.rotate(-0.55); g.fillRect(-40, -30, W * 0.35, 46); g.fillRect(W * 0.95, -30 - W * 0.37, W * 0.35, 46); g.restore(); }
+  else if (style === 'band') g.fillRect(0, H * 0.36, W, H * 0.2);
+  else if (style === 'quarters') { g.fillRect(0, 0, W / 4, H / 2); g.fillRect(W / 4, H / 2, W / 4, H / 2); g.fillRect(W / 2, 0, W / 4, H / 2); g.fillRect((W * 3) / 4, H / 2, W / 4, H / 2); }
+  else if (style === 'shoulders') g.fillRect(0, 0, W, H * 0.2);
   else if (style === 'chevron') { g.beginPath(); g.moveTo(-60, H * 0.42); g.lineTo(0, H * 0.58); g.lineTo(60, H * 0.42); g.lineTo(60, H * 0.52); g.lineTo(0, H * 0.68); g.lineTo(-60, H * 0.52); g.fill(); g.save(); g.translate(W, 0); g.fill(); g.restore(); }
   // subtle fabric shading
   const grad = g.createLinearGradient(0, 0, W, 0);

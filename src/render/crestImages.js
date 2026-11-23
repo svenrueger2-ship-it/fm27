@@ -13,3 +13,5 @@ export function preloadCrests() {
     if (img.complete) res(); else { img.onload = img.onerror = () => res(); }
   })));
 }
+
+export function resetCrestImage(short) { cache.delete(short); }
