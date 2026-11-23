@@ -1,5 +1,6 @@
 // Match engine: game state machine, ball control, kicks, tackles, fouls, cards, set pieces,
 // goals, substitutions and results. Independent from rendering (can run headless).
+import { styleFx, temperOf } from '../data/styles.js';
 import { RNG, clamp, lerp } from '../core/rng.js';
 import { Ball, solveRollSpeed, predictBall } from './ball.js';
 import { SimPlayer } from './player.js';
@@ -633,10 +634,10 @@ export class MatchEngine {
     } else def.startAction(isGK ? 'dive' : 'tackle', isGK ? 0.9 : 0.45, isGK ? { dir: 1, high: false } : {});
     let p = 0.36 + (a.tackling - c.dribbling) / 140 + (a.kraft - c.kraft) / 400 + (slide ? 0.06 : 0) - (d > 1.4 ? 0.08 : 0);
     if (isGK) p = 0.45 + (a.herauslaufen - c.dribbling) / 150;
-    p = clamp(p * (0.85 + 0.15 * def.energy), 0.08, 0.85);
+    p = clamp(p * (0.85 + 0.15 * def.energy) + (styleFx(def.data).tackle || 0), 0.08, 0.85); // v3.4 tackling specialists
     const fx = Math.cos(carrier.facing), fz = Math.sin(carrier.facing);
     const behind = (def.pos.x - carrier.pos.x) * fx + (def.pos.z - carrier.pos.z) * fz < -0.4;
-    const foulP = (slide ? 0.17 : 0.07) + (behind ? 0.12 : 0) + (100 - (isGK ? a.herauslaufen : a.tackling)) / 1000 + (isGK ? 0.08 : 0);
+    const foulP = ((slide ? 0.17 : 0.07) + (behind ? 0.12 : 0) + (100 - (isGK ? a.herauslaufen : a.tackling)) / 1000 + (isGK ? 0.08 : 0)) * (styleFx(def.data).foul || 1) * (0.8 + temperOf(def.data) * 0.5); // hot-heads foul more
     const T = this.teams[def.team];
     if (rng.chance(p)) {
       if (rng.chance(foulP * 0.3)) { this.foul(def, carrier, slide, behind); return; }
@@ -665,7 +666,7 @@ export class MatchEngine {
     const lastMan = vl.x > 20 && Math.abs(vl.z) < 20 && this.teams[def.team].active.filter((q) => !q.isGK && toLocal(this, victim.team, q.pos.x, q.pos.z).x > vl.x).length === 0;
     if (lastMan && rng.chance(0.15)) this.card(def, 'red');
     else if (rng.chance(0.004 + (slide && behind ? 0.015 : 0))) this.card(def, 'red');
-    else if (rng.chance((slide ? 0.2 : 0.06) + (behind ? 0.1 : 0))) this.card(def, 'yellow');
+    else if (rng.chance(((slide ? 0.2 : 0.06) + (behind ? 0.1 : 0)) * (0.75 + temperOf(def.data) * 0.6))) this.card(def, 'yellow');
     if (rng.chance(0.035)) {
       const weeks = rng.chance(0.4) ? 0 : rng.int(1, 6);
       victim.injured = true; victim.injuryTimer = 4; victim.mustLeave = weeks >= 2;

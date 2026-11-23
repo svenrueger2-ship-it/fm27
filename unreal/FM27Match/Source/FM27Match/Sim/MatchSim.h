@@ -28,6 +28,7 @@ struct PlayerSetup {
     int id = 0; std::string name; int number = 0; std::string pos = "ZM";
     int ovr = 60, pace = 60, shooting = 60, passing = 60, dribbling = 60, defending = 60, physical = 60, gk = 30;
     float fitness = 100.f, morale = 0.5f; std::string skin, hair;
+    std::string style; float temper = 0.4f; // v3.4 playing style + temperament
 };
 
 struct TeamSetup {
@@ -40,7 +41,7 @@ struct MatchSetup { TeamSetup home, away; unsigned seed = 1; bool neutral = fals
 
 struct MatchEvent { std::string type; int minute = 0, side = -1, player = 0, assist = 0; float xg = 0; std::string text; };
 struct SideStats { int goals = 0, shots = 0, onTarget = 0, passes = 0, passesOk = 0, tackles = 0, fouls = 0, corners = 0, offsides = 0, yellow = 0, red = 0, saves = 0; float xg = 0, possession = 50; };
-struct PlayerRating { int id = 0, side = 0; float rating = 6; int goals = 0, assists = 0; float minutes = 0; };
+struct PlayerRating { int id = 0, side = 0; float rating = 6; int goals = 0, assists = 0; float minutes = 0; int passes = 0, passesOk = 0, shots = 0, tackles = 0, saves = 0; std::vector<int> heat; };
 struct MatchSummary { int homeGoals = 0, awayGoals = 0; SideStats home, away; std::vector<MatchEvent> events; std::vector<PlayerRating> ratings; };
 
 // ---- replays (v3.3)
@@ -60,7 +61,9 @@ struct Agent {
     float stamina = 1, facing = 0, decide = 0, cooldown = 0, runTimer = 0, animT = 0, minutes = 0;
     bool gk = false, sentOff = false, running = false;
     std::string anim = "idle"; float depth = 0.5f, lat = 0.5f; std::string role = "MID";
-    float rating = 6.2f; int goals = 0, assists = 0, yellow = 0;
+    float rating = 6.2f; int goals = 0, assists = 0, yellow = 0, passes = 0, passesOk = 0, shots = 0, tackles = 0, saves = 0;
+    std::vector<int> heat = std::vector<int>(96, 0);
+    bool St(const char* s) const { return p.style == s; }
     float MaxSpeed() const { return (5.7f + p.pace / 100.f * 3.3f) * (0.8f + 0.2f * stamina) * (0.94f + 0.06f * (p.fitness / 100.f)); }
 };
 
@@ -106,7 +109,8 @@ private:
     std::string shotOutcome; bool wideHold = false; int tickParity = 0;
     std::vector<Frame> recBuf = std::vector<Frame>(280); int recHead = 0, recCount = 0; float simClock = 0;
     bool hasPending = false; Clip pending; int pendingSteps = 0;
-    void Record();
+    void Record(); int heatTick = 0;
+    static PlayerRating RatingOf(const Agent& a, int s);
     void MarkClip(const std::string& type, int side, int player, const std::string& text);
     std::vector<Frame> LastFrames(float seconds) const;
 

@@ -1181,3 +1181,9 @@ html.mobile .u-ctrl { padding: .3rem .45rem; gap: .3rem; } html.mobile .u-ctrl .
 .sub-row { display: grid; grid-template-columns: 38px 1fr; grid-template-rows: auto auto; column-gap: .5rem; width: 100%; text-align: left; padding: .4rem .5rem; margin-bottom: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.03); color: inherit; font: inherit; cursor: pointer; }
 .sub-row .pos { grid-row: span 2; align-self: center; text-align: center; font-weight: 800; font-size: .75rem; background: rgba(var(--acc-rgb),.25); border-radius: 6px; padding: .2rem 0; }
 .sub-row small { color: var(--muted); font-size: .72rem; } .sub-row.on, .sub-row:hover { border-color: var(--acc); background: rgba(var(--acc-rgb),.14); }
+/* v3.4 playing styles + player analysis */
+.pp-style { background: rgba(var(--acc-rgb), .22) !important; border: 1px solid rgba(var(--acc-rgb), .5); }
+.mini-heat { width: 100%; height: auto; display: block; border-radius: 8px; margin: .3rem 0 .5rem; }
+.ana-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: .35rem; }
+.ana-grid div { background: rgba(255,255,255,.04); border-radius: 8px; padding: .35rem .5rem; text-align: center; }
+.ana-grid b { display: block; font-size: 1.1rem; } .ana-grid small { color: var(--muted); font-size: .7rem; }

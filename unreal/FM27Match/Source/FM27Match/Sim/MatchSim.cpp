@@ -130,7 +130,8 @@ void MatchSim::Substitute(int side, int outId, const PlayerSetup& in)
         if (a.p.id == outId && !a.sentOff)
         {
             Emit("sub", side, in.id, a.p.id, 0, in.name + " für " + a.p.name);
-            summary.ratings.push_back({a.p.id, side == 1 ? 1 : 0, std::round(Clamp(a.rating, 3.f, 10.f) * 10.f) / 10.f, a.goals, a.assists, std::round(a.minutes)});
+            summary.ratings.push_back(RatingOf(a, side == 1 ? 1 : 0));
+            a.passes = a.passesOk = a.shots = a.tackles = a.saves = 0; a.heat.assign(96, 0);
             a.p = in; a.stamina = 1; a.rating = 6.2f; a.goals = a.assists = a.yellow = 0; a.minutes = 0; return;
         }
 }
@@ -176,6 +177,14 @@ void MatchSim::Step()
 void MatchSim::Record()
 {
     simClock += Dt;
+    if (phase == Phase::Play && ++heatTick % 20 == 0)
+        for (int s = 0; s < 2; s++) for (auto& a : teams[s])
+        {
+            if (a.sentOff) continue;
+            const float u = U(s, a.pos), v = Dir(s) > 0 ? a.pos.y : FieldY - a.pos.y;
+            const int gx = std::min(11, std::max(0, (int)(u / FieldX * 12))), gz = std::min(7, std::max(0, (int)(v / FieldY * 8)));
+            a.heat[gz * 12 + gx]++;
+        }
     Frame& f = recBuf[recHead]; recHead = (recHead + 1) % (int)recBuf.size(); if (recCount < (int)recBuf.size()) recCount++;
     f.t = simClock; f.bx = ball.pos.x; f.by = ball.pos.y; f.bz = ball.z;
     int i = 0;
@@ -281,6 +290,7 @@ Agent* MatchSim::Presser(int s, Agent* carrier)
 {
     float range = 7.f + pressing[s] * 16.f + (U(s, carrier->pos) < 35 ? 8.f : 0.f);
     Agent* n = Nearest(s, carrier->pos, [](const Agent& x) { return !x.gk && x.cooldown <= 0; });
+    if (n && n->St("zweikampf")) range *= 1.3f;
     return n && V2::Dist(n->pos, carrier->pos) < range ? n : nullptr;
 }
 
@@ -392,7 +402,7 @@ void MatchSim::CarrierTick(Agent& a, float dt)
 
     float xg = Xg(a.pos, goal) * (1.f - 0.45f * pressure);
     float m = (float)mentality[s];
-    float shootBar = 0.034f - m * 0.007f + (float)R() * 0.032f - (a.role == "FWD" ? 0.008f : 0.f);
+    float shootBar = 0.034f - m * 0.007f + (float)R() * 0.032f - (a.role == "FWD" ? 0.008f : 0.f) - (a.St("knipser") ? 0.012f : 0.f);
     if (d < 31 && (xg > shootBar || (d < 12 && xg > 0.03f)) && !(pressure > 0.9f && d > 20)) { Shoot(a, xg, pressure); return; }
 
     Agent* bestR = nullptr; V2 bestPt; float bestV = -1e9f; bool bestLob = false;
@@ -413,7 +423,8 @@ void MatchSim::CarrierTick(Agent& a, float dt)
         float x = (lob ? 1.6f : lane) * 1.7f - 1.8f + a.p.passing / 40.f - dist / 32.f - pressure * 0.7f;
         float p = 1.f / (1.f + std::exp(-x));
         float progress = U(s, pt) - U(s, a.pos), threat = Threat(s, pt), open = OpenSpace(pt, s);
-        float v = p * (1.0f + threat * 3.4f + progress / 30.f * (0.7f + tempo * 0.8f + m * 0.15f) + std::min(open, 8.f) / 16.f) - (1 - p) * (1.0f + (U(s, a.pos) < 35 ? 1.4f : 0.f));
+        float v = p * (1.0f + threat * 3.4f + progress / 30.f * (0.7f + tempo * 0.8f + m * 0.15f) * (a.St("spielmacher") && progress > 0 ? 1.6f : 1.f) + std::min(open, 8.f) / 16.f) - (1 - p) * (1.0f + (U(s, a.pos) < 35 ? 1.4f : 0.f)) * (a.St("ballsicher") ? 1.3f : 1.f);
+        if (a.St("knipser") && U(s, a.pos) > 70) v -= 0.25f;
         if (U(s, a.pos) > 68 && progress < -4) v -= 0.5f;
         if (InOppBox(s, pt) && open > 2.5f) v += 0.6f;
         if (r.gk) v -= 0.8f;
@@ -425,7 +436,7 @@ void MatchSim::CarrierTick(Agent& a, float dt)
         for (auto& x : teams[s]) if (&x != &a && !x.sentOff && !x.gk && InOppBox(s, x.pos)) inBox.push_back(&x);
         float crossV = 0.8f + inBox.size() * 0.45f + (U(s, a.pos) > 90 ? 0.4f : 0.f) + m * 0.1f;
         if (inBox.empty() && SpaceAhead(a) > 3.f && U(s, a.pos) < 97) wideHold = true;
-        else if (!inBox.empty() && (crossV > bestV || R() < (U(s, a.pos) > 86 ? 0.85 : 0.5)))
+        else if (!inBox.empty() && (crossV > bestV || R() < (U(s, a.pos) > 86 ? 0.85 : 0.5) + (a.St("fluegel") ? 0.25 : 0.0)))
         {
             Agent* tgt = inBox[RI((int)inBox.size())];
             int defCount = 0; for (auto& x : teams[1 - s]) if (!x.sentOff && InOwnBox(1 - s, x.pos)) defCount++;
@@ -439,7 +450,7 @@ void MatchSim::CarrierTick(Agent& a, float dt)
     }
     float space = SpaceAhead(a);
     if (wideHold) { wideHold = false; a.target = ClampP(V2(OppGoal(s).x - Dir(s) * 3.f, a.pos.y + (FieldY / 2 - a.pos.y) * 0.15f)); a.decide = 0.45f; return; }
-    float dribbleV = (space > 5.f ? 0.75f + Threat(s, a.pos) * 2.6f : space > 2.5f ? 0.1f + Threat(s, a.pos) * 1.6f : -0.4f) + (a.p.dribbling - 60) / 60.f - pressure * 0.8f + (U(s, a.pos) > 68 ? 0.45f : 0.f) + m * 0.08f;
+    float dribbleV = (space > 5.f ? 0.75f + Threat(s, a.pos) * 2.6f : space > 2.5f ? 0.1f + Threat(s, a.pos) * 1.6f : -0.4f) + (a.p.dribbling - 60) / 60.f - pressure * 0.8f + (U(s, a.pos) > 68 ? 0.45f : 0.f) + m * 0.08f + (a.St("dribbler") ? 0.35f : a.St("fluegel") ? 0.12f : 0.f);
     float holdV = pressure < 0.35f ? 0.25f : -0.6f;
     if (bestR && bestV > dribbleV && bestV > holdV) { Pass(a, bestR, bestPt, bestLob); return; }
     if (pressure > 0.8f && bestR) { Pass(a, bestR, bestPt, bestLob); return; }
@@ -508,7 +519,8 @@ void MatchSim::Pass(Agent& a, Agent* r, V2 pt, bool lob)
 {
     Stats(a.side).passes++;
     float dist = V2::Dist(a.pos, pt);
-    float err = (1.12f - a.p.passing / 100.f) * 0.11f * (1.f + Pressure(a) * 0.8f) * (lob ? 1.3f : 1.f);
+    float err = (1.12f - a.p.passing / 100.f) * 0.11f * (1.f + Pressure(a) * 0.8f) * (lob ? 1.3f : 1.f) * (a.St("ballsicher") ? 0.75f : a.St("spielmacher") ? 0.85f : 1.f);
+    a.passes++;
     float ang = std::atan2(pt.y - a.pos.y, pt.x - a.pos.x) + Gauss() * err;
     float spd = lob ? Clamp(dist * 0.62f + 6.f, 12.f, 24.f) : Clamp(dist * 0.95f + 7.f, 9.f, 27.f);
     ball.owner = nullptr; ball.lastTouch = &a; ball.passer = &a; ball.intended = r; ball.shot = false; ball.offsideAt = nullptr;
@@ -545,7 +557,7 @@ Agent* MatchSim::FindGK(int team) { for (auto& x : teams[team]) if (x.gk && !x.s
 
 void MatchSim::Shoot(Agent& a, float xg, float pressure)
 {
-    int s = a.side; auto& S = Stats(s); S.shots++; S.xg += xg;
+    int s = a.side; auto& S = Stats(s); S.shots++; S.xg += xg; a.shots++;
     shooter = &a; shotXg = xg;
     V2 goal = OppGoal(s);
     float onTarget = Clamp(0.30f + a.p.shooting / 260.f - pressure * 0.18f + (xg > 0.25f ? 0.12f : 0.f), 0.15f, 0.8f);
@@ -581,16 +593,16 @@ void MatchSim::TryTackle(Agent& d, Agent& c)
 {
     if (d.cooldown > 0 || ball.owner != &c || V2::Dist(d.pos, c.pos) > 1.5f) return; // only while he still has the ball
     d.cooldown = 0.45f;
-    float pWin = Clamp(0.26f + (d.p.defending - c.p.dribbling) / 160.f + pressing[d.side] * 0.06f, 0.07f, 0.6f);
+    float pWin = Clamp(0.26f + (d.p.defending - c.p.dribbling) / 160.f + pressing[d.side] * 0.06f + (d.St("zweikampf") ? 0.06f : 0.f), 0.07f, 0.66f);
     double r = R(); d.anim = "tackle"; d.animT = 0;
     if (r < pWin)
     {
-        Stats(d.side).tackles++; d.rating += 0.12f;
+        Stats(d.side).tackles++; d.rating += 0.12f; d.tackles++;
         ball.owner = R() < 0.55 ? &d : nullptr; ball.lastTouch = &d; ball.intended = nullptr;
         if (!ball.owner) ball.vel = (c.pos - d.pos).Norm() * 4.f + V2(Gauss() * 3, Gauss() * 3);
         c.cooldown = 0.6f;
     }
-    else if (r < pWin + 0.065f + (1.f - d.p.defending / 100.f) * 0.06f) Foul(d, c);
+    else if (r < pWin + (0.065f + (1.f - d.p.defending / 100.f) * 0.06f) * (d.St("zweikampf") ? 1.25f : 1.f) * (0.8f + d.p.temper * 0.5f)) Foul(d, c);
     else d.cooldown = 0.9f;
 }
 
@@ -600,7 +612,7 @@ void MatchSim::Foul(Agent& d, Agent& c)
     Emit("foul", d.side, d.p.id, c.p.id, 0, "Foul von " + d.p.name);
     double card = R();
     if (card < 0.005 || (card < 0.15 && d.yellow == 1)) { d.sentOff = true; S.red++; d.rating -= 1.f; Emit("red", d.side, d.p.id, 0, 0, "Rot für " + d.p.name); d.pos = V2(FieldX / 2, -3); }
-    else if (card < 0.15) { d.yellow++; S.yellow++; Emit("yellow", d.side, d.p.id, 0, 0, "Gelb für " + d.p.name); }
+    else if (card < 0.15 * (0.75 + d.p.temper * 0.6)) { d.yellow++; S.yellow++; Emit("yellow", d.side, d.p.id, 0, 0, "Gelb für " + d.p.name); }
     int att = c.side;
     if (InOwnBox(d.side, c.pos)) { StartRestart(Phase::Penalty, att, PenaltySpot(att)); Emit("penalty", att, c.p.id, 0, 0.76f, "Elfmeter!"); }
     else StartRestart(Phase::FreeKick, att, c.pos);
@@ -805,7 +817,7 @@ void MatchSim::BallTick(float dt)
                 Stats(best->side).offsides++; Emit("offside", best->side, best->p.id, 0, 0, "Abseits");
                 StartRestart(Phase::FreeKick, 1 - best->side, best->pos); return;
             }
-            Stats(best->side).passesOk++; ball.passer->rating += 0.03f; lastPasser[best->side] = ball.passer;
+            Stats(best->side).passesOk++; ball.passer->rating += 0.03f; ball.passer->passesOk++; lastPasser[best->side] = ball.passer;
         }
         else if (ball.passer && ball.passer->side != best->side) { ball.passer->rating -= 0.06f; best->rating += 0.05f; }
         if (best->side != (ball.lastTouch ? ball.lastTouch->side : best->side)) lastPasser[best->side] = nullptr;
@@ -823,7 +835,7 @@ void MatchSim::ShotFlight()
     Agent* k = shotKeeper;
     if (k && shotOutcome == "save" && V2::Dist(k->pos, ball.pos) < 3.2f)
     {
-        k->anim = "dive"; k->animT = 0; Stats(k->side).saves++; k->rating += 0.35f;
+        k->anim = "dive"; k->animT = 0; Stats(k->side).saves++; k->rating += 0.35f; k->saves++;
         Emit("save", k->side, k->p.id, shooter ? shooter->p.id : 0, shotXg, "Parade von " + k->p.name);
         if (shotXg >= 0.28f) MarkClip("save", 1 - k->side, shooter ? shooter->p.id : 0, "Glanzparade " + k->p.name);
         ball.shot = false;
@@ -882,6 +894,13 @@ void MatchSim::Goal(int side)
     lastPasser[0] = lastPasser[1] = nullptr;
 }
 
+PlayerRating MatchSim::RatingOf(const Agent& a, int s)
+{
+    PlayerRating r; r.id = a.p.id; r.side = s; r.rating = std::round(Clamp(a.rating, 3.f, 10.f) * 10.f) / 10.f; r.goals = a.goals; r.assists = a.assists; r.minutes = std::round(a.minutes);
+    r.passes = a.passes; r.passesOk = a.passesOk; r.shots = a.shots; r.tackles = a.tackles; r.saves = a.saves; r.heat = a.heat;
+    return r;
+}
+
 void MatchSim::Finish()
 {
     finished = true; phase = Phase::FullTime;
@@ -889,7 +908,7 @@ void MatchSim::Finish()
     float tot = possTime[0] + possTime[1];
     summary.home.possession = tot > 0 ? std::round(possTime[0] / tot * 100.f) : 50.f; summary.away.possession = 100.f - summary.home.possession;
     for (int s = 0; s < 2; s++) for (auto& a : teams[s])
-        summary.ratings.push_back({a.p.id, s, std::round(Clamp(a.rating, 3.f, 10.f) * 10.f) / 10.f, a.goals, a.assists, std::round(a.minutes)});
+        summary.ratings.push_back(RatingOf(a, s));
     Emit("fulltime", -1, 0, 0, 0, "Abpfiff " + std::to_string(score[0]) + ":" + std::to_string(score[1]));
 }
 

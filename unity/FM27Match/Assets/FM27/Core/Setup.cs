@@ -17,6 +17,8 @@ namespace FM27.Sim
         public float morale = 0.5f;   // 0..1
         public string skin = "";      // hex, optional
         public string hair = "";      // hex, optional
+        public string style = "";     // v3.4 playing style: knipser, spielmacher, dribbler, fluegel, zweikampf, ballsicher
+        public float temper = 0.4f;   // 0..1 – fouls and cards
     }
 
     [Serializable]
@@ -80,7 +82,7 @@ namespace FM27.Sim
     }
 
     [Serializable]
-    public class PlayerRating { public int id; public int side; public float rating; public int goals, assists; public float minutes; }
+    public class PlayerRating { public int id; public int side; public float rating; public int goals, assists; public float minutes; public int passes, passesOk, shots, tackles, saves; public int[] heat = new int[0]; }
 
     [Serializable]
     public class MatchCommand

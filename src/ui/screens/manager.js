@@ -1,5 +1,7 @@
 import { isMatchToday, daysToMatch } from '../../manager/calendar.js';
 import { mgrPortrait } from './managerCreate.js';
+import { styleOf } from '../../data/styles.js';
+import { anaSummary, heatSvg } from '../../manager/playerAna.js';
 // Club HQ dashboard, squad (cards & table), player profile, league tables & fixtures.
 import { projectPlayer, projectionSvg } from '../../manager/projection.js';
 import { computeTable, userLeague, userFixture, isUserSeasonOver } from '../../manager/season.js';
@@ -237,7 +239,7 @@ export function playerModal(app, p, { onChange } = {}) {
     <div class="pp-hero"><div class="pp-wm">${club ? crest(club, 260) : ''}</div>
       <div class="pp-face">${portrait(p, club, 150)}</div>
       <div class="pp-id"><small class="pp-first">${esc(p.firstName)}</small><h3>${esc(p.lastName)}</h3>
-        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span></div>
+        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span>${(() => { const st = styleOf(p); return st ? `<span class="pp-style" title="${esc(st.desc)}">${st.icon} ${esc(st.name)}</span>` : ''; })()}</div>
         <p class="pp-club">${club ? `<button class="linkish" id="pp-club">${crest(club, 22)} ${esc(club.name)}</button>` : 'Vereinslos'}${p.loan ? ` · Leihe von ${esc(w.clubs[p.loan.from].short)}` : ''}</p></div>
       <div class="pp-rings">${ring(known ? p.ovr : `${est.ovrLo}–${est.ovrHi}`, 'Stärke', est.ovrLo, est.ovrHi)}${ring(known ? p.pot : `${est.potLo}–${est.potHi}`, 'Potenzial', est.potLo, est.potHi)}</div>
     </div>
@@ -253,6 +255,9 @@ export function playerModal(app, p, { onChange } = {}) {
           const [lo, hi] = fuzz(p.attrs[k]); return `<div class="attr"><span>${l}</span>${bar((lo + hi) / 2, 99, 'r-mid')}<b class="muted">${lo}-${hi}</b></div>`; }).join('')}</div>
       <div class="pp-col">
         ${known ? `<div class="pp-card pp-radar"><h4>Profil</h4>${radar(p)}</div>` : ''}
+        ${(() => { const S = anaSummary(p); if (!S) return ''; const f = (v, d = 1) => v.toFixed(d).replace('.', ',');
+          return `<div class="pp-card pp-ana"><div class="row-between"><h4>📊 Analyse aus Live-Spielen</h4><small class="muted">${S.games} Spiele · ${S.min} Min.</small></div>${heatSvg(S.heat, club?.colors.primary || '#7c5cff')}
+            <div class="ana-grid">${p.pos === 'TW' ? `<div><b>${f(S.saves90)}</b><small>Paraden/90</small></div>` : `<div><b>${f(S.passes90, 0)}</b><small>Pässe/90</small></div><div><b>${f(S.passPct, 0)} %</b><small>Passquote</small></div><div><b>${f(S.shots90)}</b><small>Schüsse/90</small></div><div><b>${f(S.tackles90)}</b><small>Zweikämpfe/90</small></div>`}<div><b>${f(S.rating)}</b><small>Ø Note live</small></div></div></div>`; })()}
         ${known ? `<div class="pp-card"><h4>Zustand</h4>${fitBar('Fitness', p.fitness)}${fitBar('Moral', p.morale)}${fitBar('Form', p.form)}${fitBar('Professionalität', p.professionalism)}</div>` : ''}
         ${report ? `<div class="pp-card"><h4>🕵️ Scoutingbericht</h4><p>Stärken: ${report.strengths.map((k) => esc([...OUTFIELD_ATTRS, ...GK_ATTRS].find((a) => a[0] === k)?.[1] || k)).join(', ')}</p><p>Schwächen: ${report.weaknesses.map((k) => esc([...OUTFIELD_ATTRS, ...GK_ATTRS].find((a) => a[0] === k)?.[1] || k)).join(', ')}</p></div>` : ''}
         ${(() => { if (!known || p.age > 34) return ''; const pr = projectPlayer(p, { facility: club?.facilities?.training ?? 2 }); const last = pr.points[pr.points.length - 1];

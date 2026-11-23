@@ -1,3 +1,4 @@
+import { recordPlayerAna, classicEntries } from './playerAna.js';
 // Analyse-Hub (v2.5): season-long data. Trends come from the fixtures; heatmap, shot map and pass
 // network are accumulated from every match the user watches in 3D.
 import { computeTable, userLeague } from './season.js';
@@ -13,6 +14,7 @@ export function ensureHub(world) {
 export function recordLive(world, teams, userIdx, possession) {
   const H = ensureHub(world), T = teams[userIdx], O = teams[1 - userIdx];
   if (!T?.analysis) return;
+  recordPlayerAna(world, classicEntries(T)); // v3.4 per-player analysis
   H.games++; taskEvent(world, 'live');
   T.analysis.heat.forEach((v, i) => (H.heat[i] += v));
   for (const s of T.analysis.shots) H.shots.push({ ...s, wk: world.week + 1 });

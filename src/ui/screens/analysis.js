@@ -1,6 +1,8 @@
 // Analyse-Hub (v2.5): season trends, accumulated heatmap / shot map / pass network, top performers.
 import { esc, crest, pname } from '../dom.js';
 import { ensureHub, seasonTrend } from '../../manager/analysisHub.js';
+import { anaSummary } from '../../manager/playerAna.js';
+import { styleOf } from '../../data/styles.js';
 
 const PX = (x) => ((x + 52.5) / 105) * 120, PZ = (z) => ((z + 34) / 68) * 80;
 const pitch = (inner) => `<svg viewBox="-2 -2 124 84" class="an-pitch"><rect x="0" y="0" width="120" height="80" rx="2" fill="#1f5a2c"/>
@@ -47,6 +49,10 @@ export function analysisScreen(app, el) {
       + '<p class="muted">Durchschnittspositionen und häufigste Passwege über alle geschauten Spiele.</p>';
   };
   const hist = (club.history || []).slice(-6).reverse();
+  const anaRows = club.squad.map((id) => w.players[id]).map((p) => ({ p, S: anaSummary(p) })).filter((x) => x.S).sort((a, b) => b.S.min - a.S.min);
+  const f1 = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const anaCard = `<div class="card"><h3>🧍 Spieleranalyse <small class="muted">aus Live-Spielen, pro 90 Minuten</small></h3>${anaRows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Spieler</th><th>Stil</th><th>Sp.</th><th>Min.</th><th>Pässe</th><th>Quote</th><th>Schüsse</th><th>Zweik.</th><th>Ø Note</th></tr></thead><tbody>
+    ${anaRows.map(({ p, S }) => { const st = styleOf(p); return `<tr data-p="${p.id}" class="clickable"><td>${esc(pname(p))} <small class="muted">${p.pos}</small></td><td title="${st ? esc(st.desc) : ''}">${st ? `${st.icon} ${esc(st.name)}` : '–'}</td><td>${S.games}</td><td>${S.min}</td><td>${f1(S.passes90, 0)}</td><td>${f1(S.passPct, 0)} %</td><td>${f1(S.shots90)}</td><td>${f1(S.tackles90)}</td><td><b>${f1(S.rating)}</b></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">Noch keine Daten – jedes Spiel, das du live im 3D-Modus (Klassisch, Unity oder Unreal) schaust, füllt Heatmap und Werte jedes Spielers.</p>'}</div>`;
   el.innerHTML = `<div class="page"><div class="page-head"><h2>📊 Analyse-Hub</h2><span class="chip">${g} Spieltage · ${H.games} Spiele in 3D analysiert</span></div>
     <div class="kpis an-kpis">${kpi('Punkte / Spiel', g ? (pts / g).toFixed(2).replace('.', ',') : '–', `${pts} Punkte`)}${kpi('Tore / Spiel', g ? (gf / g).toFixed(1).replace('.', ',') : '–', `${gf} Tore`)}${kpi('Gegentore / Spiel', g ? (ga / g).toFixed(1).replace('.', ',') : '–', `${ga} Gegentore`)}
       ${kpi('xG für / gegen', H.games ? `${(H.xgFor / H.games).toFixed(1).replace('.', ',')} / ${(H.xgAg / H.games).toFixed(1).replace('.', ',')}` : '–', 'pro Spiel (3D)')}${kpi('Ballbesitz', H.games && H.poss ? `${Math.round(H.poss / H.games)} %` : '–', 'Schnitt (3D)')}
@@ -58,7 +64,7 @@ export function analysisScreen(app, el) {
         ${perf.map((p) => `<tr data-p="${p.id}" class="clickable"><td>${esc(pname(p))} <small class="muted">${p.pos}</small></td><td>${p.stats.apps}</td><td>${p.stats.goals}</td><td>${p.stats.assists}</td><td>${p.stats.rating ? p.stats.rating.toFixed(1).replace('.', ',') : '–'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Noch keine Einsätze.</td></tr>'}</tbody></table>
         <h3 style="margin-top:14px">🗂️ Saisonvergleich</h3><table class="tbl"><thead><tr><th>Saison</th><th>Liga</th><th>Platz</th><th>Punkte</th><th>Tore</th></tr></thead><tbody>
         ${hist.map((h) => `<tr><td>${h.season}/${String((h.season + 1) % 100).padStart(2, '0')}</td><td>${esc(h.league)}</td><td>${h.champion ? '🏆 ' : ''}${h.rank}.</td><td>${h.pts}</td><td>${h.gf}:${h.ga}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Noch keine abgeschlossene Saison.</td></tr>'}</tbody></table></div>
-    </div></div>`;
+    </div>${anaCard}</div>`;
   el.querySelectorAll('[data-at]').forEach((b) => (b.onclick = () => { app.anTab = b.dataset.at; analysisScreen(app, el); }));
   el.querySelectorAll('[data-p]').forEach((r) => (r.onclick = async () => { const { playerModal } = await import('./manager.js'); playerModal(app, w.players[r.dataset.p]); }));
 }

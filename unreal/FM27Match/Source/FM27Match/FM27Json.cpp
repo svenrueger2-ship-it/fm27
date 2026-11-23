@@ -17,6 +17,7 @@ namespace
 		P.ovr = I(O, TEXT("ovr"), 60); P.pace = I(O, TEXT("pace"), 60); P.shooting = I(O, TEXT("shooting"), 60); P.passing = I(O, TEXT("passing"), 60);
 		P.dribbling = I(O, TEXT("dribbling"), 60); P.defending = I(O, TEXT("defending"), 60); P.physical = I(O, TEXT("physical"), 60); P.gk = I(O, TEXT("gk"), 30);
 		P.fitness = F(O, TEXT("fitness"), 100.f); P.morale = F(O, TEXT("morale"), 0.5f); P.skin = S(O, TEXT("skin"), ""); P.hair = S(O, TEXT("hair"), "");
+		P.style = S(O, TEXT("style"), ""); P.temper = F(O, TEXT("temper"), 0.4f);
 		return P;
 	}
 
@@ -96,6 +97,10 @@ FString FM27Json::WriteSummary(const fm27::MatchSummary& S)
 		auto RO = MakeShared<FJsonObject>();
 		RO->SetNumberField(TEXT("id"), R.id); RO->SetNumberField(TEXT("side"), R.side); RO->SetNumberField(TEXT("rating"), R.rating);
 		RO->SetNumberField(TEXT("goals"), R.goals); RO->SetNumberField(TEXT("assists"), R.assists); RO->SetNumberField(TEXT("minutes"), R.minutes);
+		RO->SetNumberField(TEXT("passes"), R.passes); RO->SetNumberField(TEXT("passesOk"), R.passesOk); RO->SetNumberField(TEXT("shots"), R.shots);
+		RO->SetNumberField(TEXT("tackles"), R.tackles); RO->SetNumberField(TEXT("saves"), R.saves);
+		TArray<TSharedPtr<FJsonValue>> Heat; for (int V : R.heat) Heat.Add(MakeShared<FJsonValueNumber>(V));
+		RO->SetArrayField(TEXT("heat"), Heat);
 		Ra.Add(MakeShared<FJsonValueObject>(RO));
 	}
 	Sum->SetArrayField(TEXT("ratings"), Ra);

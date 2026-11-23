@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.4.0', date: '23.11.2026', title: 'Spielstile & Spieleranalyse',
+    neu: ['Spielstile: Knipser, Spielmacher, Dribbelkünstler, Flügelflitzer, Zweikampfmonster, Ballsicher – verändern Entscheidungen im Spiel', 'Spieleranalyse: Heatmap, Pässe, Passquote, Schüsse, Zweikämpfe pro 90 Minuten aus jedem Live-Spiel', 'Temperament wirkt: Hitzköpfe foulen öfter und sehen mehr Karten, Führungsspieler beruhigen das Team'],
+    verbessert: ['Spielerprofil mit Spielstil und Live-Analyse', 'Analyse-Hub mit Spielertabelle'],
+    behoben: [],
+    geplant: ['Gegner-Scouting mit Taktik-Vorschlag', 'Transfer-Deadline-Day'],
+  },
+  {
     version: '3.3.0', date: '23.11.2026', title: 'Wiederholungen & Live-Taktik',
     neu: ['Unity/Unreal: Wiederholung nach jedem Tor – Seitenkamera, Hintertor-Kamera, Zeitlupe', 'Highlights nach dem Abpfiff: Tore, Aluminium, Glanzparaden', 'Wechsel, Formation und Pressing live im 3D-Spiel (bis zu 5 Wechsel)'],
     verbessert: ['Einwechselspieler bekommen eigene Minuten und Noten', 'Neue Einstellung „Highlights nach dem Abpfiff“'],

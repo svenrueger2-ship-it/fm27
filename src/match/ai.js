@@ -1,3 +1,4 @@
+import { styleFx, isLeader } from '../data/styles.js';
 import { ROLE_DEFS, roleOf } from './tactics.js';
 // Team & player AI: tactical shape, pressing, marking, support runs, ball carrier decisions,
 // goalkeeper positioning and set piece positioning. Runs at AI_DT (10 Hz).
@@ -395,7 +396,7 @@ function defendThink(E, T, carrier) {
       const stand = d > 4 ? 1.2 : 1.3;
       setMove(p1, carrier.pos.x + (gx / gl) * stand, carrier.pos.z + (gz / gl) * stand, d > 3 ? p1.topSpeed() : p1.topSpeed() * 0.75, carrier.pos);
       p1.mode = 'press';
-      const rate = 0.09 + tac.pressing * 0.09 + (cl.x < -30 ? 0.08 : 0);
+      const rate = (0.09 + tac.pressing * 0.09 + (cl.x < -30 ? 0.08 : 0)) * (styleFx(p1.data).press || 1);
       if (d < 1.9 && p1.tackleCooldown <= 0 && E.rng.chance(rate)) E.tryTackle(p1, carrier);
       else if (d < 3.2 && d > 1.5 && carrier.speed > 4.5 && p1.tackleCooldown <= 0 && E.rng.chance(0.04 + tac.pressing * 0.03)) E.tryTackle(p1, carrier, false, true);
     } else {
@@ -465,11 +466,14 @@ function carrierThink(E, T, p) {
 
   const vision = a.uebersicht / 100;
   const gs = T.gs || { urgency: 0, protect: 0, nerves: 0 };
+  // v3.4 playing style + a leader on the pitch calms everyone down
+  const fx = styleFx(p.data);
+  const leaderCalm = T.active.some((q) => q !== p && isLeader(q.data)) ? 0.9 : 1;
   // tired players and big moments make decisions less precise (experience helps)
   const tired = 1 + (1 - p.energy) * 0.9;
   const nerves = 1 + gs.nerves * clamp((26 - (p.data.age || 26)) / 20 + 0.15, 0, 0.35);
-  const noise = () => rng.normal(0, 0.02 * (1.25 - vision) * (1.4 - 0.6 * (T.familiarity ?? 0.8)) * tired * nerves * (E.weatherNoise || 1));
-  const lossCost = (me.x < -25 ? 0.32 : me.x < 0 ? 0.2 : me.x < 25 ? 0.13 : 0.07) * (1.2 - tac.directness * 0.4) * (1 - gs.urgency * 0.4 + gs.protect * 0.6);
+  const noise = () => rng.normal(0, 0.02 * (1.25 - vision) * (1.4 - 0.6 * (T.familiarity ?? 0.8)) * tired * nerves * (E.weatherNoise || 1) * (fx.calm || 1) * leaderCalm);
+  const lossCost = (me.x < -25 ? 0.32 : me.x < 0 ? 0.2 : me.x < 25 ? 0.13 : 0.07) * (1.2 - tac.directness * 0.4) * (1 - gs.urgency * 0.4 + gs.protect * 0.6) * (fx.safe || 1);
   const options = [];
 
   // --- shot
@@ -487,7 +491,7 @@ function carrierThink(E, T, p) {
     xg *= Math.max(0.35, 1 - block) * (pressure < 1.5 ? 0.8 : 1);
     const skill = 0.6 + a.abschluss / 160;
     const longShot = me.x < 30 ? a.schusskraft / 99 : 1;
-    const score = xg * skill * longShot * (8.0 + tac.mentality * 1.2) * (1 + gs.urgency * 0.45) * (p.roleDef?.shot || 1) + noise();
+    const score = xg * skill * longShot * (8.0 + tac.mentality * 1.2) * (1 + gs.urgency * 0.45) * (p.roleDef?.shot || 1) * (fx.shot || 1) + noise();
     if (rawXg > 0.012 - gs.urgency * 0.004 && xg > 0.005) options.push({ kind: 'shot', score });
   }
 
@@ -535,14 +539,15 @@ function carrierThink(E, T, p) {
     risk = clamp(risk + clamp((3.5 - recvPress) / 3.5, 0, 1) * 0.35, 0, 1);
     risk *= 1.15 - a.passspiel / 160;
     const gain = threat(tl.x, tl.z);
-    const prog = (tl.x - me.x) * 0.0028 * (0.5 + tac.directness);
+    const prog = (tl.x - me.x) * 0.0028 * (0.5 + tac.directness) * (tl.x > me.x ? fx.prog || 1 : 1);
     const freeBonus = clamp(recvPress / 8, 0, 1) * 0.012 + clamp((2.5 - pressure) / 2.5, 0, 1) * 0.02;
     let score = (gain * 0.9 + prog + freeBonus) * (1 - risk) - risk * lossCost + noise();
     if (q.isGK) score -= 0.03;
+    if (fx.passFinal && me.x > 22) score += fx.passFinal; // goalscorers prefer to finish themselves
     if (lofted) score -= (0.012 + d * 0.0004) * (1.4 - tac.directness);
     // crossing from wide final third into the box
     const cross = me.x > 30 && Math.abs(me.z) > 16 && tl.x > 36 && Math.abs(tl.z) < 12;
-    if (cross) score += 0.03 + q.a.kopfball / 2500;
+    if (cross) score += 0.03 + q.a.kopfball / 2500 + (fx.cross || 0);
     options.push({ kind: cross ? 'cross' : lofted ? 'longpass' : 'pass', score, q, tx, tz, d, risk });
   }
 
@@ -560,7 +565,7 @@ function carrierThink(E, T, p) {
       const risk = clamp((3.2 - space) / 3.2 + clamp((2.2 - pressure) * 0.22, 0, 0.5), 0, 1) * (1.15 - a.dribbling / 120);
       const free = clamp(space / 8, 0, 1);
       let score = threat(lx, lz) * (0.72 + free * 0.12) * (1 - risk) - risk * lossCost + noise();
-      score += (a.dribbling - 60) * 0.0004 - tac.tempo * 0.008 + Math.cos(off) * 0.006 * (0.6 + tac.mentality) - gs.protect * 0.008 + (p.roleDef?.drib || 0);
+      score += (a.dribbling - 60) * 0.0004 - tac.tempo * 0.008 + Math.cos(off) * 0.006 * (0.6 + tac.mentality) - gs.protect * 0.008 + (p.roleDef?.drib || 0) + (fx.drib || 0);
       // protecting a lead near the corner flag: run the clock down
       if (gs.protect > 0.8 && lx > 38 && Math.abs(lz) > 18) score += 0.02;
       options.push({ kind: 'dribble', score, ang, w, space });

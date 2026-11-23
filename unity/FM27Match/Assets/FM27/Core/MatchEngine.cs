@@ -33,7 +33,8 @@ namespace FM27.Sim
         public float depth, lat;           // formation slot: depth 0 (own goal) .. 1, lateral 0..1
         public string role;                // GK, DEF, MID, FWD
         public float rating = 6.2f;
-        public int goals, assists, yellow;
+        public int goals, assists, yellow, passes, passesOk, shots, tackles, saves;
+        public int[] heat = new int[96];
         public float MaxSpeed => (5.7f + p.pace / 100f * 3.3f) * (0.8f + 0.2f * stamina) * (0.94f + 0.06f * (p.fitness / 100f));
     }
 
@@ -159,8 +160,8 @@ namespace FM27.Sim
                 var a = teams[s].Find(x => x.p.id == c.outId && !x.sentOff);
                 if (a == null) return;
                 Emit("sub", s, c.player.id, a.p.id, 0, $"{c.player.name} für {a.p.name}");
-                summary.ratings.Add(new PlayerRating { id = a.p.id, side = s, rating = (float)Math.Round(Clamp(a.rating, 3f, 10f) * 10) / 10f, goals = a.goals, assists = a.assists, minutes = (float)Math.Round(a.minutes) });
-                a.p = c.player; a.stamina = 1f; a.rating = 6.2f; a.goals = 0; a.assists = 0; a.yellow = 0; a.minutes = 0;
+                summary.ratings.Add(RatingOf(a, s));
+                a.p = c.player; a.passes = a.passesOk = a.shots = a.tackles = a.saves = 0; a.heat = new int[96]; a.stamina = 1f; a.rating = 6.2f; a.goals = 0; a.assists = 0; a.yellow = 0; a.minutes = 0;
             }
         }
 
@@ -213,9 +214,18 @@ namespace FM27.Sim
             Record();
         }
 
+        int heatTick;
         void Record()
         {
             simClock += Dt;
+            if (phase == Phase.Play && ++heatTick % 20 == 0)
+                for (int s = 0; s < 2; s++) foreach (var a in teams[s])
+                    {
+                        if (a.sentOff) continue;
+                        float u = U(s, a.pos), v = Dir(s) > 0 ? a.pos.y : FieldY - a.pos.y;
+                        int gx = Math.Min(11, Math.Max(0, (int)(u / FieldX * 12))), gz = Math.Min(7, Math.Max(0, (int)(v / FieldY * 8)));
+                        a.heat[gz * 12 + gx]++;
+                    }
             rec.Push(this, simClock);
             if (pendingClip != null && ++pendingSteps >= 44)
             {
@@ -300,6 +310,7 @@ namespace FM27.Sim
         {
             float range = 7f + pressing[s] * 16f + (U(s, carrier.pos) < 35 ? 8f : 0f);
             var n = Nearest(teams[s], carrier.pos, x => !x.gk && x.cooldown <= 0);
+            if (n != null && St(n, "zweikampf")) range *= 1.3f;
             return n != null && V2.Dist(n.pos, carrier.pos) < range ? n : null;
         }
 
@@ -429,7 +440,7 @@ namespace FM27.Sim
 
             float xg = Xg(a.pos, goal, s) * (1f - 0.45f * pressure);
             float m = mentality[s];
-            float shootBar = 0.034f - m * 0.007f + (float)rng.NextDouble() * 0.032f - (a.role == "FWD" ? 0.008f : 0f);
+            float shootBar = 0.034f - m * 0.007f + (float)rng.NextDouble() * 0.032f - (a.role == "FWD" ? 0.008f : 0f) - (St(a, "knipser") ? 0.012f : 0f);
             if (d < 31 && (xg > shootBar || (d < 12 && xg > 0.03f)) && !(pressure > 0.9f && d > 20))
             { D("dec.shoot"); Shoot(a, xg, pressure); return; }
 
@@ -453,7 +464,8 @@ namespace FM27.Sim
                 float progress = U(s, pt) - U(s, a.pos);
                 float threat = Threat(s, pt);
                 float open = OpenSpace(pt, s);
-                float v = p * (1.0f + threat * 3.4f + progress / 30f * (0.7f + tempo * 0.8f + m * 0.15f) + Math.Min(open, 8f) / 16f) - (1 - p) * (1.0f + (U(s, a.pos) < 35 ? 1.4f : 0f));
+                float v = p * (1.0f + threat * 3.4f + progress / 30f * (0.7f + tempo * 0.8f + m * 0.15f) * (St(a, "spielmacher") && progress > 0 ? 1.6f : 1f) + Math.Min(open, 8f) / 16f) - (1 - p) * (1.0f + (U(s, a.pos) < 35 ? 1.4f : 0f)) * (St(a, "ballsicher") ? 1.3f : 1f);
+                if (St(a, "knipser") && U(s, a.pos) > 70) v -= 0.25f;
                 if (U(s, a.pos) > 68 && progress < -4) v -= 0.5f;   // don't recycle endlessly in the final third
                 if (InOppBox(s, pt) && open > 2.5f) v += 0.6f;
                 if (r.gk) v -= 0.8f;
@@ -466,7 +478,7 @@ namespace FM27.Sim
                 float crossV = 0.8f + inBox.Count * 0.45f + (U(s, a.pos) > 90 ? 0.4f : 0) + m * 0.1f;
                 D("cross.zone");
                 if (inBox.Count == 0 && SpaceAhead(a) > 3f && U(s, a.pos) < 97) wideHold = true;
-                else if (inBox.Count > 0 && (crossV > bestV || rng.NextDouble() < (U(s, a.pos) > 86 ? 0.85 : 0.5)))
+                else if (inBox.Count > 0 && (crossV > bestV || rng.NextDouble() < (U(s, a.pos) > 86 ? 0.85 : 0.5) + (St(a, "fluegel") ? 0.25 : 0)))
                 {
                     var tgt = inBox[rng.Next(inBox.Count)];
                     var defs = teams[1 - s].FindAll(x => !x.sentOff && InOwnBox(1 - s, x.pos));
@@ -481,7 +493,7 @@ namespace FM27.Sim
             // dribble option
             float space = SpaceAhead(a);
             if (wideHold) { wideHold = false; D("dec.wide"); a.target = Clamp(new V2(OppGoal(s).x - Dir(s) * 3f, a.pos.y + (FieldY / 2 - a.pos.y) * 0.15f)); a.decide = 0.45f; return; }
-            float dribbleV = (space > 5f ? 0.75f + Threat(s, a.pos) * 2.6f : space > 2.5f ? 0.1f + Threat(s, a.pos) * 1.6f : -0.4f) + (a.p.dribbling - 60) / 60f - pressure * 0.8f + (U(s, a.pos) > 68 ? 0.45f : 0) + m * 0.08f;
+            float dribbleV = (space > 5f ? 0.75f + Threat(s, a.pos) * 2.6f : space > 2.5f ? 0.1f + Threat(s, a.pos) * 1.6f : -0.4f) + (a.p.dribbling - 60) / 60f - pressure * 0.8f + (U(s, a.pos) > 68 ? 0.45f : 0) + m * 0.08f + (St(a, "dribbler") ? 0.35f : St(a, "fluegel") ? 0.12f : 0f);
             float holdV = pressure < 0.35f ? 0.25f : -0.6f;
             D("third" + (int)(U(s, a.pos) / 35));
             if (bestR != null && bestV > dribbleV && bestV > holdV) { D("dec.pass"); Pass(a, bestR, bestPt, bestLob); return; }
@@ -562,7 +574,8 @@ namespace FM27.Sim
         {
             var S = Stats(a.side); S.passes++;
             float dist = V2.Dist(a.pos, pt);
-            float err = (1.12f - a.p.passing / 100f) * 0.11f * (1f + Pressure(a) * 0.8f) * (lob ? 1.3f : 1f);
+            float err = (1.12f - a.p.passing / 100f) * 0.11f * (1f + Pressure(a) * 0.8f) * (lob ? 1.3f : 1f) * (St(a, "ballsicher") ? 0.75f : St(a, "spielmacher") ? 0.85f : 1f);
+            a.passes++;
             float ang = (float)Math.Atan2(pt.y - a.pos.y, pt.x - a.pos.x) + Gauss() * err;
             float spd = lob ? Clamp(dist * 0.62f + 6f, 12f, 24f) : Clamp(dist * 0.95f + 7f, 9f, 27f);
             ball.owner = null; ball.lastTouch = a; ball.passer = a; ball.intended = r; ball.shot = false;
@@ -596,7 +609,7 @@ namespace FM27.Sim
 
         void Shoot(Agent a, float xg, float pressure)
         {
-            int s = a.side; var S = Stats(s); S.shots++; S.xg += xg;
+            int s = a.side; var S = Stats(s); S.shots++; S.xg += xg; a.shots++;
             shooter = a; shotXg = xg;
             var goal = OppGoal(s);
             // decide the outcome with a calibrated model, then let the ball fly accordingly
@@ -633,17 +646,17 @@ namespace FM27.Sim
         {
             if (d.cooldown > 0 || ball.owner != c || V2.Dist(d.pos, c.pos) > 1.5f) return; // only while he still has the ball
             d.cooldown = 0.45f;
-            float pWin = Clamp(0.26f + (d.p.defending - c.p.dribbling) / 160f + pressing[d.side] * 0.06f, 0.07f, 0.6f);
+            float pWin = Clamp(0.26f + (d.p.defending - c.p.dribbling) / 160f + pressing[d.side] * 0.06f + (St(d, "zweikampf") ? 0.06f : 0f), 0.07f, 0.66f);
             double r = rng.NextDouble();
             d.anim = "tackle"; d.animT = 0;
             if (r < pWin)
             {
-                Stats(d.side).tackles++; d.rating += 0.12f; D("tackle.won");
+                Stats(d.side).tackles++; d.rating += 0.12f; d.tackles++; D("tackle.won");
                 ball.owner = rng.NextDouble() < 0.55 ? d : null; ball.lastTouch = d; ball.intended = null;
                 if (ball.owner == null) { ball.vel = (c.pos - d.pos).Norm * 4f + new V2(Gauss() * 3, Gauss() * 3); }
                 c.cooldown = 0.6f;
             }
-            else if (r < pWin + 0.065f + (1f - d.p.defending / 100f) * 0.06f)
+            else if (r < pWin + (0.065f + (1f - d.p.defending / 100f) * 0.06f) * (St(d, "zweikampf") ? 1.25f : 1f) * (0.8f + d.p.temper * 0.5f))
             {
                 Foul(d, c);
             }
@@ -656,7 +669,7 @@ namespace FM27.Sim
             Emit("foul", d.side, d.p.id, c.p.id, 0, $"Foul von {d.p.name}");
             double card = rng.NextDouble();
             if (card < 0.005 || (card < 0.15 && d.yellow == 1)) { d.sentOff = true; S.red++; d.rating -= 1f; Emit("red", d.side, d.p.id, 0, 0, $"Rot für {d.p.name}"); d.pos = new V2(FieldX / 2, -3); }
-            else if (card < 0.15) { d.yellow++; S.yellow++; Emit("yellow", d.side, d.p.id, 0, 0, $"Gelb für {d.p.name}"); }
+            else if (card < 0.15 * (0.75f + d.p.temper * 0.6f)) { d.yellow++; S.yellow++; Emit("yellow", d.side, d.p.id, 0, 0, $"Gelb für {d.p.name}"); }
             int att = c.side;
             if (InOwnBox(d.side, c.pos)) { StartRestart(Phase.Penalty, att, PenaltySpot(att)); Emit("penalty", att, c.p.id, 0, 0.76f, "Elfmeter!"); }
             else StartRestart(Phase.FreeKick, att, c.pos);
@@ -876,7 +889,7 @@ namespace FM27.Sim
                         Stats(best.side).offsides++; Emit("offside", best.side, best.p.id, 0, 0, "Abseits");
                         StartRestart(Phase.FreeKick, 1 - best.side, best.pos); return;
                     }
-                    Stats(best.side).passesOk++; ball.passer.rating += 0.03f; lastPasser[best.side] = ball.passer;
+                    Stats(best.side).passesOk++; ball.passer.rating += 0.03f; ball.passer.passesOk++; lastPasser[best.side] = ball.passer;
                 }
                 else if (ball.passer != null && ball.passer.side != best.side) { ball.passer.rating -= 0.06f; best.rating += 0.05f; }
                 if (best.side != (ball.lastTouch?.side ?? best.side)) lastPasser[best.side] = null;
@@ -900,7 +913,7 @@ namespace FM27.Sim
             var k = shotKeeper;
             if (k != null && shotOutcome == "save" && V2.Dist(k.pos, ball.pos) < 3.2f)
             {
-                k.anim = "dive"; k.animT = 0; Stats(k.side).saves++; k.rating += 0.35f;
+                k.anim = "dive"; k.animT = 0; Stats(k.side).saves++; k.rating += 0.35f; k.saves++;
                 Emit("save", k.side, k.p.id, shooter?.p.id ?? 0, shotXg, $"Parade von {k.p.name}");
                 if (shotXg >= 0.28f) MarkClip("save", 1 - k.side, shooter?.p.id ?? 0, $"Glanzparade {k.p.name}");
                 ball.shot = false;
@@ -961,6 +974,9 @@ namespace FM27.Sim
             lastPasser[0] = lastPasser[1] = null;
         }
 
+        static PlayerRating RatingOf(Agent a, int s) => new PlayerRating { id = a.p.id, side = s, rating = (float)Math.Round(Clamp(a.rating, 3f, 10f) * 10) / 10f, goals = a.goals, assists = a.assists, minutes = (float)Math.Round(a.minutes),
+            passes = a.passes, passesOk = a.passesOk, shots = a.shots, tackles = a.tackles, saves = a.saves, heat = (int[])a.heat.Clone() };
+
         void Finish()
         {
             finished = true; phase = Phase.FullTime;
@@ -968,7 +984,7 @@ namespace FM27.Sim
             float tot = possTime[0] + possTime[1];
             summary.home.possession = tot > 0 ? (float)Math.Round(possTime[0] / tot * 100f) : 50; summary.away.possession = 100 - summary.home.possession;
             for (int s = 0; s < 2; s++) foreach (var a in teams[s])
-                    summary.ratings.Add(new PlayerRating { id = a.p.id, side = s, rating = (float)Math.Round(Clamp(a.rating, 3f, 10f) * 10) / 10f, goals = a.goals, assists = a.assists, minutes = (float)Math.Round(a.minutes) });
+                    summary.ratings.Add(RatingOf(a, s));
             Emit("fulltime", -1, 0, 0, 0, $"Abpfiff {score[0]}:{score[1]}");
         }
 
@@ -997,6 +1013,7 @@ namespace FM27.Sim
             return b;
         }
         float Gauss() { double u1 = 1.0 - rng.NextDouble(), u2 = rng.NextDouble(); return (float)(Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2 * Math.PI * u2)); }
+        static bool St(Agent a, string s) => a.p.style == s;
         public static float Clamp(float v, float a, float b) => v < a ? a : v > b ? b : v;
         static V2 Clamp(V2 p, float m = 0.5f) => new V2(Clamp(p.x, m, FieldX - m), Clamp(p.y, m, FieldY - m));
     }

@@ -3,6 +3,7 @@ import { crest, esc, modal } from '../dom.js';
 import { ensureLineup } from '../../match/tactics.js';
 import { UNITY_URL, buildUnitySetup, unityResult } from '../../match/unityBridge.js';
 import { FORMATIONS } from '../../match/tactics.js';
+import { recordPlayerAna } from '../../manager/playerAna.js';
 import { conditions, commitResult, currentFixture } from './match.js';
 
 const LOAD_TIMEOUT = 60000;
@@ -141,7 +142,7 @@ export function engineReport(app, el, { r, setup, H, A, label }) {
     <div class="card"><h3>Statistik</h3>${row('Ballbesitz', st[0].possession + ' %', st[1].possession + ' %')}${row('Schüsse', st[0].shots, st[1].shots)}${row('aufs Tor', st[0].onTarget, st[1].onTarget)}${row('xG', (+st[0].xg).toFixed(2), (+st[1].xg).toFixed(2))}${row('Pässe (angekommen)', `${st[0].passes} (${st[0].passesOk})`, `${st[1].passes} (${st[1].passesOk})`)}${row('Zweikämpfe gewonnen', st[0].tackles, st[1].tackles)}${row('Fouls', st[0].fouls, st[1].fouls)}${row('Ecken', st[0].corners, st[1].corners)}${row('Paraden', st[0].saves, st[1].saves)}</div>
     <div class="grid-2"><div class="card"><h3>${esc(H.short)} – Beste Noten</h3>${rated('home')}</div><div class="card"><h3>${esc(A.short)} – Beste Noten</h3>${rated('away')}</div></div>
     <div class="row-actions center"><button class="btn primary lg" id="cont">Weiter</button></div></div>`;
-  el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly: false });
+  el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly: false, record: (w2) => recordPlayerAna(w2, r.ana) });
 }
 
 /** v3.2: Unreal Engine client (Windows only) – runs in its own window, the launcher passes setup and result. */

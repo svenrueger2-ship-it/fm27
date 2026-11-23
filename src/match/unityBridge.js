@@ -2,6 +2,7 @@
 // The Unity side lives in unity/FM27Match (C#). Without internet or before the first Unity build exists,
 // the classic Three.js mode is used instead.
 import { FORMATIONS } from './tactics.js';
+import { styleId, temperOf } from '../data/styles.js';
 
 export const UNITY_URL = 'https://svenrueger2-ship-it.github.io/fm27/unity/';
 
@@ -17,6 +18,7 @@ function playerSetup(p, slotPos, idx) {
     dribbling: avg(A.dribbling, A.ballkontrolle, A.technik), defending: avg(A.tackling, A.stellungsspiel),
     physical: avg(A.kraft, A.ausdauer, A.sprungkraft, A.kopfball), gk: gk ? avg(A.reflexe, A.fangen, A.tw_stellung, A.herauslaufen) : 20,
     fitness: p.fitness ?? 100, morale: (p.morale ?? 60) / 100, skin: p.looks?.skin || '', hair: p.looks?.hair || '',
+    style: styleId(p) || '', temper: temperOf(p),
   };
 }
 
@@ -61,5 +63,6 @@ export function unityResult(summary, setup, w) {
     fitness[id] = Math.round(Math.max(25, Math.min(100, (p.fitness ?? 100) - mins * 0.27 * (1.3 - stam / 140))));
   }
   const st = (S) => ({ shots: S.shots, onTarget: S.onTarget, xg: Math.round(S.xg * 100) / 100, passes: S.passes, passesOk: S.passesOk, tackles: S.tackles, fouls: S.fouls, corners: S.corners, offsides: S.offsides, yellow: S.yellow, red: S.red, saves: S.saves, possession: Math.round(S.possession) });
-  return { hg: summary.homeGoals, ag: summary.awayGoals, events, fitness, played, ratings, stats: [st(summary.home), st(summary.away)], engine: 'unity' };
+  const ana = (summary.ratings || []).map((r) => ({ id: r.id, min: r.minutes, heat: r.heat || [], passes: r.passes, passesOk: r.passesOk, shots: r.shots, goals: r.goals, tackles: r.tackles, saves: r.saves, rating: r.rating }));
+  return { hg: summary.homeGoals, ag: summary.awayGoals, events, fitness, played, ratings, stats: [st(summary.home), st(summary.away)], ana, engine: 'unity' };
 }
