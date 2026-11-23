@@ -3,7 +3,7 @@ import { prefetchCrowd } from '../../render/audio.js';
 import { recordLive } from '../../manager/analysisHub.js';
 import { taskEvent } from '../../manager/progress.js';
 import { MatchEngine } from '../../match/engine.js';
-import { unityMatch } from './unityMatch.js';
+import { unityMatch, unrealMatch } from './unityMatch.js';
 import { ensureLineup, teamStrength, FORMATIONS, PRESETS, effectiveRating } from '../../match/tactics.js';
 import { simAheadButton, bindSimAhead } from './simAhead.js';
 import { pressQuestions, applyPressAnswer, postPressQuestions } from '../../manager/events.js';
@@ -91,7 +91,7 @@ export function matchdayScreen(app, el, params = {}) {
     ${simAheadButton()}
   </div>`;
   bindSimAhead(app, el);
-  el.querySelector('#play3d').onclick = () => app.go('match', { mode: app.settings.engine3d === 'unity' ? 'unity' : '3d' });
+  el.querySelector('#play3d').onclick = () => app.go('match', { mode: app.settings.engine3d === 'unity' ? 'unity' : app.settings.engine3d === 'unreal' && window.bakusa?.unrealPlay ? 'unreal' : '3d' });
   el.querySelector('#instant').onclick = () => app.go('match', { mode: 'instant' });
   el.querySelector('#tac').onclick = () => app.go('tactics');
   el.querySelector('#scoutopp').onclick = () => {
@@ -128,6 +128,7 @@ export function matchdayScreen(app, el, params = {}) {
 
 function liveMatch(app, el, params) {
   if (params.mode === 'unity' && !params.friendly) return unityMatch(app, el, params);
+  if (params.mode === 'unreal' && !params.friendly) return unrealMatch(app, el, params);
   const w = app.world, S = app.settings;
   const friendly = !!params.friendly;
   const fx = friendly ? { h: params.home, a: params.away } : currentFixture(w);

@@ -299,7 +299,7 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
       ${tog('s-story', 'Saison-Story am Saisonende', '', s.story !== false)}
       ${tog('s-acht', 'Meldungen für Erfolge & Level-Ups', '', s.achToasts !== false)}`,
     spiel3d: () => `
-      ${sel('s-eng', '3D-Engine', 'Unity: neue Grafik & Spieler-KI (Beta, braucht Internet beim Laden)', s.engine3d === 'unity' ? 'unity' : 'klassisch', [['klassisch', 'Klassisch (Three.js)'], ['unity', 'Unity (Beta)']])}
+      ${sel('s-eng', '3D-Engine', 'Unity/Unreal: neue Grafik & Spieler-KI (Beta). Unreal nur in der Windows-App, einmalig auf dem PC bauen', ['unity', 'unreal'].includes(s.engine3d) ? s.engine3d : 'klassisch', [['klassisch', 'Klassisch (Three.js)'], ['unity', 'Unity (Beta)'], ...(window.bakusa?.unrealPlay ? [['unreal', 'Unreal Engine 5 (Windows, Beta)']] : [])])}
       ${sel('s-q', 'Grafikqualität', 'Auf schwächeren PCs „Niedrig“ oder „Mittel“', s.quality, [['niedrig', 'Niedrig'], ['mittel', 'Mittel'], ['hoch', 'Hoch'], ['ultra', 'Ultra']])}
       ${sel('s-sp', 'Standard-Spielgeschwindigkeit', '', s.speed, [[1, '1x'], [2, '2x'], [4, '4x'], [8, '8x'], ['highlights', 'Nur Highlights']])}
       ${sel('s-cam', 'Standard-Kamera', '', s.camera, CAMERA_MODES)}

@@ -198,9 +198,10 @@ namespace FM27.Sim
         void PlayTick(float dt)
         {
             var owner = ball.owner;
-            int attSide = owner != null ? owner.side : (ball.lastTouch?.side ?? 0);
-            for (int s = 0; s < 2; s++)
+            tickParity ^= 1; // alternate which team decides first (fairness)
+            for (int s2 = 0; s2 < 2; s2++)
             {
+                int s = tickParity == 1 ? 1 - s2 : s2;
                 bool attacking = owner != null && owner.side == s;
                 Agent chaser = owner == null ? BestChaser(s) : null;
                 var presser = owner != null && !attacking ? Presser(s, owner) : null;
@@ -461,7 +462,7 @@ namespace FM27.Sim
             }
             return Clamp(a.pos + fwd * 6f);
         }
-        float Vside(Agent a, Agent opp) => ((a.pos.y - opp.pos.y) >= 0 ? 1f : -1f) * (a.side == 0 ? 1 : -1);
+        float Vside(Agent a, Agent opp) => ((a.pos.y - opp.pos.y) >= 0 ? 1f : -1f) * Dir(a.side); // mirror-consistent for both directions
 
         float Pressure(Agent a)
         {
@@ -588,7 +589,7 @@ namespace FM27.Sim
 
         void TryTackle(Agent d, Agent c)
         {
-            if (d.cooldown > 0 || V2.Dist(d.pos, c.pos) > 1.5f) return;
+            if (d.cooldown > 0 || ball.owner != c || V2.Dist(d.pos, c.pos) > 1.5f) return; // only while he still has the ball
             d.cooldown = 0.45f;
             float pWin = Clamp(0.26f + (d.p.defending - c.p.dribbling) / 160f + pressing[d.side] * 0.06f, 0.07f, 0.6f);
             double r = rng.NextDouble();
@@ -705,6 +706,7 @@ namespace FM27.Sim
         }
         Agent cornerHeader, clearer;
         bool wideHold;
+        int tickParity;
 
         V2 RestartPos(Agent a)
         {

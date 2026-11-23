@@ -87,19 +87,54 @@ export function unityMatch(app, el, params) {
   function report(r) {
     window.removeEventListener('message', onMsg);
     frame?.remove(); frame = null;
-    const goals = r.events.filter((e) => e.type === 'goal');
-    const st = r.stats;
-    const row = (l, a, b) => `<div class="u-st"><b>${a}</b><span>${l}</span><b>${b}</b></div>`;
-    const rated = (side) => setup.match[side].players.map((p) => ({ p, r: r.ratings[p.id] ?? 6 })).sort((x, y) => y.r - x.r).slice(0, 4)
-      .map((x) => `<div class="pl-row"><span class="pos">${x.p.pos}</span><span class="nm">${esc(x.p.name)}</span><b>${x.r.toFixed(1)}</b></div>`).join('');
-    el.innerHTML = `<div class="page narrow report">
-      <div class="card big-result"><small class="muted">UNITY-3D · NEUE KI</small><div class="ov-score">${crest(H, 56)}<b>${r.hg} : ${r.ag}</b>${crest(A, 56)}</div>
-        <div class="goals-list">${goals.map((g) => `<p class="${g.side === 'h' ? 'l' : 'r'}">${g.minute}' ⚽ ${nameOf(g.player)}</p>`).join('') || '<p class="muted">Keine Tore.</p>'}</div></div>
-      <div class="card"><h3>Statistik</h3>${row('Ballbesitz', st[0].possession + ' %', st[1].possession + ' %')}${row('Schüsse', st[0].shots, st[1].shots)}${row('aufs Tor', st[0].onTarget, st[1].onTarget)}${row('xG', st[0].xg.toFixed(2), st[1].xg.toFixed(2))}${row('Pässe (angekommen)', `${st[0].passes} (${st[0].passesOk})`, `${st[1].passes} (${st[1].passesOk})`)}${row('Zweikämpfe gewonnen', st[0].tackles, st[1].tackles)}${row('Fouls', st[0].fouls, st[1].fouls)}${row('Ecken', st[0].corners, st[1].corners)}${row('Paraden', st[0].saves, st[1].saves)}</div>
-      <div class="grid-2"><div class="card"><h3>${esc(H.short)} – Beste Noten</h3>${rated('home')}</div><div class="card"><h3>${esc(A.short)} – Beste Noten</h3>${rated('away')}</div></div>
-      <div class="row-actions center"><button class="btn primary lg" id="cont">Weiter</button></div></div>`;
-    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly: false });
+    engineReport(app, el, { r, setup, H, A, label: 'UNITY-3D · NEUE KI' });
   }
 
   return () => { clearTimeout(timer); window.removeEventListener('message', onMsg); frame?.remove(); };
+}
+
+/** Result page shared by the Unity and Unreal modes. */
+export function engineReport(app, el, { r, setup, H, A, label }) {
+  const w = app.world;
+  const nameOf = (id) => esc(w.players[id]?.lastName || 'Eigentor');
+  const goals = r.events.filter((e) => e.type === 'goal');
+  const st = r.stats;
+  const row = (l, a, b) => `<div class="u-st"><b>${a}</b><span>${l}</span><b>${b}</b></div>`;
+  const rated = (side) => setup.match[side].players.map((p) => ({ p, r: r.ratings[p.id] ?? 6 })).sort((x, y) => y.r - x.r).slice(0, 4)
+    .map((x) => `<div class="pl-row"><span class="pos">${x.p.pos}</span><span class="nm">${esc(x.p.name)}</span><b>${x.r.toFixed(1)}</b></div>`).join('');
+  el.innerHTML = `<div class="page narrow report">
+    <div class="card big-result"><small class="muted">${esc(label)}</small><div class="ov-score">${crest(H, 56)}<b>${r.hg} : ${r.ag}</b>${crest(A, 56)}</div>
+      <div class="goals-list">${goals.map((g) => `<p class="${g.side === 'h' ? 'l' : 'r'}">${g.minute}' ⚽ ${nameOf(g.player)}</p>`).join('') || '<p class="muted">Keine Tore.</p>'}</div></div>
+    <div class="card"><h3>Statistik</h3>${row('Ballbesitz', st[0].possession + ' %', st[1].possession + ' %')}${row('Schüsse', st[0].shots, st[1].shots)}${row('aufs Tor', st[0].onTarget, st[1].onTarget)}${row('xG', (+st[0].xg).toFixed(2), (+st[1].xg).toFixed(2))}${row('Pässe (angekommen)', `${st[0].passes} (${st[0].passesOk})`, `${st[1].passes} (${st[1].passesOk})`)}${row('Zweikämpfe gewonnen', st[0].tackles, st[1].tackles)}${row('Fouls', st[0].fouls, st[1].fouls)}${row('Ecken', st[0].corners, st[1].corners)}${row('Paraden', st[0].saves, st[1].saves)}</div>
+    <div class="grid-2"><div class="card"><h3>${esc(H.short)} – Beste Noten</h3>${rated('home')}</div><div class="card"><h3>${esc(A.short)} – Beste Noten</h3>${rated('away')}</div></div>
+    <div class="row-actions center"><button class="btn primary lg" id="cont">Weiter</button></div></div>`;
+  el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly: false });
+}
+
+/** v3.2: Unreal Engine client (Windows only) – runs in its own window, the launcher passes setup and result. */
+export function unrealMatch(app, el) {
+  const w = app.world, S = app.settings;
+  const fx = currentFixture(w);
+  const H = w.clubs[fx.h], A = w.clubs[fx.a];
+  ensureLineup(H, w.players); ensureLineup(A, w.players);
+  const cond = conditions(w, fx);
+  const setup = buildUnitySetup(w, H, A, S, cond, (w.season * 1000 + w.week * 17 + H.id * 31 + A.id) >>> 0);
+  const userSide = H.id === w.userClubId ? 0 : A.id === w.userClubId ? 1 : -1;
+  const B = window.bakusa;
+  const box = (title, text, buttons) => `<div class="page"><div class="card md-gate"><div class="cal-vs">${crest(H, 54)}<b>VS</b>${crest(A, 54)}</div><h3>${title}</h3><p class="muted">${text}</p><div class="row-actions center">${buttons}</div></div></div>`;
+  const fallbackBtns = '<button class="btn primary" id="un-classic">Klassisch spielen</button><button class="btn ghost" id="un-retry">Erneut starten</button>';
+  const bindFallback = () => { el.querySelector('#un-classic')?.addEventListener('click', () => app.go('match', { mode: '3d' })); el.querySelector('#un-retry')?.addEventListener('click', () => app.go('match', { mode: 'unreal' })); };
+  if (!B?.unrealPlay) { el.innerHTML = box('Unreal Engine nur in der Windows-App', 'Der Unreal-3D-Modus läuft als eigenes Programm und wird vom FM27-Launcher gestartet.', fallbackBtns); bindFallback(); return; }
+  el.innerHTML = box('Das Spiel läuft im Unreal-Fenster …', 'Steuerung dort: <b>1–4</b> Tempo · <b>C</b> Kamera · <b>Leertaste</b> Pause · <b>Pfeil hoch/runter</b> Ausrichtung · <b>Esc</b> Spiel beenden.<br>Nach dem Abpfiff geht es hier automatisch weiter.', '<span class="spinner"></span>');
+  let alive = true;
+  B.unrealPlay(JSON.stringify(setup), { userSide, fullscreen: !!S.fullscreenStart }).then((res) => {
+    if (!alive) return;
+    if (res?.ok) {
+      try { const m = JSON.parse(res.result); engineReport(app, el, { r: unityResult(m.summary || m, setup, w), setup, H, A, label: 'UNREAL ENGINE · NEUE KI' }); return; }
+      catch { res = { ok: false, error: 'bad-result' }; }
+    }
+    const why = { 'not-installed': 'Der Unreal-Client ist auf diesem PC noch nicht gebaut. Die Anleitung steht in UNREAL_SETUP.md (einmalig Unreal 5.5 installieren, dann build_unreal.bat doppelklicken).', 'no-result': 'Das Unreal-Fenster wurde vor dem Abpfiff geschlossen.', 'start-failed': 'Das Unreal-Programm ließ sich nicht starten.', running: 'Es läuft bereits ein Unreal-Spiel.', 'bad-result': 'Das Ergebnis konnte nicht gelesen werden.' }[res?.error] || 'Unbekannter Fehler.';
+    el.innerHTML = box('Unreal-3D nicht verfügbar', why, fallbackBtns); bindFallback();
+  });
+  return () => { alive = false; };
 }

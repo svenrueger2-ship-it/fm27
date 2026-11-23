@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '3.2.0', date: '23.11.2026', title: 'Unreal Engine 5 (Beta)',
+    neu: ['3D-Modus mit Unreal Engine 5 (Windows, Beta): Lumen-Licht, Flutlicht-Spots, Schatten, 16.000 Fans', 'Neue Spieler-KI jetzt auch in C++ – gleiche Regeln wie im Unity-Modus', 'Einstellung „3D-Engine“: Klassisch, Unity oder Unreal'],
+    verbessert: ['Spieler-KI fairer: kein Vorteil mehr für die Gastmannschaft'],
+    behoben: ['KI: Verteidiger konnten bereits gespielte Pässe „abfangen“'],
+    geplant: ['Unreal: Wiederholungen, Wetter, Auswechslungen im Spiel'],
+  },
+  {
     version: '3.1.0', date: '23.11.2026', title: 'Unity-3D (Beta)',
     neu: ['Neuer 3D-Modus mit Unity-Engine (Beta): selbst gebaute Spieler, Stadion & Flutlicht', 'Komplett neue Spieler-KI: Raumaufteilung, Pressing, Tiefenläufe, Flanken, Abseitslinie', 'Einstellung „3D-Engine“: Klassisch oder Unity'],
     verbessert: ['Ergebnisse aus beiden 3D-Modi werden gleich in die Saison übernommen'],

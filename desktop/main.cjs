@@ -5,6 +5,7 @@ const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
 
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -16,7 +17,7 @@ const RELEASES = 'https://github.com/svenrueger2-ship-it/fm27/releases';
 // The game and the launcher are plain HTML files. New versions are fetched from the "live" release on GitHub,
 // checked against their SHA-256 and stored in the user folder – no installer, no restart of the app.
 // Only when the Electron shell itself changes (SHELL_API) a regular app update is needed.
-const SHELL_API = 1;
+const SHELL_API = 1; // content still works with every shell; the Unreal mode is feature-detected (window.bakusa.unrealPlay, app 2.8)
 const LIVE = process.env.FM27_LIVE_URL || 'https://github.com/svenrueger2-ship-it/fm27/releases/download/live/';
 const CONTENT_FILES = ['index.html', 'launcher.html'];
 const contentRoot = () => path.join(app.getPath('userData'), 'content');
@@ -149,6 +150,44 @@ ipcMain.on('bakusa:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close
 ipcMain.on('bakusa:quit', () => { quitting = true; app.quit(); });
 ipcMain.on('bakusa:fullscreen', (e) => { const w = BrowserWindow.fromWebContents(e.sender); w?.setFullScreen(!w.isFullScreen()); });
 ipcMain.on('bakusa:releases', () => shell.openExternal(RELEASES));
+// ---------------------------------------------------------------- Unreal 3D match client (v2.8)
+// Built on this PC with unreal/build_unreal.bat into %LOCALAPPDATA%\FM27\unreal\Windows\FM27Match.exe
+const unrealExe = () => {
+  const base = process.env.LOCALAPPDATA || app.getPath('appData');
+  const cands = [path.join(base, 'FM27', 'unreal', 'Windows', 'FM27Match.exe'), path.join(path.dirname(process.execPath), 'unreal', 'Windows', 'FM27Match.exe')];
+  return cands.find((p) => { try { return fs.existsSync(p); } catch { return false; } }) || null;
+};
+let unrealRunning = false;
+ipcMain.handle('bakusa:unreal-available', () => !!unrealExe());
+ipcMain.handle('bakusa:unreal-play', async (e, setupJson, opts = {}) => {
+  const exe = unrealExe();
+  if (!exe) return { ok: false, error: 'not-installed' };
+  if (unrealRunning) return { ok: false, error: 'running' };
+  const dir = path.join(app.getPath('temp'), 'fm27-unreal');
+  fs.mkdirSync(dir, { recursive: true });
+  const setupFile = path.join(dir, 'setup.json'), resultFile = path.join(dir, 'result.json');
+  try { fs.unlinkSync(resultFile); } catch { /* none */ }
+  fs.writeFileSync(setupFile, String(setupJson), 'utf8');
+  const q = (v) => `"${String(v).replace(/"/g, '')}"`;
+  const args = [`-setup=${q(setupFile)}`, `-result=${q(resultFile)}`, `-userside=${Number.isInteger(opts.userSide) ? opts.userSide : -1}`, opts.fullscreen ? '-fullscreen' : '-windowed', ...(opts.fullscreen ? [] : ['-ResX=1600', '-ResY=900'])];
+  const win = BrowserWindow.fromWebContents(e.sender);
+  unrealRunning = true;
+  win?.minimize();
+  const code = await new Promise((resolve) => {
+    let child;
+    // verbatim arguments keep the quotes around paths with spaces; argv0 is quoted for the same reason
+    try { child = spawn(exe, args, { argv0: q(exe), windowsVerbatimArguments: true, shell: false, cwd: path.dirname(exe) }); }
+    catch (err) { resolve(-1); return; }
+    child.on('error', () => resolve(-1));
+    child.on('exit', (c) => resolve(c ?? 0));
+  });
+  unrealRunning = false;
+  if (win) { win.restore(); win.focus(); }
+  let result = null;
+  try { result = fs.readFileSync(resultFile, 'utf8'); } catch { /* window closed early */ }
+  return result ? { ok: true, result } : { ok: false, error: code === -1 ? 'start-failed' : 'no-result' };
+});
+
 ipcMain.handle('bakusa:info', () => ({ version: activeContent().version, appVersion: app.getVersion(), live, portable: isPortable(), electron: process.versions.electron, chrome: process.versions.chrome, update: lastUpdate }));
 
 // only one instance (important for the updater)

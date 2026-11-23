@@ -1172,3 +1172,5 @@ html.mobile .mc-o { padding: .2rem .5rem; font-size: .75rem; }
 .u-ctrl select { width: auto; padding: .35rem .6rem; }
 .u-st { display: grid; grid-template-columns: 70px 1fr 70px; text-align: center; padding: .3rem 0; border-bottom: 1px solid rgba(255,255,255,.05); } .u-st span { color: var(--muted); }
 html.mobile .u-ctrl { padding: .3rem .45rem; gap: .3rem; } html.mobile .u-ctrl .seg button { padding: .3rem .5rem; font-size: .75rem; }
+.spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: var(--acc); animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -17,5 +17,8 @@ contextBridge.exposeInMainWorld('bakusa', {
   liveCheck: () => ipcRenderer.invoke('bakusa:live-check'),
   reloadLauncher: () => ipcRenderer.send('bakusa:reload-launcher'),
   reloadGame: (slot) => ipcRenderer.send('bakusa:reload-game', slot),
+  // Unreal 3D match client (v2.8)
+  unrealAvailable: () => ipcRenderer.invoke('bakusa:unreal-available'),
+  unrealPlay: (setupJson, opts) => ipcRenderer.invoke('bakusa:unreal-play', setupJson, opts),
   platform: 'windows',
 });
