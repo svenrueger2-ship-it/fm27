@@ -57,6 +57,7 @@ export function ratingClass(v) {
 }
 
 export function crest(club, size = 34) {
+  if (club.crest) return `<img class="crest" src="${club.crest}" width="${size}" height="${size}" alt="${esc(club.short)}" style="object-fit:contain">`;
   if (CRESTS[club.short]) return `<img class="crest" src="${CRESTS[club.short]}" width="${size}" height="${size}" alt="${esc(club.short)}" style="object-fit:contain">`;
   const c = club.colors;
   const initials = esc(club.short.slice(0, 3));

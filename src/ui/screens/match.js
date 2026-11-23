@@ -5,6 +5,7 @@ import { recordLive } from '../../manager/analysisHub.js';
 import { taskEvent } from '../../manager/progress.js';
 import { MatchEngine } from '../../match/engine.js';
 import { endWeek } from '../turn.js';
+import { wmCommit } from './wm.js';
 import { unityMatch, unrealMatch } from './unityMatch.js';
 import { ensureLineup, teamStrength, FORMATIONS, PRESETS, effectiveRating } from '../../match/tactics.js';
 import { simAheadButton, bindSimAhead } from './simAhead.js';
@@ -182,7 +183,7 @@ function liveMatch(app, el, params) {
     <div class="lower-third" id="lt"></div>
     <div class="comm" id="comm"><i>🎙️</i><span></span></div>
     <div class="replay-tag" id="replay"><span>⟲ WIEDERHOLUNG</span><button class="btn sm" id="skipRep">Überspringen ⏭</button></div>
-    <div class="intro" id="intro"><div class="bar-top"><small>Live · ${esc(H.stadium.name)}</small><b>${esc(H.name)} – ${esc(A.name)}</b><small style="color:#cfe0ff;letter-spacing:.1em">${friendly ? 'Testspiel' : `${esc(w.leagues.find((l) => l.id === H.leagueId).name)} · Spieltag ${w.week + 1}`}</small></div>
+    <div class="intro" id="intro"><div class="bar-top"><small>Live · ${esc(H.stadium.name)}</small><b>${esc(H.name)} – ${esc(A.name)}</b><small style="color:#cfe0ff;letter-spacing:.1em">${params.wm ? 'FIFA WM 2026' : friendly ? 'Testspiel' : `${esc(w.leagues.find((l) => l.id === H.leagueId).name)} · Spieltag ${w.week + 1}`}</small></div>
       <div class="lineups">${[T0, T1].map((T) => `<div class="lu" style="--c1:${T.kit.primary}"><b>${esc(T.club.short)} · ${T.formation}</b>${T.players.map((p) => `${p.data.number} ${esc(p.data.lastName)}`).join('<br>')}</div>`).join('')}</div>
       <button class="btn primary skip" id="skipIntro">Anpfiff ▶</button></div>
     <div class="ticker" id="ticker"></div>
@@ -506,7 +507,7 @@ function liveMatch(app, el, params) {
       };
       step();
     });
-    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
+    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, wm: params.wm, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
   }
 
   if (params.mode === 'instant') { runInstant(); }
@@ -515,8 +516,9 @@ function liveMatch(app, el, params) {
 }
 
 // v3.1: shared by the classic 3D mode and the Unity mode – books the result into the season
-export async function commitResult(app, { r, H, A, friendly, record }) {
+export async function commitResult(app, { r, H, A, friendly, record, wm }) {
   const w = app.world;
+  if (wm) return wmCommit(app, r, wm);
   if (friendly) { app.world = null; app.go('start'); return; }
   const rng = newRng(w);
   const m = currentFixture(w);

@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.1.0', date: '23.11.2026', title: 'WM 2026 & echte Wappen für alle Ligen',
+    neu: ['WM 2026 als eigener Modus: 48 Nationen, echte Gruppen A–L, Sechzehntelfinale bis Finale – jedes Spiel live in 3D oder sofort', 'Offizielle Verbandslogos aller 48 WM-Teilnehmer', 'Echte Vereinswappen für 3. Liga, Championship, Eredivisie, Liga Portugal, Süper Lig und Scottish Premiership'],
+    verbessert: ['Alle Wappen der Bundesliga, 2. Liga, Premier League, La Liga, Serie A und Ligue 1 erneuert', 'WM-Kader nominieren aus allen Spielern der Nation, Elfmeterschießen in der K.-o.-Runde'],
+    behoben: [],
+    geplant: ['Stadion-Großansicht, Trikot- & Wappen-Editor, Börsengang, Schwierigkeitsgrade'],
+  },
+  {
     version: '5.0.1', date: '23.11.2026', title: 'Echte Kader für die neuen Ligen',
     neu: ['Echte Spieler 2026/27 für alle 66 Vereine aus Eredivisie, Liga Portugal, Süper Lig und Scottish Premiership (z. B. Leão, Osimhen, Lukaku, Salah, McGregor)', 'Echte Gründungsjahre und Meistertitel der neuen Vereine'],
     verbessert: ['Spielstände aus 5.0.0 bekommen die echten Kader automatisch beim Laden (dein eigener Verein bleibt unverändert)', 'Versionsnummer jetzt auch in der Android-App im Hauptmenü sichtbar'],

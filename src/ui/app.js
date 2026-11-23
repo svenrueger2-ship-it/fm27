@@ -32,6 +32,8 @@ import { applyTheme } from './theme.js';
 import { animateNumbers, runCeremonies } from './fx.js';
 import { mobileFit } from './mobileFit.js';
 import { hotTurnScreen } from './screens/hotseat.js';
+import { wmScreen, wmGroupsScreen, wmKoScreen, wmSquadScreen, confirmQuit } from './screens/wm.js';
+import { WM_NATIONS } from '../manager/wm.js';
 import { isHot, humanName } from '../manager/hotseat.js';
 import { windowInfo } from '../manager/transfers.js';
 
@@ -40,7 +42,7 @@ const NAV = [
   ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion bauen', '🏟️', 'Stadion'],
   ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
 ];
-const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen };
+const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen, wm: wmScreen, wmGroups: wmGroupsScreen, wmKo: wmKoScreen, wmSquad: wmSquadScreen };
 
 export class App {
   constructor(root) {
@@ -63,7 +65,7 @@ export class App {
     // after a sacking the user has to pick a new club first
     if (this.world?.career?.pendingSack && !['career', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'career';
     // v3.0.4: no career without your own manager – old saves get the editor once too
-    if (mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings', 'hotTurn'].includes(screen)) screen = 'mgrCreate';
+    if (this.world?.mode !== 'wm' && mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings', 'hotTurn'].includes(screen)) screen = 'mgrCreate';
     this.screen = screen; this.params = params;
     if (this.pendingLive && screen !== 'match') setTimeout(() => this.applyLive?.(), 800);
     document.body.classList.toggle('no-anim', this.settings.animations === false);
@@ -88,6 +90,22 @@ export class App {
     if (this.screen === 'match') {
       r.innerHTML = '<div class="match-root"></div>';
       this.cleanup = matchdayScreen(this, r.firstChild, { live: true, ...this.params }) || null;
+      return;
+    }
+    // v5.1: World Cup mode has its own small shell (overview, groups, knock-out, squad, tactics)
+    if (this.world?.mode === 'wm') {
+      const W = this.world.wm, c = this.club;
+      document.documentElement.style.setProperty('--club1', c.colors.primary); document.documentElement.style.setProperty('--club2', c.colors.secondary);
+      const tabs = [['wm', '🏟️ Übersicht'], ['wmGroups', '📊 Gruppen'], ['wmKo', '🏆 K.-o.-Runde'], ['wmSquad', '👥 Kader'], ['tactics', '📋 Taktik']];
+      r.innerHTML = `<div class="shell wm-shell"><header class="topbar"><div class="brand"><span class="logo">FM<b>2027</b></span></div>
+        <div class="club-chip">${crest(c, 30)}<div><strong>WM 2026 · ${esc(WM_NATIONS[W.nat][0])}</strong><small>${W.done ? 'Turnier beendet' : ['1. Spieltag', '2. Spieltag', '3. Spieltag', 'Sechzehntelfinale', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'][W.round]}</small></div></div>
+        <nav class="wm-tabs">${tabs.map(([k, l]) => `<button data-nav="${k}" class="${this.screen === k ? 'active' : ''}">${l}</button>`).join('')}</nav>
+        <div class="top-stats"><button class="btn sm ghost" id="wm-quit">Hauptmenü</button></div></header><main class="content" id="content"></main></div>`;
+      r.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => this.go(b.dataset.nav)));
+      r.querySelector('#wm-quit').onclick = () => confirmQuit(this);
+      const fn = ['wm', 'wmGroups', 'wmKo', 'wmSquad', 'tactics'].includes(this.screen) ? SCREENS[this.screen] : wmScreen;
+      this.cleanup = fn(this, r.querySelector('#content'), this.params) || null;
+      mobileFit(this, r.querySelector('#content'));
       return;
     }
     const club = this.club, w = this.world;

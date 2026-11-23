@@ -1,5 +1,6 @@
 import { IS_MOBILE } from '../../core/device.js';
 // Start menu, new game / club selection, save slots, settings, season end.
+import { wmStartHtml, bindWmStart } from './wm.js';
 import { isHot, allSeasonsOver, setupHotseat, humanName } from '../../manager/hotseat.js';
 import { endWeek } from '../turn.js';
 import { buildStory, showStory } from '../story.js';
@@ -77,6 +78,7 @@ export function startScreen(app, el) {
           <button data-go="comps"><i>🏆</i>Wettbewerbe</button>
           <button data-go="stats"><i>📊</i>Statistiken</button>
           <button data-go="scenarios"><i>🎬</i>Szenarien</button>
+          <button data-go="wm"><i>🏆</i>WM 2026</button>
           <button data-go="quick"><i>⚽</i>Schnelles 3D-Spiel</button>
           <button data-go="settings"><i>⚙️</i>Einstellungen</button>
           <button data-go="credits"><i>✦</i>Credits</button>
@@ -124,6 +126,7 @@ export function startScreen(app, el) {
         app.go('home');
       }));
     },
+    wm: () => { center.innerHTML = wmStartHtml(); bindWmStart(app, center); },
     quick: () => {
       const w = generateWorld();
       const ids = [...w.leagues[0].clubIds].sort((a, b) => w.clubs[b].rep - w.clubs[a].rep);
