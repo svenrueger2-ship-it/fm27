@@ -39,7 +39,7 @@ export class SimPlayer {
 
   get speed() { return Math.hypot(this.vel.x, this.vel.z); }
 
-  topSpeed() { return this.maxSpeed * (0.8 + 0.2 * this.energy); }
+  topSpeed() { return this.maxSpeed * (0.8 + 0.2 * this.energy) * (this.workMul || 1); }
 
   startAction(type, dur, extra = {}) { this.action = { type, t: 0, dur, ...extra }; }
   busy() { return this.action && ['pass', 'shot', 'cross', 'tackle', 'slide', 'header', 'throw', 'dive', 'clear', 'longpass'].includes(this.action.type); }

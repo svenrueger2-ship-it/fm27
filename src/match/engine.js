@@ -155,6 +155,14 @@ export class MatchEngine {
     if (out && inn) this.substitute(t, out.id, inn.id);
   }
 
+  // v4.0 team talk: focus for the whole team (calm = decision noise, work = intensity, foul = temperament)
+  setFocus(t, focus) {
+    const T = this.teams[t]; if (!T) return;
+    T.focus = focus ? { ...focus } : null;
+    if (focus?.fam) { T.familiarity = Math.max(0.4, Math.min(1, (T.familiarity ?? 0.8) + focus.fam - (T.focusFam || 0))); T.focusFam = focus.fam; }
+    for (const p of T.players) p.workMul = focus?.work || 1;
+  }
+
   // Touchline shout: temporary tactical push for ~10 match minutes, then back to the previous plan.
   shout(t, key) {
     const T = this.teams[t];
@@ -637,7 +645,7 @@ export class MatchEngine {
     p = clamp(p * (0.85 + 0.15 * def.energy) + (styleFx(def.data).tackle || 0), 0.08, 0.85); // v3.4 tackling specialists
     const fx = Math.cos(carrier.facing), fz = Math.sin(carrier.facing);
     const behind = (def.pos.x - carrier.pos.x) * fx + (def.pos.z - carrier.pos.z) * fz < -0.4;
-    const foulP = ((slide ? 0.17 : 0.07) + (behind ? 0.12 : 0) + (100 - (isGK ? a.herauslaufen : a.tackling)) / 1000 + (isGK ? 0.08 : 0)) * (styleFx(def.data).foul || 1) * (0.8 + temperOf(def.data) * 0.5); // hot-heads foul more
+    const foulP = ((slide ? 0.17 : 0.07) + (behind ? 0.12 : 0) + (100 - (isGK ? a.herauslaufen : a.tackling)) / 1000 + (isGK ? 0.08 : 0)) * (styleFx(def.data).foul || 1) * (0.8 + temperOf(def.data) * 0.5) * (this.teams[def.team].focus?.foul || 1); // hot-heads foul more
     const T = this.teams[def.team];
     if (rng.chance(p)) {
       if (rng.chance(foulP * 0.3)) { this.foul(def, carrier, slide, behind); return; }
@@ -906,6 +914,7 @@ export class MatchEngine {
     const out = T.players.find((p) => p.id === outId && !p.offPitch && !p.leaving && !p.sentOff);
     if (!out) return false;
     const np = new SimPlayer(this.db[inId], t, out.slotIndex, out.role);
+    np.workMul = T.focus?.work || 1;
     np.pos.x = t === 0 ? -4 : 4; np.pos.z = HALF_W + 0.8;
     np.target.x = np.pos.x; np.target.z = HALF_W - 2;
     np.minuteIn = this.minute();

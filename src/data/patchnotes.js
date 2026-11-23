@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '4.0.0', date: '23.11.2026', title: 'Kabine, Stil-Schule & Legenden',
+    neu: ['Kabinenansprache vor dem Spiel und in der Halbzeit – die Mannschaft reagiert je nach Lage und Persönlichkeiten', 'Stil-Training: Spielern einen Spielstil antrainieren, U19-Talente mit Stil-Begabung', 'Taktik-Vorschlag aus der Gegneranalyse mit einem Tipp übernehmen', 'Legendenstatus und Karriere-Chronik nach Jahrzehnten'],
+    verbessert: ['Android: fast alle Tabs passen auf eine Seite, lange Listen scrollen in ihrer Karte', 'Stadion-Tab 10× schneller, Transfermarkt und Training flotter'],
+    behoben: [],
+    geplant: ['Transfer-Deadline-Day-Liveticker', 'Wettbewerbe mit eigenen Regeln'],
+  },
+  {
     version: '3.4.0', date: '23.11.2026', title: 'Spielstile & Spieleranalyse',
     neu: ['Spielstile: Knipser, Spielmacher, Dribbelkünstler, Flügelflitzer, Zweikampfmonster, Ballsicher – verändern Entscheidungen im Spiel', 'Spieleranalyse: Heatmap, Pässe, Passquote, Schüsse, Zweikämpfe pro 90 Minuten aus jedem Live-Spiel', 'Temperament wirkt: Hitzköpfe foulen öfter und sehen mehr Karten, Führungsspieler beruhigen das Team'],
     verbessert: ['Spielerprofil mit Spielstil und Live-Analyse', 'Analyse-Hub mit Spielertabelle'],

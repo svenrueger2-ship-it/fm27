@@ -1,6 +1,6 @@
 import { isMatchToday, daysToMatch } from '../../manager/calendar.js';
 import { mgrPortrait } from './managerCreate.js';
-import { styleOf } from '../../data/styles.js';
+import { styleOf, STYLES } from '../../data/styles.js';
 import { anaSummary, heatSvg } from '../../manager/playerAna.js';
 // Club HQ dashboard, squad (cards & table), player profile, league tables & fixtures.
 import { projectPlayer, projectionSvg } from '../../manager/projection.js';
@@ -157,7 +157,7 @@ function youthView(app) {
   return `<div class="card" style="margin-bottom:12px"><b>🌱 U19 · Nachwuchsleistungszentrum (Stufe ${club.facilities?.youth ?? 2})</b>
     <p class="muted" style="margin:4px 0 0">${ys.length} Talente · entwickeln sich jede Woche im Training. Mit 20 müssen sie hochgezogen werden oder gehen.${yl ? ` Letzte Saison: Platz ${yl.rank}/${yl.of} in der ${yl.name}.` : ''}</p></div>
     <div class="card table-wrap"><table class="tbl squad"><thead><tr><th>Name</th><th>Pos</th><th>Alter</th><th>Stärke</th><th>Potenzial</th><th>Marktwert</th><th></th></tr></thead><tbody>
-    ${ys.map((p) => `<tr><td class="nm">${portrait(p, club, 26)}<span>${flag(p.nation)} ${esc(pname(p))}${p.pot >= 82 ? ' <i class="tag">Juwel</i>' : ''}${p.age >= 19 ? ' <i class="tag r">letztes Jahr</i>' : ''}</span></td>
+    ${ys.map((p) => `<tr><td class="nm">${portrait(p, club, 26)}<span>${flag(p.nation)} ${esc(pname(p))}${p.pot >= 82 ? ' <i class="tag">Juwel</i>' : ''}${p.styleTalent && STYLES[p.styleTalent] ? ` <i class="tag b" title="Talent für diesen Spielstil – lernt ihn fast doppelt so schnell">${STYLES[p.styleTalent].icon} ${STYLES[p.styleTalent].name}-Talent</i>` : ''}${p.age >= 19 ? ' <i class="tag r">letztes Jahr</i>' : ''}</span></td>
       <td><span class="pos pos-${POSITIONS[p.pos].group}">${p.pos}</span></td><td>${p.age}</td><td><b class="${ratingClass(p.ovr)}">${p.ovr}</b></td><td>${p.pot}</td><td>${money(p.value)}</td>
       <td style="white-space:nowrap"><button class="btn small primary" data-up="${p.id}">⬆ Hochziehen</button> <button class="btn small ghost" data-rel="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="7" class="muted">Keine Talente im Kader.</td></tr>'}
     </tbody></table></div>`;
@@ -239,7 +239,7 @@ export function playerModal(app, p, { onChange } = {}) {
     <div class="pp-hero"><div class="pp-wm">${club ? crest(club, 260) : ''}</div>
       <div class="pp-face">${portrait(p, club, 150)}</div>
       <div class="pp-id"><small class="pp-first">${esc(p.firstName)}</small><h3>${esc(p.lastName)}</h3>
-        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span>${(() => { const st = styleOf(p); return st ? `<span class="pp-style" title="${esc(st.desc)}">${st.icon} ${esc(st.name)}</span>` : ''; })()}</div>
+        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span>${(() => { const st = styleOf(p); return (st ? `<span class="pp-style" title="${esc(st.desc)}">${st.icon} ${esc(st.name)}</span>` : '') + (p.styleTrain && STYLES[p.styleTrain.id] ? `<span class="pp-style lrn">🎓 lernt ${STYLES[p.styleTrain.id].name} ${Math.round(p.styleTrain.progress * 100)} %</span>` : ''); })()}</div>
         <p class="pp-club">${club ? `<button class="linkish" id="pp-club">${crest(club, 22)} ${esc(club.name)}</button>` : 'Vereinslos'}${p.loan ? ` · Leihe von ${esc(w.clubs[p.loan.from].short)}` : ''}</p></div>
       <div class="pp-rings">${ring(known ? p.ovr : `${est.ovrLo}–${est.ovrHi}`, 'Stärke', est.ovrLo, est.ovrHi)}${ring(known ? p.pot : `${est.potLo}–${est.potHi}`, 'Potenzial', est.potLo, est.potHi)}</div>
     </div>

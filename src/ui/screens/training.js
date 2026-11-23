@@ -4,6 +4,7 @@ import { leadership } from '../../manager/players.js';
 import { OUTFIELD_ATTRS, GK_ATTRS, POSITIONS, POS_WEIGHTS } from '../../data/attributes.js';
 import { esc, pname, ratingClass, portrait, bar, toast } from '../dom.js';
 import { playerModal } from './manager.js';
+import { STYLES, styleOf, learnable, startStyleTrain } from '../../data/styles.js';
 
 const FOCUS_ICONS = { ausgewogen: '⚖️', fitness: '🏃', technik: '🎯', angriff: '⚽', verteidigung: '🛡️', taktik: '🧠' };
 const ATTR_NAME = Object.fromEntries([...OUTFIELD_ATTRS, ...GK_ATTRS]);
@@ -40,13 +41,15 @@ export function trainingScreen(app, el) {
           ${(w.trainingReport?.items || []).slice(0, 10).map((r) => `<p>${r.type === 'up' ? '📈' : '🩹'} ${esc(r.text)}${r.gains ? ` <small>(${[...new Set(r.gains)].map((g) => ATTR_NAME[g]).join(', ')})</small>` : ''}</p>`).join('') || '<p class="muted">Noch kein Bericht – er erscheint nach dem nächsten Spieltag.</p>'}
         </div>
       </div>
-      <div class="card table-wrap"><h3>Einzeltraining</h3><table class="tbl"><thead><tr><th>Spieler</th><th>Pos</th><th>Alter</th><th>Stärke</th><th>Potenzial</th><th>Entwicklung</th><th>Fitness</th><th>Individueller Schwerpunkt</th><th>Umschulung</th><th>Mentor</th></tr></thead><tbody>
+      <div class="card table-wrap"><h3>Einzeltraining</h3><table class="tbl"><thead><tr><th>Spieler</th><th>Pos</th><th>Alter</th><th>Stärke</th><th>Potenzial</th><th>Entwicklung</th><th>Fitness</th><th>Individueller Schwerpunkt</th><th>Umschulung</th><th>Spielstil</th><th>Mentor</th></tr></thead><tbody>
         ${ps.map((p) => { const room = p.pot - p.ovr; const keys = Object.keys(POS_WEIGHTS[p.pos]);
           return `<tr data-p="${p.id}"><td class="nm">${portrait(p, club, 26)}<span>${esc(pname(p))}</span></td><td><span class="pos pos-${POSITIONS[p.pos].group}">${p.pos}</span></td><td>${p.age}</td>
           <td><b class="${ratingClass(p.ovr)}">${p.ovr}</b></td><td>${p.pot}</td><td>${bar(p.ovr, p.pot, room > 8 ? 'r-elite' : 'r-high')} <small>${room > 0 ? `+${room} möglich` : 'ausgereizt'}</small></td><td>${bar(p.fitness, 100, p.fitness < 70 ? 'warn' : '')}</td>
           <td><select class="input" data-ind="${p.id}"><option value="">– keiner –</option>${keys.map((k) => `<option value="${k}" ${tr.individual[p.id] === k ? 'selected' : ''}>${ATTR_NAME[k]} (${p.attrs[k]})</option>`).join('')}</select></td>
           <td>${p.pos === 'TW' ? '–' : `<select class="input sm" data-rt="${p.id}"><option value="">${(p.altPos || []).length ? `kann: ${p.altPos.join(', ')}` : '–'}</option>${['IV', 'LV', 'RV', 'DM', 'ZM', 'OM', 'LM', 'RM', 'LA', 'RA', 'ST'].filter((x) => x !== p.pos && !(p.altPos || []).includes(x)).map((x) => `<option ${p.retrain?.pos === x ? 'selected' : ''}>${x}</option>`).join('')}</select>${p.retrain ? `<div class="meter sm"><i style="width:${Math.round(p.retrain.progress * 100)}%"></i></div>` : ''}`}</td>
-          <td>${p.age <= 22 ? `<select class="input sm" data-men="${p.id}"><option value="">–</option>${club.squad.map((id) => w.players[id]).filter((m) => m.age >= 27 && m.id !== p.id).sort((a, b) => (b.pos === p.pos) - (a.pos === p.pos) || leadership(b) - leadership(a)).map((m) => `<option value="${m.id}" ${club.mentors[p.id] === m.id ? 'selected' : ''}>${esc(m.lastName)} (${m.pos}, ${m.age})</option>`).join('')}</select>` : Object.values(club.mentors).includes(p.id) ? '<small>Mentor 🎓</small>' : '–'}</td></tr>`; }).join('')}
+          <td>${(() => { const cur = styleOf(p), L = learnable(p); if (p.pos === 'TW') return '–';
+            return `${cur ? `<small>${cur.icon} ${esc(cur.name)}</small>` : ''}${L.length || p.styleTrain ? `<select class="input sm" data-st="${p.id}"><option value="">${cur ? 'umlernen…' : 'Stil lernen…'}</option>${L.map((k) => `<option value="${k}" ${p.styleTrain?.id === k ? 'selected' : ''}>${STYLES[k].icon} ${STYLES[k].name}${p.styleTalent === k ? ' ⭐' : ''}</option>`).join('')}</select>` : '<small class="muted">noch nichts lernbar</small>'}${p.styleTrain ? `<div class="meter sm"><i style="width:${Math.round(p.styleTrain.progress * 100)}%"></i></div>` : ''}`; })()}</td>
+          <td>${p.age <= 22 ? `<select class="input sm" data-men="${p.id}"><option value="">–</option>${club.mentors[p.id] != null && w.players[club.mentors[p.id]] ? `<option value="${club.mentors[p.id]}" selected>${esc(w.players[club.mentors[p.id]].lastName)}</option>` : ''}</select>` : Object.values(club.mentors).includes(p.id) ? '<small>Mentor 🎓</small>' : '–'}</td></tr>`; }).join('')}
       </tbody></table></div></div>`;
     el.querySelector('#useplan').onchange = (e) => { tr.plan = e.target.checked ? [...PLAN_TEMPLATES.standard.plan] : null; draw(); };
     el.querySelectorAll('[data-tpl]').forEach((b) => (b.onclick = () => { tr.plan = [...PLAN_TEMPLATES[b.dataset.tpl].plan]; toast(`Vorlage: ${PLAN_TEMPLATES[b.dataset.tpl].name}`, 1000); draw(); }));
@@ -59,6 +62,10 @@ export function trainingScreen(app, el) {
       setTimeout(() => document.addEventListener('click', function off(ev) { if (!host.contains(ev.target)) { host.remove(); document.removeEventListener('click', off); } }), 0);
     }));
     el.querySelectorAll('[data-rt]').forEach((s2) => { s2.onclick = (e) => e.stopPropagation(); s2.onchange = () => { startRetrain(w.players[s2.dataset.rt], s2.value || null); toast(s2.value ? `Umschulung auf ${s2.value} gestartet (ca. 4 Monate)` : 'Umschulung beendet', 1400); draw(); }; });
+    el.querySelectorAll('[data-st]').forEach((s2) => { s2.onclick = (e) => e.stopPropagation(); s2.onchange = () => { startStyleTrain(w.players[s2.dataset.st], s2.value || null); toast(s2.value ? `Stil-Training „${STYLES[s2.value].name}“ gestartet (ca. 3 Monate)` : 'Stil-Training beendet', 1400); draw(); }; });
+    // v4.0: mentor options are filled when the list is opened (hundreds of <option>s made the screen slow on phones)
+    const menOpts = (p) => `<option value="">–</option>${club.squad.map((id) => w.players[id]).filter((m) => m.age >= 27 && m.id !== p.id).sort((a, b) => (b.pos === p.pos) - (a.pos === p.pos) || leadership(b) - leadership(a)).map((m) => `<option value="${m.id}" ${club.mentors[p.id] === m.id ? 'selected' : ''}>${esc(m.lastName)} (${m.pos}, ${m.age})</option>`).join('')}`;
+    el.querySelectorAll('[data-men]').forEach((s2) => { const fill = () => { if (s2.dataset.full) return; s2.dataset.full = '1'; s2.innerHTML = menOpts(w.players[s2.dataset.men]); }; s2.addEventListener('pointerdown', fill); s2.addEventListener('focus', fill); s2.addEventListener('keydown', fill); });
     el.querySelectorAll('[data-men]').forEach((s2) => { s2.onclick = (e) => e.stopPropagation(); s2.onchange = () => {
       if (s2.value && Object.keys(club.mentors).length >= MAX_MENTORS && !club.mentors[s2.dataset.men]) { toast(`Maximal ${MAX_MENTORS} Mentorenpaare.`); draw(); return; }
       if (s2.value) club.mentors[s2.dataset.men] = +s2.value; else delete club.mentors[s2.dataset.men]; toast(s2.value ? 'Mentor zugewiesen' : 'Mentor entfernt', 1000); }; });

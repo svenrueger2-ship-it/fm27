@@ -8,7 +8,7 @@ import { esc, money, toast, confirmDialog, modal } from '../dom.js';
 
 export function stadiumScreen(app, el) {
   const w = app.world;
-  let preview = null;
+  let preview = null, pvT = 0;
   const draw = (rebuild3D = false) => {
     const club = app.club, st = club.stadium, L = st.layout, lg = userLeague(w);
     const rank = computeTable(lg).findIndex((r) => r.id === club.id) + 1;
@@ -45,7 +45,9 @@ export function stadiumScreen(app, el) {
       </div></div>`;
     // 3D preview
     const host = el.querySelector('#sb3d');
-    preview?.dispose(); preview = createStadiumPreview(host, { club, quality: app.settings.quality });
+    // v4.0: the page appears first, the 3D preview is built right after (no frozen tap)
+    preview?.dispose(); preview = null; clearTimeout(pvT);
+    pvT = setTimeout(() => { if (host.isConnected) preview = createStadiumPreview(host, { club, quality: app.settings.quality }); }, 30);
     const go = async (opt, standIdx) => {
       if (!(await confirmDialog(`${standIdx != null ? STAND_NAMES[standIdx] + ': ' : ''}${opt.label} für ${money(opt.cost)}? Bauzeit ${opt.weeks} Wochen.`, 'Bauen'))) return;
       const r = startProject(w, club, opt, standIdx);
@@ -62,7 +64,7 @@ export function stadiumScreen(app, el) {
     el.querySelector('#naming').onclick = () => namingDialog(app, club, () => draw(true));
   };
   draw(true);
-  return () => preview?.dispose();
+  return () => { clearTimeout(pvT); preview?.dispose(); };
 }
 
 function namingDialog(app, club, done) {

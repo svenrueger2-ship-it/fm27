@@ -1187,3 +1187,59 @@ html.mobile .u-ctrl { padding: .3rem .45rem; gap: .3rem; } html.mobile .u-ctrl .
 .ana-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: .35rem; }
 .ana-grid div { background: rgba(255,255,255,.04); border-radius: 8px; padding: .35rem .5rem; text-align: center; }
 .ana-grid b { display: block; font-size: 1.1rem; } .ana-grid small { color: var(--muted); font-size: .7rem; }
+/* v4.0 */
+.talk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+.talk-grid .btn{display:flex;flex-direction:column;align-items:flex-start;white-space:normal;text-align:left;padding:.6rem .7rem}
+.talk-grid .btn small{opacity:.7;font-weight:400}
+.talk-res{padding:10px 0}.talk-res b{font-size:1.1rem}
+.pp-style.lrn{background:rgba(255,255,255,.08)}
+.legend-card .chron{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}
+.chron-d{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04)}
+.ov-card #ov-talk{margin-right:6px}
+/* v4.0 phone fit: lists scroll inside their card, stacked cards flow into two columns */
+html.mobile .tbl tbody tr { content-visibility: auto; contain-intrinsic-size: auto 30px; }
+@media (orientation: landscape) and (max-height: 600px) {
+  html.mobile .page .card.table-wrap { max-height: calc(100vh - 52px); overflow: auto; overscroll-behavior: contain; }
+  html.mobile .page .card.table-wrap thead th { position: sticky; top: -.56rem; z-index: 2; background: #17132b; }
+  html.mobile .grid2 { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: .45rem; margin-bottom: .45rem; }
+  html.mobile .kv { padding: .16rem 0; font-size: .8rem; }
+  html.mobile .spirit b { font-size: 28px; }
+  html.mobile .card h4 { margin: .35rem 0 .2rem; font-size: .85rem; }
+  html.mobile .meter { margin: .2rem 0; }
+  html.mobile .page.flow2 { column-count: 2; column-gap: .45rem; }
+  html.mobile .page.flow2 > * { break-inside: avoid; }
+  html.mobile .page.flow2 > :is(.page-head, .tabs, .table-wrap, .row-actions, .vs-screen, .str-bars, .club-hero, .pp-hero) { column-span: all; }
+  html.mobile .page.flow2 > .grid-2, html.mobile .page.flow2 > .grid2, html.mobile .page.flow2 > .grid-3 { display: block; }
+  html.mobile .page.flow2 > :is(.grid-2, .grid2, .grid-3) > .card { margin-bottom: .45rem; break-inside: avoid; }
+  html.mobile .talk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  html.mobile .talk-grid .btn { padding: .35rem .5rem; }
+  html.mobile .legend-card .chron { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  html.mobile .pcard-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .4rem; }
+  html.mobile .pcard-grid > * { zoom: .7; }
+  html.mobile .ach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; max-height: calc(100vh - 118px); overflow: auto; }
+  html.mobile .ach { padding: 5px 7px; gap: 7px; } html.mobile .ach span { font-size: 18px; } html.mobile .ach small { font-size: 10.5px; }
+  html.mobile .staff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  html.mobile .staff-card { padding: 6px 8px; gap: 1px; font-size: .82rem; } html.mobile .staff-card .btn { padding: .2rem .5rem; }
+  html.mobile .deleg-row { padding: 3px 0; gap: 6px; } html.mobile .deleg-row small { font-size: .72rem; margin-top: 0; }
+  html.mobile .deleg-row .tabs button { padding: .2rem .45rem; font-size: .78rem; }
+  html.mobile .sb-top { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important; gap: .45rem; margin-bottom: .45rem; }
+  html.mobile .sb-view { min-height: calc(100vh - 110px) !important; }
+  html.mobile .sb-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; margin-bottom: .45rem; }
+  html.mobile .week-plan { gap: 4px; margin: 5px 0; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  html.mobile .lvl-ring { width: 74px; height: 74px; } html.mobile .lvl-ring b { font-size: 1.7rem; }
+  html.mobile .week-plan .sess { min-height: 46px; padding: 4px 2px; border-radius: 9px; } html.mobile .week-plan .sess span { font-size: 16px; } html.mobile .week-plan .sess b { font-size: 10.5px; }
+  html.mobile .grid-3 > .btn[data-focus] { padding: .35rem .45rem !important; } html.mobile .grid-3 > .btn[data-focus] > div { font-size: 1.1rem !important; } html.mobile .grid-3 > .btn[data-focus] small { display: none; }
+  html.mobile .sim-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  html.mobile .club-hero .crest, html.mobile .hero-crest { max-width: 64px; max-height: 64px; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  html.mobile .club-hero .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  html.mobile .club-hero .kpis small { font-size: .62rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html.mobile .hero-mgr { margin: .2rem 0; font-size: .78rem; }
+  html.mobile .grid-4 > .card h3 { margin-bottom: .2rem; }
+  html.mobile .grid-4 > .card p { margin: .15rem 0; font-size: .8rem; }
+}

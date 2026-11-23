@@ -472,7 +472,7 @@ function carrierThink(E, T, p) {
   // tired players and big moments make decisions less precise (experience helps)
   const tired = 1 + (1 - p.energy) * 0.9;
   const nerves = 1 + gs.nerves * clamp((26 - (p.data.age || 26)) / 20 + 0.15, 0, 0.35);
-  const noise = () => rng.normal(0, 0.02 * (1.25 - vision) * (1.4 - 0.6 * (T.familiarity ?? 0.8)) * tired * nerves * (E.weatherNoise || 1) * (fx.calm || 1) * leaderCalm);
+  const noise = () => rng.normal(0, 0.02 * (1.25 - vision) * (1.4 - 0.6 * (T.familiarity ?? 0.8)) * tired * nerves * (E.weatherNoise || 1) * (fx.calm || 1) * leaderCalm * (T.focus?.calm || 1));
   const lossCost = (me.x < -25 ? 0.32 : me.x < 0 ? 0.2 : me.x < 25 ? 0.13 : 0.07) * (1.2 - tac.directness * 0.4) * (1 - gs.urgency * 0.4 + gs.protect * 0.6) * (fx.safe || 1);
   const options = [];
 

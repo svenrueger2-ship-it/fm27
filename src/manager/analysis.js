@@ -40,3 +40,21 @@ export function opponentReport(world, oppId) {
     coach: opp.ai?.coach || null, tips: tips.slice(0, q >= 4 ? 4 : q >= 3 ? 3 : 2), quality: q, strength: Math.round(sOpp), mine: Math.round(sMe),
   };
 }
+
+// v4.0: concrete tactic proposal from the opponent report – the user can take it over with one tap.
+export function suggestTactic(world, R) {
+  const me = world.clubs[world.userClubId], T = R.club.tactic, cur = me.tactic;
+  const ch = {}, why = [];
+  const fav = R.mine - R.strength;
+  if (T.line > 0.6) { ch.directness = 0.75; ch.tempo = 0.75; why.push('Hohe Abwehr → direkt und schnell hinter die Kette'); }
+  else if (T.pressing < 0.35 && T.line < 0.45) { ch.width = 0.8; ch.tempo = 0.4; ch.directness = 0.3; why.push('Tiefer Block → Breite und Geduld'); }
+  if (T.pressing > 0.65) { ch.directness = Math.max(ch.directness ?? 0, 0.65); why.push('Hohes Pressing → Pressing mit langen Bällen überspielen'); }
+  if (T.width > 0.65) { ch.compactness = 0.7; why.push('Flügelspiel → kompakt verschieben'); }
+  if (fav < -5) { ch.mentality = 0.35; ch.pressing = 0.35; ch.line = 0.35; why.push('Gegner klar stärker → tiefer stehen, kontern'); }
+  else if (fav > 5) { ch.mentality = 0.65; ch.pressing = 0.7; why.push('Wir sind Favorit → mutig, früh anlaufen'); }
+  if (R.weakest === 'Abwehr' && fav > -5) { ch.mentality = Math.max(ch.mentality ?? 0.5, 0.6); why.push('Schwache Abwehr → offensiver'); }
+  const changes = Object.fromEntries(Object.entries(ch).filter(([k, v]) => Math.abs((cur[k] ?? 0.5) - v) > 0.06));
+  return { changes, why: why.slice(0, R.quality >= 3 ? 4 : 2) };
+}
+
+export const TACTIC_LABEL = { mentality: 'Mentalität', pressing: 'Pressing', line: 'Abwehrlinie', width: 'Breite', tempo: 'Tempo', directness: 'Direktheit', compactness: 'Kompaktheit' };

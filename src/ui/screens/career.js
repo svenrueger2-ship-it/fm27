@@ -1,6 +1,6 @@
 // Career screen: reputation, history, titles, job offers, sacking and the national team job.
 import { crest, esc, flag, nationName, money, confirmDialog, toast, pname, ratingClass } from '../dom.js';
-import { ensureCareer, repLabel, takeJob, acceptNat, resignNat, natSquad } from '../../manager/career.js';
+import { ensureCareer, repLabel, takeJob, acceptNat, resignNat, natSquad, legendStatus, chronicle } from '../../manager/career.js';
 import { ensureMood } from '../../manager/events.js';
 import { newRng } from '../../manager/season.js';
 import { nationSquad, nextTournament, nationStrength } from '../../manager/nationals.js';
@@ -29,6 +29,10 @@ export function careerScreen(app, el) {
             : '<p class="muted">Mit einem Ruf ab ca. 62 melden sich Nationalverbände (meist im Sommer).</p>'}
         </div>
       </div>
+      ${(() => { const Lg = legendStatus(w), Ch = chronicle(w); const pct = Lg.next ? Math.round(((Lg.pts - (Lg.level ? [0, 60, 160, 320, 560, 900][Lg.level] : 0)) / (Lg.next.pts - [0, 60, 160, 320, 560, 900][Lg.level])) * 100) : 100;
+        return `<div class="card legend-card"><div class="row-between"><h3>${Lg.icon} Legendenstatus: ${esc(Lg.name)}</h3><b>${Lg.pts} Pkt.</b></div>
+          <div class="rep-bar"><i style="width:${pct}%"></i></div><p class="small muted">${Lg.next ? `Nächste Stufe: ${Lg.next.icon} ${esc(Lg.next.name)} ab ${Lg.next.pts} Punkten` : 'Höchste Stufe erreicht.'} · ${Lg.parts.filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' · ')}</p>
+          ${Ch.length ? `<div class="chron">${Ch.map((D) => `<div class="chron-d"><b>${D.decade}er</b><small>${D.seasons} Saison${D.seasons === 1 ? '' : 's'} · ${D.clubs.map((id) => esc(w.clubs[id].short)).join(', ')} · bester Platz ${D.best < 99 ? D.best + '.' : '–'} · Ziele ${D.reached}/${D.seasons}</small>${D.titles.length ? `<small>🏆 ${D.titles.map(esc).join(', ')}</small>` : ''}</div>`).join('')}</div>` : '<p class="muted small">Die Chronik füllt sich nach der ersten Saison.</p>'}</div>`; })()}
       <div class="card table-wrap"><h3>Stationen & Saisons</h3><table class="tbl compact"><thead><tr><th>Saison</th><th>Verein</th><th>Liga</th><th>Platz</th><th>Ziel</th><th>Titel</th><th>Ruf</th></tr></thead><tbody>
         ${C.seasons.slice().reverse().map((s) => `<tr><td>${s.season}/${String((s.season + 1) % 100).padStart(2, '0')}</td><td>${crest(w.clubs[s.clubId], 16)} ${esc(w.clubs[s.clubId].short)}</td><td>${esc(s.league)}</td><td><b>${s.rank}.</b></td><td class="${s.reached ? 'good' : 'bad'}">${esc(s.goal)} ${s.reached ? '✓' : '✗'}</td><td>${esc(s.titles.join(', ') || '–')}</td><td>${s.rep}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Die erste Saison läuft.</td></tr>'}</tbody></table>
         <p class="muted small">Vereine: ${C.clubs.map((c) => `${esc(w.clubs[c.clubId].short)} (${c.from}${c.to ? `–${c.to}` : '–heute'})`).join(' → ')}</p></div></div>`;

@@ -10,7 +10,8 @@ import { simAheadButton, bindSimAhead } from './simAhead.js';
 import { pressQuestions, applyPressAnswer, postPressQuestions } from '../../manager/events.js';
 import { autoPress } from '../../manager/staff.js';
 import { Commentator } from '../../match/commentary.js';
-import { opponentReport } from '../../manager/analysis.js';
+import { opponentReport, suggestTactic, TACTIC_LABEL } from '../../manager/analysis.js';
+import { TALKS, talkHint, holdTalk, reactionText } from '../../manager/teamtalk.js';
 import { userCupFixture, resolveCupFixture, cupById } from '../../manager/cups.js';
 import { isDirector, ensureCoach, coachDecides } from '../../manager/director.js';
 
@@ -86,6 +87,7 @@ export function matchdayScreen(app, el, params = {}) {
       <button class="btn lg" id="instant">⏭ Sofortsimulation</button>
       <button class="btn lg ghost" id="tac">${isDirector(w) ? `👔 Aufstellung von ${esc(w.coach?.name || 'Trainer')}` : '📋 Taktik & Aufstellung'}</button>
       <button class="btn lg ghost" id="scoutopp">🔎 Gegneranalyse</button>
+      <button class="btn lg ghost" id="talk" ${talkDone(w) || isDirector(w) ? 'disabled' : ''}>🗣️ Kabinenansprache${talkDone(w) ? ' ✓' : ''}</button>
       <button class="btn lg ghost" id="press" ${w.pressWeek === w.week ? 'disabled' : ''}>🎤 Pressekonferenz${pressByStaff ? ' (Co-Trainer) ✓' : w.pressWeek === w.week ? ' ✓' : ''}</button>
     </div>
     <div class="grid-2"><div class="card"><h3>${esc(H.short)} – Startelf</h3>${lineupList(w, H)}</div><div class="card"><h3>${esc(A.short)} – Startelf</h3>${lineupList(w, A)}</div></div>
@@ -98,7 +100,8 @@ export function matchdayScreen(app, el, params = {}) {
   el.querySelector('#scoutopp').onclick = () => {
     const oppId = fx.h === w.userClubId ? fx.a : fx.h;
     const R = opponentReport(w, oppId);
-    modal(`<h3>🔎 Gegneranalyse: ${crest(R.club, 26)} ${esc(R.club.name)}</h3>
+    const SG = suggestTactic(w, R);
+    const M = modal(`<h3>🔎 Gegneranalyse: ${crest(R.club, 26)} ${esc(R.club.name)}</h3>
       <p class="muted">Bericht deines Co-Trainers (${'★'.repeat(R.quality)}) – bessere Co-Trainer liefern mehr Details.</p>
       <div class="kv"><span>System · Spielstil</span><b>${esc(R.formation)} · ${esc(R.preset)}</b></div>
       ${R.coach ? `<div class="kv"><span>Trainer</span><b>${esc(R.coach.name)} ${'★'.repeat(R.coach.quality)}</b></div>` : ''}
@@ -108,7 +111,15 @@ export function matchdayScreen(app, el, params = {}) {
       <p>Stärkster Mannschaftsteil: <b>${esc(R.strongest || '–')}</b>, schwächster: <b>${esc(R.weakest || '–')}</b>.${R.style.length ? ` Der Gegner ${esc(R.style.join(', '))}.` : ''}</p>
       ${R.danger ? `<p>⚠️ Gefährlichster Spieler: <b>${esc(R.danger.firstName)} ${esc(R.danger.lastName)}</b> (${R.danger.pos}, ${R.danger.ovr}, ${R.danger.stats.goals} Tore / ${R.danger.stats.assists} Vorlagen)</p>` : ''}
       <h4>Empfehlungen</h4>${R.tips.map((t) => `<p>• ${esc(t)}</p>`).join('') || '<p class="muted">Keine besonderen Auffälligkeiten.</p>'}
-      <div class="row-actions end"><button class="btn primary" onclick="this.closest('.modal-wrap').remove(); window.ufm.go('tactics')">Zur Taktik</button></div>`);
+      ${Object.keys(SG.changes).length ? `<h4>📋 Taktik-Vorschlag</h4><p class="small">${SG.why.map(esc).join(' · ')}</p><p class="small">${Object.entries(SG.changes).map(([k, v]) => `${TACTIC_LABEL[k]}: <b>${Math.round((w.clubs[w.userClubId].tactic[k] ?? 0.5) * 100)} → ${Math.round(v * 100)}</b>`).join(' · ')}</p>` : ''}
+      <div class="row-actions end">${Object.keys(SG.changes).length && !isDirector(w) ? '<button class="btn" id="sg-apply">✅ Vorschlag übernehmen</button>' : ''}<button class="btn primary" onclick="this.closest('.modal-wrap').remove(); window.ufm.go('tactics')">Zur Taktik</button></div>`);
+    M.el.querySelector('#sg-apply')?.addEventListener('click', () => { const me = w.clubs[w.userClubId]; me.tactic = { ...me.tactic, ...SG.changes, preset: 'Individuell' }; app.autosave?.(); toast('Taktik angepasst'); M.close(); });
+  };
+  el.querySelector('#talk').onclick = () => {
+    const me = app.club, opp = me.id === H.id ? A : H;
+    const xi = me.lineup.xi.map((id) => w.players[id]).filter(Boolean);
+    const ctx = { diff: teamStrength(me, w.players) - teamStrength(opp, w.players) + (me.id === H.id ? 1.5 : -1.5), form: me.formRun > 0 ? 1 : me.formRun < 0 ? -1 : 0, rep: w.career?.rep ?? 50 };
+    talkModal(w, ctx, xi, false, (res) => { w.talk = { season: w.season, week: w.week, key: res.key, focus: res.focus, reaction: res.reaction }; app.autosave?.(); app.go('matchday'); });
   };
   el.querySelector('#press').onclick = () => {
     const club = app.club, opp = club.id === H.id ? A : H;
@@ -145,6 +156,8 @@ function liveMatch(app, el, params) {
   engine.bigMatch = !friendly && isBigMatch(w, fx);
   // match preparation from the training week and team spirit (v2.0)
   for (const T of engine.teams) { const c = T.club; if (c.matchPrep?.week === w.week) T.familiarity = Math.min(1, (T.familiarity ?? 0.8) + c.matchPrep.prep * 0.05); if (c.spirit != null) T.familiarity = Math.min(1, Math.max(0.4, (T.familiarity ?? 0.8) + (c.spirit - 60) / 400)); }
+  if (!friendly && userTeam >= 0 && talkDone(w)) engine.setFocus(userTeam, w.talk.focus);
+  let htTalk = false;
   engine.pyro = S.pyro || 'normal';
   if (S.var === false) engine.varRate = 0;
   // Konferenz: the other matches of this matchday are decided now and revealed minute by minute
@@ -429,7 +442,19 @@ function liveMatch(app, el, params) {
     if (finished || instantRunning || !O) return;
     O.classList.add('show');
     O.innerHTML = `<div class="ov-card"><h2>${full ? 'Abpfiff' : 'Halbzeit'}</h2><div class="ov-score">${crest(T0.club, 40)}<b>${T0.score} : ${T1.score}</b>${crest(T1.club, 40)}</div>${statsHtml()}
-      <button class="btn primary lg" id="ov-go">${full ? 'Zur Spielauswertung' : '2. Halbzeit starten'}</button></div>`;
+      ${!full && userTeam >= 0 && !friendly && !director && !htTalk ? '<button class="btn lg" id="ov-talk">🗣️ Halbzeitansprache</button> ' : ''}<button class="btn primary lg" id="ov-go">${full ? 'Zur Spielauswertung' : '2. Halbzeit starten'}</button></div>`;
+    O.querySelector('#ov-talk')?.addEventListener('click', () => {
+      const U = engine.teams[userTeam], Op = engine.teams[1 - userTeam];
+      const xi = U.players.filter((p) => !p.offPitch && !p.sentOff).map((p) => p.data);
+      const ctx = { half: true, lead: U.score - Op.score, diff: teamStrength(U.club, w.players) - teamStrength(Op.club, w.players), form: 0, rep: w.career?.rep ?? 50 };
+      talkModal(w, ctx, xi, true, (res) => {
+        htTalk = true;
+        const prev = U.focus || { calm: 1, work: 1, foul: 1 };
+        engine.setFocus(userTeam, { calm: (prev.calm + res.focus.calm * 2) / 3, work: (prev.work + res.focus.work * 2) / 3, fam: ((prev.fam || 0) + (res.focus.fam || 0) * 2) / 3, foul: res.focus.foul });
+        cmd(res.reaction.icon, `Halbzeitansprache: ${TALKS[res.key].name}`, `Die Mannschaft ist ${res.reaction.label}`);
+        O.querySelector('#ov-talk')?.remove();
+      });
+    });
     O.querySelector('#ov-go').onclick = () => {
       O.classList.remove('show'); O.innerHTML = '';
       if (full) report(); else engine.resume();
@@ -522,4 +547,22 @@ export async function commitResult(app, { r, H, A, friendly, record }) {
   finishWeek(w, rng);
   await app.autosave();
   app.go('calendar');
+}
+
+// ------------------------------------------------------------------ v4.0 team talk
+function talkDone(w) { return w.talk && w.talk.season === w.season && w.talk.week === w.week; }
+
+function talkModal(w, ctx, xi, half, done) {
+  const H = talkHint(ctx, xi);
+  const m = modal(`<h3>🗣️ ${half ? 'Halbzeitansprache' : 'Kabinenansprache'}</h3>
+    <p class="muted">Co-Trainer: ${esc(H.text)} Mein Tipp: <b>${TALKS[H.best].icon} ${TALKS[H.best].name}</b>.</p>
+    <div class="talk-grid">${Object.entries(TALKS).map(([k, t]) => `<button class="btn" data-talk="${k}"><b>${t.icon} ${t.name}</b><small>${t.desc}</small></button>`).join('')}</div><div id="talk-res"></div>`);
+  m.el.querySelectorAll('[data-talk]').forEach((b) => (b.onclick = () => {
+    const res = holdTalk(b.dataset.talk, ctx, xi, newRng(w));
+    const per = { top: 0, gut: 0, neutral: 0, schlecht: 0 }; res.per.forEach((x) => per[x.r]++);
+    m.el.querySelector('.talk-grid').remove();
+    m.el.querySelector('#talk-res').innerHTML = `<div class="talk-res"><b>${res.reaction.icon} Die Mannschaft ist ${esc(res.reaction.label)}</b><p>${esc(reactionText(res))}</p>
+      <p class="small muted">🤩 ${per.top} · 💪 ${per.gut} · 😐 ${per.neutral} · 😟 ${per.schlecht}</p><button class="btn primary" id="talk-ok">Weiter</button></div>`;
+    m.el.querySelector('#talk-ok').onclick = () => { m.close(); done(res); };
+  }));
 }

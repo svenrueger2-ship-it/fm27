@@ -1,4 +1,5 @@
 // Youth academy (U19) for the user's club and realistic market values for all players.
+import { rollStyleTalent } from '../data/styles.js';
 import { clamp } from '../core/rng.js';
 import { generatePlayer, marketValue } from '../data/generator.js';
 import { trainPlayer } from './training.js';
@@ -18,6 +19,7 @@ function makeYouth(world, rng, club, age) {
   y.pot = clamp(Math.round(44 + club.rep * 0.18 + lvl * 2 + rng.normal(0, 6) + (rng.chance(0.03 + lvl * 0.015) ? rng.int(6, 12) : 0)), y.ovr + 4, 94);
   y.clubId = null; y.youthOf = club.id; y.contract = 0; y.wage = 0; y.prog = {}; y.loan = null; y.releaseClause = null; y.career = []; y.moves = [];
   y.value = marketValue(y.ovr, y.age, y.pot);
+  rollStyleTalent(y, rng);
   world.players[y.id] = y;
   return y;
 }
@@ -37,7 +39,7 @@ export function weeklyYouth(world, rng) {
   const club = world.clubs[world.userClubId];
   const lvl = club.facilities?.youth ?? 2;
   const fake = { ...club, facilities: { ...club.facilities, training: Math.max(1, lvl - 1) }, coachFactor: 0.55 };
-  for (const p of youthPlayers(world)) { p.playedThisWeek = true; trainPlayer(p, fake, rng, skillRank(world, 'jugend')); p.value = marketValue(p.ovr, p.age, p.pot); }
+  for (const p of youthPlayers(world)) { if (p.styleTalent === undefined) rollStyleTalent(p, rng); p.playedThisWeek = true; trainPlayer(p, fake, rng, skillRank(world, 'jugend')); p.value = marketValue(p.ovr, p.age, p.pot); }
 }
 
 export function promoteYouth(world, id) {

@@ -1,3 +1,4 @@
+import { IS_MOBILE } from '../../core/device.js';
 // Transfers & scouting: market search, watchlist, scout assignments, bids, contract talks,
 // loans with buy option, incoming offers, transfer list, contract extensions, history.
 import {
@@ -112,12 +113,13 @@ function markt(app, el, redraw) {
       <div class="field"><span>&nbsp;</span><button class="btn primary" id="f-go">Suchen</button></div>
     </div><p class="muted">Stärke und Potenzial nicht gescouteter Spieler sind nur Schätzungen (Spanne). Ein Scout liefert exakte Werte und einen Bericht.</p></div>
     <div class="card table-wrap"><table class="tbl"><thead><tr><th>Spieler</th><th>Pos</th><th>Alter</th><th>Verein</th><th>Stärke</th><th>Potenzial</th><th>Marktwert</th><th>Ablöse</th><th></th></tr></thead><tbody>
-    ${res.map(({ p, est, price }) => { const c = p.clubId ? w.clubs[p.clubId] : null; const watched = w.scouting.watch.includes(p.id);
+    ${res.slice(0, app.tf.lim || (IS_MOBILE ? 40 : 120)).map(({ p, est, price }) => { const c = p.clubId ? w.clubs[p.clubId] : null; const watched = w.scouting.watch.includes(p.id);
       return `<tr data-p="${p.id}"><td class="nm">${portrait(p, c, 28)}<span>${flag(p.nation)} ${esc(pname(p))}${w.transfer.listed.includes(p.id) ? ' <i class="tag y">Transferliste</i>' : ''}${p.releaseClause ? ' <i class="tag b">Klausel</i>' : ''}${p.loan ? ' <i class="tag r">verliehen</i>' : ''}</span></td>
       <td><span class="pos pos-${POSITIONS[p.pos].group}">${p.pos}</span></td><td>${p.age}</td><td>${c ? `${crest(c, 18)} ${esc(c.short)}` : '<i class="tag">vereinslos</i>'}</td>
       <td><b class="${ratingClass(est.ovr)}">${fmtRange(est)}</b>${est.exact ? ' ✓' : ''}</td><td>${est.exact ? p.pot : potRange(est)}</td><td>${money(p.value)}</td><td><b>${c ? money(price) : 'ablösefrei'}</b></td>
       <td><button class="btn sm" data-watch="${p.id}">${watched ? '★' : '☆'}</button></td></tr>`; }).join('') || '<tr><td colspan="9" class="muted">Keine Spieler gefunden.</td></tr>'}
-    </tbody></table></div>`;
+    </tbody></table>${res.length > (app.tf.lim || (IS_MOBILE ? 40 : 120)) ? '<div class="row-actions center"><button class="btn sm" id="f-more">Mehr anzeigen</button></div>' : ''}</div>`;
+  el.querySelector('#f-more')?.addEventListener('click', () => { app.tf.lim = (app.tf.lim || 40) + 40; redraw(); });
   const read = () => { f.name = el.querySelector('#f-name').value; f.pos = el.querySelector('#f-pos').value; f.league = el.querySelector('#f-league').value; f.sort = el.querySelector('#f-sort').value; f.maxAge = el.querySelector('#f-age').value; f.minOvr = el.querySelector('#f-ovr').value; f.maxPrice = el.querySelector('#f-price').value; };
   el.querySelector('#f-go').onclick = () => { read(); redraw(); };
   el.querySelectorAll('select').forEach((s) => (s.onchange = () => { read(); redraw(); }));

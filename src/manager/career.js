@@ -102,6 +102,7 @@ export function careerSeasonEnd(world, rng, { rank, cupWins, tournament }) {
   C.rep = Math.round(clamp(C.rep + delta, 5, 99));
   C.seasons.push({ season: world.season, clubId: club.id, league: L.name, rank, goal, reached: rank <= target, titles, rep: C.rep });
   for (const t of titles) C.titles.push({ season: world.season, clubId: club.id, title: t });
+  const lv = legendStatus(world).level; if (lv > (C.legendLevel ?? 0)) { C.legendLevel = lv; world.news.unshift({ season: world.season + 1, week: 0, text: `${LEGEND_LEVELS[lv][1]} Neuer Legendenstatus: Du bist jetzt „${LEGEND_LEVELS[lv][2]}“.` }); }
   // national team job
   if (C.nat && tournament) {
     const T = tournament, mine = C.nat;
@@ -137,4 +138,35 @@ export function natSquad(world) {
 export function natCoachBonus(world, nat) {
   const C = world.career; if (!C?.nat || C.nat !== nat) return 0;
   return (C.rep - 60) / 20; // a renowned coach gets more out of his team
+}
+
+// ------------------------------------------------------------------ v4.0 legend status & chronicle
+export const LEGEND_LEVELS = [
+  [0, '🌱', 'Neuling'], [60, '📋', 'Trainer'], [160, '🎖️', 'Erfahrener Trainer'], [320, '🏅', 'Meistertrainer'],
+  [560, '🏆', 'Trainerlegende'], [900, '👑', 'Ikone des Fußballs'],
+];
+/** Legend points from matches, wins, seasons, reached goals, titles and national team success. */
+export function legendStatus(world) {
+  const C = ensureCareer(world), S = world.userStats || { matches: 0, w: 0 };
+  const titles = C.titles.filter((t) => !t.nat).length, natTitles = C.titles.filter((t) => t.nat).length;
+  const goals = C.seasons.filter((s) => s.reached).length;
+  const parts = [
+    ['Spiele', S.matches * 0.5], ['Siege', S.w * 0.8], ['Saisons', C.seasons.length * 6], ['Ziele erreicht', goals * 10],
+    ['Titel', titles * 45], ['Länderspieltitel', natTitles * 90], ['Ruf', Math.max(0, C.rep - 50) * 1.2],
+  ];
+  const pts = Math.round(parts.reduce((a, [, v]) => a + v, 0));
+  let i = LEGEND_LEVELS.length - 1; while (i > 0 && pts < LEGEND_LEVELS[i][0]) i--;
+  const next = LEGEND_LEVELS[i + 1];
+  return { pts, level: i, icon: LEGEND_LEVELS[i][1], name: LEGEND_LEVELS[i][2], next: next ? { pts: next[0], name: next[2], icon: next[1] } : null, parts: parts.map(([k, v]) => [k, Math.round(v)]) };
+}
+/** Chronicle grouped by decade: clubs, titles, best finish, goals reached. */
+export function chronicle(world) {
+  const C = ensureCareer(world), out = {};
+  for (const s of C.seasons) {
+    const d = Math.floor(s.season / 10) * 10;
+    const D = (out[d] ||= { decade: d, seasons: 0, clubs: new Set(), titles: [], best: 99, reached: 0 });
+    D.seasons++; D.clubs.add(s.clubId); D.titles.push(...s.titles); D.best = Math.min(D.best, s.rank); if (s.reached) D.reached++;
+  }
+  for (const t of C.titles) if (t.nat) { const d = Math.floor(t.season / 10) * 10; (out[d] ||= { decade: d, seasons: 0, clubs: new Set(), titles: [], best: 99, reached: 0 }).titles.push(`${t.title} (Nationalteam)`); }
+  return Object.values(out).sort((a, b) => b.decade - a.decade).map((D) => ({ ...D, clubs: [...D.clubs] }));
 }

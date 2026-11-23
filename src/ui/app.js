@@ -30,6 +30,7 @@ import { navHtml, placeInk, openPalette, icon } from './nav.js';
 import { openInbox } from '../manager/staff.js';
 import { applyTheme } from './theme.js';
 import { animateNumbers, runCeremonies } from './fx.js';
+import { mobileFit } from './mobileFit.js';
 import { windowInfo } from '../manager/transfers.js';
 
 const NAV = [
@@ -123,6 +124,7 @@ export class App {
     });
     const fn = SCREENS[this.screen] || dashboardScreen;
     this.cleanup = fn(this, r.querySelector('#content'), this.params) || null;
+    mobileFit(this, r.querySelector('#content'));
   }
 
   async save(slot = this.slot || 'slot1', silent = false) {

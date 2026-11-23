@@ -6,6 +6,7 @@ import { computeOverall, OUTFIELD_ATTRS, GK_ATTRS, POS_WEIGHTS } from '../data/a
 import { generatePlayer, marketValue } from '../data/generator.js';
 import { weeklyFinance, seasonFinanceClose } from './economy.js';
 import { weeklyTraining, recoverInjury } from './training.js';
+import { weeklyStyleTrain } from '../data/styles.js';
 import { weeklyTransfers, seasonTransfers } from './transfers.js';
 import { rollEvent, moodAfterMatch, sponsorSeasonClose, ensureMood, moodChange } from './events.js';
 import { createCups, weeklyCups, catchUpCups, cupFixturesOfWeek, resolveCupFixture, advanceCups } from './cups.js';
@@ -220,7 +221,7 @@ export function finishWeek(world, rng) {
       const rank = table.findIndex((r) => r.id === id) + 1;
       weeklyFinance(world, club, league, { homeGame: md.some((m) => m.h === id), rank });
       const rep = weeklyTraining(world, club, rng);
-      if (id === world.userClubId) world.trainingReport = { season: world.season, week: world.week + 1, items: rep };
+      if (id === world.userClubId) { for (const t of weeklyStyleTrain(world, club, rng)) { rep.unshift({ type: 'up', text: t }); world.news.unshift({ season: world.season, week: world.week, text: t }); } world.trainingReport = { season: world.season, week: world.week + 1, items: rep }; }
     }
   }
   ensureIntl(world); intlBreak(world, rng);
