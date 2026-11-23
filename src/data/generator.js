@@ -117,6 +117,7 @@ export function generateWorld(seed = (Math.random() * 1e9) | 0) {
   const world = { version: 1, seed, season: 2026, week: 0, userClubId: null, leagues: [], clubs: {}, players: {}, news: [], history: [], nextPlayerId: 1 };
   let clubId = 1;
   for (const L of LEAGUES) clubId = buildLeague(world, L, rng, clubId);
+  world.realV501 = true; // squads are real from the start
   migrateWorld(world);
   createCups(world, rng);
   ensureClubAI(world, rng);
@@ -133,8 +134,85 @@ export function addMissingLeagues(world, rng) {
     id = buildLeague(world, L, rng, id);
     added.push(L.name);
   }
-  if (added.length) ensureClubAI(world, rng);
+  if (added.length) { ensureClubAI(world, rng); world.realV501 = true; }
   return added;
+}
+
+/** Builds a club's squad: the real first team if known (REAL_SQUADS), otherwise generated players. */
+function fillSquad(world, club, L, rng, rep = club.rep, short = club.short) {
+  const used = new Set();
+  const add = (p, num) => {
+    p.clubId = club.id;
+    while (!num || used.has(num)) num = rng.int(2, 45);
+    used.add(num); p.number = num;
+    world.players[p.id] = p; club.squad.push(p.id);
+  };
+  const real = REAL_SQUADS[short];
+  if (real && real.length >= 12) {
+    const mean = 44 + rep * 0.39;
+    const CYCLE = { G: ['TW'], D: ['IV', 'IV', 'LV', 'RV', 'IV', 'LV', 'RV', 'IV'], M: ['ZM', 'DM', 'OM', 'LM', 'RM', 'ZM', 'DM', 'ZM', 'OM', 'RM', 'LM'], F: ['ST', 'LA', 'RA', 'ST', 'LA', 'RA', 'ST'] };
+    const STARTERS = { G: 1, D: 4, M: 4, F: 3 };
+    const HINT = { D: { 2: 'RV', 3: 'LV', 4: 'IV', 5: 'IV', 15: 'IV', 22: 'RV', 23: 'IV' }, M: { 6: 'DM', 8: 'ZM', 10: 'OM', 16: 'DM', 18: 'ZM' }, F: { 9: 'ST', 7: 'RA', 11: 'LA', 19: 'ST', 14: 'LA', 17: 'RA' } };
+    const groups = { G: [], D: [], M: [], F: [] };
+    real.forEach((r) => groups[r[2]].push(r));
+    for (const g of 'GDMF') {
+      groups[g].sort((a, b) => (a[0] || 99) - (b[0] || 99));
+      groups[g].forEach((r, i) => {
+        const [num, full, , nat] = r;
+        let pos = HINT[g]?.[num] || CYCLE[g][i % CYCLE[g].length];
+        const st = STARTERS[g];
+        let target = mean + (i < st ? 3.5 : i < st * 2 ? -0.5 : -5) + rng.normal(0, 3);
+        let age = clamp(Math.round(rng.normal(i < st ? 27 : 25, 3.5)), 18, 36);
+        if (i >= st * 2 && num >= 30) { age = rng.int(17, 21); target -= 3; }
+        const star = STARS[full];
+        if (star) { pos = star[0]; target = star[1]; age = star[2]; } else target = Math.min(target, 83);
+        let sp = full.indexOf(' ');
+        if (/ (Júnior|Junior|Jr\.?|Neto|Filho)$/.test(full) && full.split(' ').length === 2) sp = -1; // "Vinícius Júnior" stays whole
+        const first = sp > 0 ? full.slice(0, sp) : '';
+        const last = sp > 0 ? full.slice(sp + 1) : full;
+        add(generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(target, 35, 94)), age, L.country, rep, { nat, first, last }), num);
+      });
+    }
+    // Fill thin position groups with generated youngsters
+    const need = { TW: 2, IV: 3, LV: 1, RV: 1, ZM: 2, ST: 1 };
+    for (const [pos, n] of Object.entries(need)) {
+      let have = club.squad.filter((id) => world.players[id].pos === pos).length;
+      while (have++ < n) add(generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(mean - 6 + rng.normal(0, 3), 35, 90)), rng.int(17, 21), L.country, rep), pos === 'TW' ? 40 : 0);
+    }
+    // v5.0: small real squads (e.g. after a Wikipedia clean-up) are topped up to a playable 22
+    const FILL = ['IV', 'ZM', 'ST', 'LV', 'RV', 'DM', 'OM', 'LA', 'RA', 'TW'];
+    for (let k = 0; club.squad.length < 22 && k < 30; k++) add(generatePlayer(rng, world.nextPlayerId++, FILL[k % FILL.length], Math.round(clamp(mean - 7 + rng.normal(0, 3), 35, 88)), rng.int(17, 22), L.country, rep), 0);
+  } else SQUAD_TEMPLATE.forEach((pos, idx) => {
+    const count = SQUAD_TEMPLATE.slice(0, idx).filter((p) => p === pos).length;
+    const { mean, fc } = squadOvr(rng, rep, idx, pos);
+    const starter = count < Math.max(1, fc);
+    let age = clamp(Math.round(rng.normal(26, 4)), 17, 36);
+    let target = mean + (starter ? 3 : -3) + rng.normal(0, 3.5);
+    if (!starter && rng.chance(0.3)) { age = rng.int(17, 20); target -= 6; }
+    const p = generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(target, 35, 94)), age, L.country, rep);
+    add(p, pos === 'TW' ? (count === 0 ? 1 : count === 1 ? 12 : 30 + count) : rng.int(2, 40));
+  });
+  club.wageBudget = Math.round(club.squad.reduce((s, id) => s + world.players[id].wage, 0) * 1.1);
+}
+
+/** v5.0.1: saves started with 5.0.0 get the real squads of the new leagues (AI clubs only, once). */
+export function realSquadsForNewLeagues(world, rng) {
+  if (world.realV501) return 0;
+  world.realV501 = true;
+  let n = 0;
+  for (const L of LEAGUES.filter((x) => ['nl1', 'pt1', 'tr1', 'sc1'].includes(x.id))) {
+    const lg = world.leagues.find((l) => l.id === L.id); if (!lg) continue;
+    for (const id of lg.clubIds) {
+      const club = world.clubs[id];
+      if (!club || !REAL_SQUADS[club.short] || id === world.userClubId || world.hot?.humans?.some((h) => h.clubId === id)) continue;
+      for (const pid of club.squad) { const p = world.players[pid]; if (p && !p.loan) delete world.players[pid]; }
+      club.squad = club.squad.filter((pid) => world.players[pid]);
+      club.lineup = null;
+      fillSquad(world, club, L, rng);
+      n++;
+    }
+  }
+  return n;
 }
 
 function buildLeague(world, L, rng, clubId) {
@@ -154,56 +232,7 @@ function buildLeague(world, L, rng, clubId) {
         stats: { titles: 0 }, history: [],
         info: { founded: CLUB_INFO[short]?.founded ?? CLUB_FOUNDED[short] ?? null, titles: CLUB_INFO[short]?.titles ?? null },
       };
-      const used = new Set();
-      const add = (p, num) => {
-        p.clubId = club.id;
-        while (!num || used.has(num)) num = rng.int(2, 45);
-        used.add(num); p.number = num;
-        world.players[p.id] = p; club.squad.push(p.id);
-      };
-      const real = REAL_SQUADS[short];
-      if (real && real.length >= 15) {
-        const mean = 44 + rep * 0.39;
-        const CYCLE = { G: ['TW'], D: ['IV', 'IV', 'LV', 'RV', 'IV', 'LV', 'RV', 'IV'], M: ['ZM', 'DM', 'OM', 'LM', 'RM', 'ZM', 'DM', 'ZM', 'OM', 'RM', 'LM'], F: ['ST', 'LA', 'RA', 'ST', 'LA', 'RA', 'ST'] };
-        const STARTERS = { G: 1, D: 4, M: 4, F: 3 };
-        const HINT = { D: { 2: 'RV', 3: 'LV', 4: 'IV', 5: 'IV', 15: 'IV', 22: 'RV', 23: 'IV' }, M: { 6: 'DM', 8: 'ZM', 10: 'OM', 16: 'DM', 18: 'ZM' }, F: { 9: 'ST', 7: 'RA', 11: 'LA', 19: 'ST', 14: 'LA', 17: 'RA' } };
-        const groups = { G: [], D: [], M: [], F: [] };
-        real.forEach((r) => groups[r[2]].push(r));
-        for (const g of 'GDMF') {
-          groups[g].sort((a, b) => (a[0] || 99) - (b[0] || 99));
-          groups[g].forEach((r, i) => {
-            const [num, full, , nat] = r;
-            let pos = HINT[g]?.[num] || CYCLE[g][i % CYCLE[g].length];
-            const st = STARTERS[g];
-            let target = mean + (i < st ? 3.5 : i < st * 2 ? -0.5 : -5) + rng.normal(0, 3);
-            let age = clamp(Math.round(rng.normal(i < st ? 27 : 25, 3.5)), 18, 36);
-            if (i >= st * 2 && num >= 30) { age = rng.int(17, 21); target -= 3; }
-            const star = STARS[full];
-            if (star) { pos = star[0]; target = star[1]; age = star[2]; } else target = Math.min(target, 83);
-            let sp = full.indexOf(' ');
-            if (/ (Júnior|Junior|Jr\.?|Neto|Filho)$/.test(full) && full.split(' ').length === 2) sp = -1; // "Vinícius Júnior" stays whole
-            const first = sp > 0 ? full.slice(0, sp) : '';
-            const last = sp > 0 ? full.slice(sp + 1) : full;
-            add(generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(target, 35, 94)), age, L.country, rep, { nat, first, last }), num);
-          });
-        }
-        // Fill thin position groups with generated youngsters
-        const need = { TW: 2, IV: 3, LV: 1, RV: 1, ZM: 2, ST: 1 };
-        for (const [pos, n] of Object.entries(need)) {
-          let have = club.squad.filter((id) => world.players[id].pos === pos).length;
-          while (have++ < n) add(generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(mean - 6 + rng.normal(0, 3), 35, 90)), rng.int(17, 21), L.country, rep), pos === 'TW' ? 40 : 0);
-        }
-      } else SQUAD_TEMPLATE.forEach((pos, idx) => {
-        const count = SQUAD_TEMPLATE.slice(0, idx).filter((p) => p === pos).length;
-        const { mean, fc } = squadOvr(rng, rep, idx, pos);
-        const starter = count < Math.max(1, fc);
-        let age = clamp(Math.round(rng.normal(26, 4)), 17, 36);
-        let target = mean + (starter ? 3 : -3) + rng.normal(0, 3.5);
-        if (!starter && rng.chance(0.3)) { age = rng.int(17, 20); target -= 6; }
-        const p = generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(target, 35, 94)), age, L.country, rep);
-        add(p, pos === 'TW' ? (count === 0 ? 1 : count === 1 ? 12 : 30 + count) : rng.int(2, 40));
-      });
-      club.wageBudget = Math.round(club.squad.reduce((s, id) => s + world.players[id].wage, 0) * 1.1);
+      fillSquad(world, club, L, rng, rep, short);
       world.clubs[club.id] = club;
       league.clubIds.push(club.id);
       clubId++;

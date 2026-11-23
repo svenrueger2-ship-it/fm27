@@ -1,4 +1,6 @@
 import { CRESTS } from '../data/crests.js';
+import { realSquadsForNewLeagues } from '../data/generator.js';
+import { RNG } from '../core/rng.js';
 import { migrateWorld } from '../manager/migrate.js';
 // IndexedDB save system (multiple slots) + localStorage settings. Falls back to memory if unavailable.
 const DB_NAME = 'ufm3d';
@@ -58,7 +60,23 @@ export async function loadGame(slot) {
     const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(slot);
     req.onsuccess = () => resolve(req.result); req.onerror = () => resolve(null);
   }) : memory.get(slot);
-  return rec ? migrateWorld(JSON.parse(rec.data)) : null;
+  if (!rec) return null;
+  const w = migrateWorld(JSON.parse(rec.data));
+  // v5.0.1: real squads for the Eredivisie, Liga Portugal, Süper Lig and Scottish Premiership in 5.0.0 saves
+  if (w.leagues?.some((l) => l.id === 'nl1') && !w.realV501) {
+    const n = realSquadsForNewLeagues(w, new RNG((w.seed || 1) + w.season * 7 + w.week));
+    if (n) {
+      const ok = (id) => !!w.players[id];
+      if (w.rumours) w.rumours = w.rumours.filter((r) => ok(r.player));
+      if (w.transfer) { w.transfer.offers = (w.transfer.offers || []).filter((o) => ok(o.playerId)); w.transfer.listed = (w.transfer.listed || []).filter(ok); }
+      if (w.scouting) { w.scouting.watch = (w.scouting.watch || []).filter(ok); w.scouting.assignments = (w.scouting.assignments || []).filter((a) => ok(a.playerId)); }
+      w.freeAgents = (w.freeAgents || []).filter(ok);
+      if (w.career?.natSquad) w.career.natSquad = w.career.natSquad.filter(ok);
+      for (const h of w.hot?.humans || []) { const st = h.st; if (!st) continue; if (st.rumours) st.rumours = st.rumours.filter((r) => ok(r.player)); if (st.scouting) st.scouting.watch = (st.scouting.watch || []).filter(ok); if (st.transfer) st.transfer.offers = (st.transfer.offers || []).filter((o) => ok(o.playerId)); }
+      w.news?.unshift({ season: w.season, week: w.week, text: `🌍 Echte Kader 2026/27 für ${n} Vereine aus Eredivisie, Liga Portugal, Süper Lig und Scottish Premiership eingespielt.` });
+    }
+  }
+  return w;
 }
 
 export async function deleteGame(slot) {

@@ -82,7 +82,7 @@ export function startScreen(app, el) {
           <button data-go="credits"><i>✦</i>Credits</button>
           <button data-go="quit" class="quit"><i>⏻</i>Beenden</button>
         </nav>
-        <p class="sm-ver">Version ${GAME_VERSION} · ${isDesktop() ? 'Windows' : 'Browser'}</p>
+        <p class="sm-ver">Version ${GAME_VERSION} · ${isDesktop() ? 'Windows' : /FM27-Android/.test(navigator.userAgent) ? 'Android-App' : 'Browser'}</p>
       </aside>
       <main class="sm-center" id="m-center">${welcomeHtml()}</main>
       <aside class="sm-notes"><div class="pn-top"><small>BAKUSA</small><h3>Patchnotes</h3></div><div class="pn-list">${patchHtml()}</div></aside>

@@ -36,6 +36,8 @@ const C = {
   'Equatorial Guinea':['EQG','GQ','Äquatorialguinea','d'],'Lithuania':['LTU','LT','Litauen','l'],'Central African Republic':['CTA','CF','Zentralafrikanische Republik','d'],
   'Saudi Arabia':['KSA','SA','Saudi-Arabien','b'],'Burundi':['BDI','BI','Burundi','d'],'Costa Rica':['CRC','CR','Costa Rica','b'],'Mauritania':['MTN','MR','Mauretanien','d'],
   'Tanzania':['TAN','TZ','Tansania','d'],'Wales':['WAL','WAL','Wales','l'],
+  'Iran':['IRN','IR','Iran','b'],'Chad':['CHA','TD','Tschad','d'],'Bolivia':['BOL','BO','Bolivien','b'],'Puerto Rico':['PUR','PR','Puerto Rico','b'],
+  'Faroe Islands':['FRO','FO','Färöer','l'],'Grenada':['GRN','GD','Grenada','d'],'Iraq':['IRQ','IQ','Irak','b'],'Syria':['SYR','SY','Syrien','b'],'Liberia':['LBR','LR','Liberia','d'],
 };
 const SPECIAL = { ENG: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', SCO: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', WAL: '🏴󠁧󠁢󠁷󠁬󠁳󠁿' };
 const flagOf = (iso) => SPECIAL[iso] || [...iso].map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65)).join('');

@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.0.1', date: '23.11.2026', title: 'Echte Kader für die neuen Ligen',
+    neu: ['Echte Spieler 2026/27 für alle 66 Vereine aus Eredivisie, Liga Portugal, Süper Lig und Scottish Premiership (z. B. Leão, Osimhen, Lukaku, Salah, McGregor)', 'Echte Gründungsjahre und Meistertitel der neuen Vereine'],
+    verbessert: ['Spielstände aus 5.0.0 bekommen die echten Kader automatisch beim Laden (dein eigener Verein bleibt unverändert)', 'Versionsnummer jetzt auch in der Android-App im Hauptmenü sichtbar'],
+    behoben: [],
+    geplant: ['Zweite Ligen für Spanien, Italien, Frankreich'],
+  },
+  {
     version: '5.0.0', date: '23.11.2026', title: 'Hotseat, 4 neue Ligen & Deadline Day',
     neu: ['Hotseat-Mehrspieler: 2–4 Manager abwechselnd auf einem Gerät, offline, mit direkten Duellen', '4 neue Ligen mit echten Vereinen 2026/27: Eredivisie, Liga Portugal, Süper Lig, Scottish Premiership – mit Pokal', 'Deadline-Day-Liveticker mit Uhr, Breaking News und Last-Minute-Angeboten', 'Europapokal-Plätze neu verteilt auf 12 Ligen'],
     verbessert: ['Alte Spielstände bekommen die neuen Ligen zur nächsten Saison', 'Schottland spielt drei Runden (33 Spieltage)'],

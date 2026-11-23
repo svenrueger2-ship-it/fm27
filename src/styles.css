@@ -1018,7 +1018,7 @@ html.mobile .topbar { gap: .6rem; padding: .35rem .7rem; } html.mobile .brand .b
 html.mobile .page { padding: .7rem .8rem 1.2rem; } html.mobile .card { padding: .8rem .9rem; margin-bottom: .7rem; border-radius: 14px; }
 html.mobile .page-head h2, html.mobile .page > h2 { font-size: 1.5rem; }
 html.mobile .grid-3, html.mobile .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-html.mobile .sm-notes, html.mobile .sm-ver { display: none; }
+html.mobile .sm-notes { display: none; } html.mobile .sm-ver { font-size: .7rem; opacity: .7; margin: .2rem 0 0; }
 html.mobile .start3 { grid-template-columns: 240px 1fr !important; }
 html.mobile .sm-nav { padding: .8rem .6rem; } html.mobile .sm-nav nav button { padding: .5rem .6rem; }
 html.mobile .sm-brand { padding-bottom: .6rem; margin-bottom: .5rem; }
