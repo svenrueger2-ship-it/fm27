@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.4.0', date: '26.11.2026', title: 'Eigene Spielerfotos',
+    neu: ['Eigene Spielerfotos: im Spielerprofil über 📷 ein Foto wählen, im Kader über „📷 Fotos“ viele auf einmal zuordnen', 'Fotopakete (.fm27photos) importieren – die Fotos werden per Name den Spielern zugeordnet'],
+    verbessert: ['Fotos werden verkleinert nur im Spielstand gespeichert, nicht in den Spieldateien'],
+    behoben: [],
+    geplant: ['6.0: Derbys & Choreos, Standards selbst schießen, Saisonvorbereitung, Trainingszentrum, Transfer-KI 2.0, Frauen-Fußball'],
+  },
+  {
     version: '5.3.1', date: '26.11.2026', title: 'Hotfix: Meister-Feier auf Android',
     neu: [],
     verbessert: ['Meister- und Pokal-Feier: ein Tipp irgendwo schließt sie, nach 10 Sekunden schließt sie von selbst', 'Saison-Story: neuer Knopf „Überspringen“, Tippen funktioniert zuverlässig auf Touchscreens'],
