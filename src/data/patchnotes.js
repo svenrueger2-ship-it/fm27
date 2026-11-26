@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.2', date: '27.11.2026', title: 'Patchnotes überall sichtbar',
+    neu: ['Nach jedem Update erscheint einmal „Neu in Version …“ mit den wichtigsten Änderungen', 'Eigener Menüpunkt „Patchnotes“ im Hauptmenü – auch auf dem Handy und in der Android-App'],
+    verbessert: [],
+    behoben: ['Auf dem Handy waren die Patchnotes im Hauptmenü ausgeblendet'],
+    geplant: [],
+  },
+  {
     version: '7.0.1', date: '27.11.2026', title: 'Echte Spielerfotos: Schalke 04',
     neu: ['Echte Fotos für den kompletten Schalke-Kader (32 Spieler) – im Spiel und in den Repo-Daten', 'Schalke-Kader ergänzt: Anton Donkor, Max Grüger, Edion Gashi, Jean-Paul Ndiaye und Zaid Amoussou-Tchibara'],
     verbessert: ['Freigestellte Fotos mit transparentem Hintergrund werden sauber auf dunklem Grund dargestellt'],

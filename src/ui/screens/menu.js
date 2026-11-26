@@ -74,6 +74,7 @@ export function startScreen(app, el) {
           <button data-go="play"><i>✨</i>Neues Spiel</button>
           <button data-go="load"><i>💾</i>Spielstände</button>
           <button data-go="world"><i>🌍</i>Fußballwelt</button>
+          <button data-go="notes"><i>📋</i>Patchnotes <span class="pn-badge">v${esc(GAME_VERSION)}</span></button>
           <button data-go="settings"><i>⚙️</i>Einstellungen</button>
           <button data-go="quit" class="quit"><i>⏻</i>Beenden</button>
         </nav>
@@ -87,6 +88,15 @@ export function startScreen(app, el) {
   const center = el.querySelector('#m-center');
   let latest = null, latestWorld = null;
   el.querySelectorAll('.pn-head').forEach((h) => (h.onclick = () => h.parentElement.classList.toggle('open')));
+  try { // v7.0.1: show what's new once after every update (the side panel is hidden on phones)
+    if (localStorage.getItem('fm27-seen-version') !== GAME_VERSION) {
+      localStorage.setItem('fm27-seen-version', GAME_VERSION);
+      const p = PATCHNOTES[0];
+      const m = modal(`<div class="pn-new"><small>Neu in Version ${esc(p.version)}</small><h2>${esc(p.title)}</h2><ul>${[...(p.neu || []), ...(p.verbessert || []), ...(p.behoben || [])].slice(0, 8).map((x) => `<li>${esc(x)}</li>`).join('')}</ul><div class="row-actions"><button class="btn primary" id="pn-ok">Los geht's</button><button class="btn ghost" id="pn-all">Alle Patchnotes</button></div></div>`);
+      m.el.querySelector('#pn-ok').onclick = () => m.close();
+      m.el.querySelector('#pn-all').onclick = () => { m.close(); actions.notes(); };
+    }
+  } catch { /* storage blocked */ }
   bindLang(app, el);
   const showSaves = async () => {
     const saves = await listSaves();
@@ -97,6 +107,10 @@ export function startScreen(app, el) {
   const actions = {
     new: () => app.go('new'),
     clubs: () => app.go('new'),
+    notes: () => {
+      center.innerHTML = `<div class="sv-panel pn-center"><h2>📋 Patchnotes</h2><div class="pn-list">${patchHtml()}</div></div>`;
+      center.querySelectorAll('.pn-head').forEach((h) => (h.onclick = () => h.parentElement.classList.toggle('open')));
+    },
     play: () => {
       center.innerHTML = `<div class="sv-panel"><h2>✨ Neues Spiel</h2><div class="play-grid">
         <button class="play-card main" data-go="new"><span>🏟️</span><b>Karriere</b><small>Übernimm einen von 252 Vereinen – Männer oder Frauen – oder gründe deinen eigenen. Mit Europapokal, EM und WM.</small></button>
