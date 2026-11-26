@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.4.1', date: '26.11.2026', title: 'Echte Spielerfotos im Spiel',
+    neu: ['Echte Spielerfotos direkt in den Spieldaten – den Anfang machen die Schalker Torhüter Karius, Müller und Siebeking'],
+    verbessert: ['Eigene Fotos aus dem Spielstand haben weiter Vorrang vor den eingebauten'],
+    behoben: [],
+    geplant: ['Weitere Spielerfotos', '6.0: Derbys & Choreos, Standards selbst schießen, Saisonvorbereitung, Trainingszentrum, Transfer-KI 2.0, Frauen-Fußball'],
+  },
+  {
     version: '5.4.0', date: '26.11.2026', title: 'Eigene Spielerfotos',
     neu: ['Eigene Spielerfotos: im Spielerprofil über 📷 ein Foto wählen, im Kader über „📷 Fotos“ viele auf einmal zuordnen', 'Fotopakete (.fm27photos) importieren – die Fotos werden per Name den Spielern zugeordnet'],
     verbessert: ['Fotos werden verkleinert nur im Spielstand gespeichert, nicht in den Spieldateien'],
