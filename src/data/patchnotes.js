@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.1', date: '27.11.2026', title: 'Echte Spielerfotos: Schalke 04',
+    neu: ['Echte Fotos für den kompletten Schalke-Kader (32 Spieler) – im Spiel und in den Repo-Daten', 'Schalke-Kader ergänzt: Anton Donkor, Max Grüger, Edion Gashi, Jean-Paul Ndiaye und Zaid Amoussou-Tchibara'],
+    verbessert: ['Freigestellte Fotos mit transparentem Hintergrund werden sauber auf dunklem Grund dargestellt'],
+    behoben: [],
+    geplant: [],
+  },
+  {
     version: '7.0.0', date: '26.11.2026', title: 'Museum, Fans, Politik, Wetter, Konferenz & Jugend 2.0',
     neu: ['Vereinsmuseum in 3D: begehbare Halle mit Trophäen-Vitrinen, Chronik, Legendenwand, Trikot-Galerie und gesperrten Rückennummern', 'Schiedsrichter mit Charakter: strenge und großzügige Schiris pfeifen anders – nach strittigen Entscheidungen kannst du Beschwerde beim Verband einlegen', 'Fans & Kurve: Ultras mit eigenen Forderungen, Proteste (Spruchbänder, Stimmungsboykott, Boykott), Fanclubs, Fanshop-Kollektion und Dauerkarten zum selbst gewählten Preis', 'Wetter & Rasen: Regen, Schnee, Hitze, Nebel und Sturm verändern die Spiele – dazu Rasenqualität, Rasenheizung, Hybridrasen, Greenkeeper und Spielabsagen bei Frost', 'Vereinspolitik: Präsident mit eigener Linie, Aufsichtsrat mit Fraktionen, Präsidentschaftswahlen alle drei Jahre und Anträge für Budget, Stadion oder Jugend', 'Samstagskonferenz: alle Spiele deiner Liga gleichzeitig auf 3D-Mini-Plätzen – bei jedem Tor springt die Bühne ins Stadion, mit Radio-Ticker und Live-Tabelle', 'Jugend 2.0: echte U19-Liga mit Tabelle und Torjägern, Hallenmasters in der Winterpause und das Internats-Leben deiner Talente mit eigener Geschichte'],
     verbessert: ['Neue Reiter unter Verein: Rasen & Schiris, Fans, Politik, Museum · unter Kader: Jugend · am Spieltag: Konferenz', 'Spieltag zeigt Wetter mit Temperatur, Rasenzustand und den Schiedsrichter'],

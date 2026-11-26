@@ -12,7 +12,10 @@ def norm(s):
 photos = {}
 for f in sorted(os.listdir(SRC)):
     if not re.search(r'\.(png|jpe?g|webp)$', f, re.I): continue
-    im = Image.open(os.path.join(SRC, f)).convert('RGB')
+    im = Image.open(os.path.join(SRC, f))
+    if im.mode in ('RGBA', 'LA', 'P'):  # transparent cut-outs: put them on the dark card background
+        im = im.convert('RGBA'); bg = Image.new('RGBA', im.size, (29, 39, 49, 255)); bg.alpha_composite(im); im = bg
+    im = im.convert('RGB')
     s = min(im.size); x = (im.width - s) // 2; y = int((im.height - s) * 0.12) if im.height > im.width else 0
     im = im.crop((x, y, x + s, y + s)).resize((200, 200), Image.LANCZOS)
     b = io.BytesIO(); im.save(b, 'WEBP', quality=82)
