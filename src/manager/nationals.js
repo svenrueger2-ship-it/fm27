@@ -14,13 +14,13 @@ export const NATION_BASE = {
   WAL: 70, GHA: 70, CHI: 70, SVN: 70, IRL: 70, ALB: 70, VEN: 70, COD: 70, TUN: 69, PER: 69, KSA: 68, BIH: 68, BFA: 68, FIN: 67, PAN: 67, RSA: 67,
   NIR: 66, ISL: 66, CRC: 66, UZB: 66, CPV: 66, QAT: 66, JAM: 65, KOS: 66, JOR: 64, NZL: 62, MKD: 65, MNE: 64, ISR: 66, BUL: 64, GUI: 67,
 };
-const EUROPE = new Set(['ESP', 'FRA', 'ENG', 'POR', 'NED', 'GER', 'BEL', 'ITA', 'CRO', 'SUI', 'DEN', 'AUT', 'NOR', 'TUR', 'SRB', 'UKR', 'POL', 'SWE', 'HUN', 'CZE', 'SCO', 'GRE', 'SVK', 'ROU', 'GEO', 'WAL', 'SVN', 'IRL', 'ALB', 'BIH', 'FIN', 'NIR', 'ISL', 'KOS', 'MKD', 'MNE', 'ISR', 'BUL']);
+export const EUROPE = new Set(['ESP', 'FRA', 'ENG', 'POR', 'NED', 'GER', 'BEL', 'ITA', 'CRO', 'SUI', 'DEN', 'AUT', 'NOR', 'TUR', 'SRB', 'UKR', 'POL', 'SWE', 'HUN', 'CZE', 'SCO', 'GRE', 'SVK', 'ROU', 'GEO', 'WAL', 'SVN', 'IRL', 'ALB', 'BIH', 'FIN', 'NIR', 'ISL', 'KOS', 'MKD', 'MNE', 'ISR', 'BUL']);
 export const INTL_WEEKS = [8, 13, 24, 30];
 
 // ------------------------------------------------------------------ squads & strength
-function byNation(world) {
+export function byNation(world) {
   const m = {};
-  for (const p of Object.values(world.players)) if (p.clubId != null && !p.youthOf) (m[p.nation] ||= []).push(p);
+  for (const p of Object.values(world.players)) if (p.clubId != null && !p.youthOf && !p.women) (m[p.nation] ||= []).push(p);
   return m;
 }
 export function nationSquad(world, nat, map = byNation(world)) {
@@ -52,7 +52,7 @@ export function ranking(world) {
 }
 
 // ------------------------------------------------------------------ matches
-function simIntl(world, rng, a, b, map, { ko = false } = {}) {
+export function simIntl(world, rng, a, b, map, { ko = false } = {}) {
   const sa = nationStrength(world, a, map), sb = nationStrength(world, b, map);
   const la = clamp(1.18 * Math.exp((sa - sb) * 0.085), 0.15, 4.2), lb = clamp(1.18 * Math.exp((sb - sa) * 0.085), 0.15, 4.2);
   let ga = rng.poisson(la), gb = rng.poisson(lb), note = '';
@@ -80,7 +80,7 @@ function scorers(world, rng, map, nat, goals) {
   return out;
 }
 
-function capSquad(world, nat, map, rng, { fatigue = 0, injury = 0 } = {}) {
+export function capSquad(world, nat, map, rng, { fatigue = 0, injury = 0 } = {}) {
   const hurt = [];
   for (const p of nationSquad(world, nat, map).slice(0, 23)) {
     (p.intl ||= { caps: 0, goals: 0 }).caps++;
@@ -122,7 +122,7 @@ export function nextTournament(world) {
   return null;
 }
 
-function groupTable(g) {
+export function groupTable(g) {
   const r = Object.fromEntries(g.teams.map((n) => [n, { nat: n, p: 0, pts: 0, gf: 0, ga: 0 }]));
   for (const m of g.games) { const A = r[m.a], B = r[m.b]; A.p++; B.p++; A.gf += m.ga; A.ga += m.gb; B.gf += m.gb; B.ga += m.ga; if (m.ga > m.gb) A.pts += 3; else if (m.ga < m.gb) B.pts += 3; else { A.pts++; B.pts++; } }
   return Object.values(r).sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf);
@@ -171,7 +171,7 @@ export function playTournament(world, rng) {
   const res = { ...T, year, groups, rounds, winner, runnerUp: finalTie.winner === finalTie.a ? finalTie.b : finalTie.a, topScorer: top ? { id: +top[0], goals: top[1], name: `${world.players[top[0]]?.firstName || ''} ${world.players[top[0]]?.lastName || ''}`.trim(), nat: world.players[top[0]]?.nation } : null };
   I.tournaments.unshift(res);
   news(world, `🏆 ${T.name}: ${winner} ist ${T.kind === 'wm' ? 'Weltmeister' : 'Europameister'}! Finale ${finalTie.a} ${finalTie.ga}:${finalTie.gb}${finalTie.note} ${finalTie.b}.${res.topScorer ? ` Torschützenkönig: ${res.topScorer.name} (${res.topScorer.goals} Tore).` : ''}`);
-  const mine = Object.values(world.players).filter((p) => p.clubId === world.userClubId && field.includes(p.nation) && nationSquad(world, p.nation, map).slice(0, 26).includes(p));
+  const mine = Object.values(world.players).filter((p) => !p.women && p.clubId === world.userClubId && field.includes(p.nation) && nationSquad(world, p.nation, map).slice(0, 26).includes(p));
   if (mine.length) news(world, `🌍 Bei der ${T.name} dabei: ${mine.map((p) => `${p.lastName} (${p.nation})`).join(', ')}.`);
   return res;
 }

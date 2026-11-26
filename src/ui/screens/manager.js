@@ -1,6 +1,7 @@
 import { setPhoto, removePhoto, bulkPhotos } from '../photos.js';
 import { isMatchToday, daysToMatch } from '../../manager/calendar.js';
 import { tickerAvailable, runDeadline } from '../../manager/deadline.js';
+import { prepOpen } from '../../manager/preseason.js';
 import { mgrPortrait } from './managerCreate.js';
 import { styleOf, STYLES } from '../../data/styles.js';
 import { anaSummary, heatSvg } from '../../manager/playerAna.js';
@@ -71,6 +72,7 @@ export function dashboardScreen(app, el) {
   const sc = w.scenario && !w.scenario.done ? w.scenario : null;
   el.innerHTML = `<div class="page">
     ${sc ? `<div class="scenario-bar"><span>🎬</span><div class="grow"><small class="muted">SZENARIO · ${esc(sc.name)}</small><b>Ziel: ${esc(sc.goal)}</b></div><div><small class="muted">Aktuell</small><b>Platz ${rank}</b></div><div><small class="muted">Spiele übrig</small><b>${Math.max(0, L.fixtures.length - w.week)}</b></div>${sc.id === 'pleite' ? `<div><small class="muted">Kontostand</small><b class="${club.budget >= 0 ? 'good' : 'bad'}">${money(club.budget)}</b></div>` : ''}</div>` : ''}
+    ${prepOpen(w) && !w.prep?.closed ? `<div class="deadline prep-bar"><b>☀️ SAISONVORBEREITUNG</b><span>Trainingslager, Reise und Testspiele planen, bevor Spieltag 1 ansteht.</span><button class="btn sm primary" id="to-prep">Planen →</button></div>` : ''}
     ${isDeadlineDay(win) ? `<div class="deadline"><b>⏰ DEADLINE DAY</b><span>Das ${esc(win.name)} schließt nach diesem Spieltag. Die Gerüchteküche brodelt – letzte Chance für Transfers!</span><button class="btn sm" id="dl-ticker">📺 ${tickerAvailable(w) ? 'Liveticker starten' : 'Liveticker ansehen'}</button> <button class="btn sm primary" data-nav2="transfers">Zum Transfermarkt</button></div>` : ''}
     <div class="grid-2">
       <div class="card club-hero" style="--c1:${club.colors.primary}">
@@ -146,6 +148,7 @@ export function dashboardScreen(app, el) {
   el.querySelector('#club-hist')?.addEventListener('click', () => clubModal(app, club, { onPlayer: (p) => playerModal(app, p) }));
   el.querySelector('#go-end')?.addEventListener('click', () => app.go('seasonEnd'));
   el.querySelector('#dl-ticker')?.addEventListener('click', () => deadlineTicker(app));
+  el.querySelector('#to-prep')?.addEventListener('click', () => app.go('prep'));
   el.querySelectorAll('[data-nav2]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); app.go(b.dataset.nav2); }));
   el.querySelectorAll('.home-press[data-art]').forEach((b) => b.addEventListener('click', () => openArticle(w, +b.dataset.art)));
   el.querySelectorAll('[data-p]').forEach((d) => d.addEventListener('click', () => playerModal(app, w.players[d.dataset.p])));

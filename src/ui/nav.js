@@ -30,13 +30,28 @@ const P = {
 export const icon = (k, s = 22) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[k] || P.home}</svg>`;
 
 export const NAV_GROUPS = [
-  ['Übersicht', [['home', 'Vereinszentrale', 'Zentrale'], ['calendar', 'Kalender', 'Kalender'], ['matchday', 'Spieltag', 'Spiel'], ['staff', 'Stab & Posteingang', 'Stab']]],
-  ['Mannschaft', [['squad', 'Kader', 'Kader'], ['tactics', 'Taktik', 'Taktik'], ['training', 'Training', 'Training'], ['kabine', 'Kabine', 'Kabine']]],
-  ['Verein', [['transfers', 'Transfers & Scouting', 'Transfer'], ['finance', 'Finanzen & Ausbau', 'Finanzen'], ['stadium', 'Stadion bauen', 'Stadion']]],
-  ['Wettbewerbe', [['league', 'Liga', 'Liga'], ['cups', 'Pokale & Europa', 'Pokale'], ['world', 'Fußballwelt', 'Welt'], ['analysis', 'Analyse-Hub', 'Analyse']]],
-  ['Manager', [['career', 'Karriere', 'Karriere'], ['profile', 'Manager-Profil', 'Profil'], ['achievements', 'Erfolge', 'Erfolge'], ['media', 'Medien', 'Medien']]],
+  ['Übersicht', [['home', 'Vereinszentrale', 'Zentrale'], ['matchday', 'Spieltag & Kalender', 'Spiel'], ['staff', 'Stab & Posteingang', 'Stab']]],
+  ['Mannschaft', [['squad', 'Kader & Kabine', 'Kader'], ['tactics', 'Taktik', 'Taktik'], ['training', 'Training', 'Training']]],
+  ['Verein', [['transfers', 'Transfers & Scouting', 'Transfer'], ['finance', 'Finanzen, Stadion & Verein', 'Verein']]],
+  ['Welt', [['league', 'Liga, Pokale & Welt', 'Wettbew.'], ['profile', 'Manager, Karriere & Medien', 'Manager']]],
 ];
-export const NAV_FLAT = NAV_GROUPS.flatMap(([, items]) => items).concat([['saves', 'Spielstände', 'Speichern'], ['settings', 'Einstellungen', 'Optionen']]);
+// v6.0: every sidebar entry bundles related screens – they switch via a tab bar on top of the page
+export const SUBNAV = {
+  matchday: [['matchday', '⚽ Spieltag'], ['calendar', '📅 Kalender'], ['prep', '☀️ Vorbereitung']],
+  squad: [['squad', '👥 Kader'], ['kabine', '🛋️ Kabine'], ['analysis', '📊 Analyse']],
+  finance: [['finance', '💶 Finanzen'], ['stadium', '🏟️ Stadion'], ['campus', '🏗️ Trainingszentrum'], ['design', '🎨 Trikot & Wappen'], ['boerse', '📈 Börse']],
+  league: [['league', '🏆 Liga'], ['cups', '🏅 Pokale & Europa'], ['tourney', '🌍 EM / WM'], ['world', '🌐 Fußballwelt']],
+  profile: [['profile', '🎖️ Profil'], ['career', '👔 Karriere'], ['achievements', '🏅 Erfolge'], ['media', '📰 Medien'], ['editor', '✍️ Editor']],
+};
+const PARENT = Object.fromEntries(Object.entries(SUBNAV).flatMap(([p, items]) => items.map(([id]) => [id, p])));
+export const parentNav = (screen) => PARENT[screen] || screen;
+export function subnavHtml(screen, world) {
+  const g = SUBNAV[PARENT[screen]];
+  if (!g) return '';
+  const vis = g.filter(([id]) => id === screen || (id !== 'tourney' || world?.tourney) && (id !== 'prep' || (world && world.week === 0)));
+  return `<div class="tabs subnav">${vis.map(([id, l]) => `<button data-nav="${id}" class="${id === screen ? 'active' : ''}">${l}</button>`).join('')}</div>`;
+}
+export const NAV_FLAT = NAV_GROUPS.flatMap(([, items]) => items).concat(Object.values(SUBNAV).flat().filter(([id]) => !NAV_GROUPS.some(([, it]) => it.some(([x]) => x === id))).map(([id, l]) => [id, l.replace(/^\S+\s/, ''), l]), [['saves', 'Spielstände', 'Speichern'], ['settings', 'Einstellungen', 'Optionen']]);
 
 export function navHtml(screen, badges, pinned, level) {
   const item = ([id, label, short]) => `<button data-nav="${id}" class="nv ${screen === id ? 'active' : ''}" title="${esc(label)}">${icon(id)}<span class="nv-l">${esc(label)}</span><span class="nv-s">${esc(short)}</span>${badges[id] ? `<b class="nv-b">${badges[id]}</b>` : ''}</button>`;

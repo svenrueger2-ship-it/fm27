@@ -49,9 +49,9 @@ export function careerScreen(app, el) {
   draw();
 }
 
-function natPicker(app, done) {
+export function natPicker(app, done) {
   const w = app.world, C = w.career;
-  const pool = nationSquad(w, C.nat).concat(Object.values(w.players).filter((p) => p.nation === C.nat && p.clubId != null && !p.youthOf)).filter((p, i, a) => a.indexOf(p) === i).sort((a, b) => b.ovr - a.ovr).slice(0, 45);
+  const pool = nationSquad(w, C.nat).concat(Object.values(w.players).filter((p) => !p.women && p.nation === C.nat && p.clubId != null && !p.youthOf)).filter((p, i, a) => a.indexOf(p) === i).sort((a, b) => b.ovr - a.ovr).slice(0, 45);
   const sel = new Set(natSquad(w).map((p) => p.id));
   const host = document.createElement('div'); host.className = 'modal-wrap';
   const render = () => {

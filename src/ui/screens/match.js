@@ -6,6 +6,7 @@ import { taskEvent } from '../../manager/progress.js';
 import { MatchEngine } from '../../match/engine.js';
 import { endWeek } from '../turn.js';
 import { wmCommit } from './wm.js';
+import { tourneyCommit } from './tourney.js';
 import { unityMatch, unrealMatch } from './unityMatch.js';
 import { ensureLineup, teamStrength, FORMATIONS, PRESETS, effectiveRating } from '../../match/tactics.js';
 import { simAheadButton, bindSimAhead } from './simAhead.js';
@@ -24,6 +25,8 @@ import { MatchView } from '../../render/matchView.js';
 import { CAMERA_MODES } from '../../render/camera.js';
 import { isMatchToday, daysToMatch, nextUserMatchDay, dateOf, fmtDate } from '../../manager/calendar.js';
 import { aiEdge } from '../../manager/difficulty.js';
+import { recordFriendly } from '../../manager/preseason.js';
+import { derbyName, choreoActive, headToHead } from '../../manager/derby.js';
 import { crest, esc, shortName, ratingClass, toast, bar, flag, modal, portrait } from '../dom.js';
 
 const TOD_NAME = { tag: '☀️ Nachmittag', abend: '🌇 Abendspiel', nacht: '🌙 Flutlicht' };
@@ -81,10 +84,11 @@ export function matchdayScreen(app, el, params = {}) {
     <div class="vs-screen" style="--h1:${H.colors.primary};--a1:${A.colors.primary}">
       <div class="side">${crest(H, 110)}<h3>${esc(H.name)}</h3><div class="chips"><span class="chip">${H.tactic.formation}</span><span class="chip">${esc(H.tactic.preset || 'Individuell')}</span><span class="chip">Stärke ${Math.round(sH)}</span>${coachChip(H)}</div></div>
       <div class="mid"><small>${fx.cup ? `🏆 ${esc(cupLabel(w, fx))}` : `${esc(L.name)} · Spieltag ${w.week + 1}`}</small><b>VS</b><small>${esc(H.stadium.name)} · ${H.stadium.capacity.toLocaleString('de-DE')}</small>
-        <div class="chips"><span class="chip">${TOD_NAME[cond.tod]}</span><span class="chip">${WEATHER_NAME[cond.weather]}</span>${isBigMatch(w, fx) ? '<span class="chip">🔥 Topspiel</span>' : ''}</div></div>
+        <div class="chips"><span class="chip">${TOD_NAME[cond.tod]}</span><span class="chip">${WEATHER_NAME[cond.weather]}</span>${derbyName(w, fx.h, fx.a) ? `<span class="chip hot">🔥 ${esc(derbyName(w, fx.h, fx.a))}</span>` : isBigMatch(w, fx) ? '<span class="chip">🔥 Topspiel</span>' : ''}</div></div>
       <div class="side">${crest(A, 110)}<h3>${esc(A.name)}</h3><div class="chips"><span class="chip">${A.tactic.formation}</span><span class="chip">${esc(A.tactic.preset || 'Individuell')}</span><span class="chip">Stärke ${Math.round(sA)}</span>${coachChip(A)}</div></div>
     </div>
     <div class="str-bars" style="grid-template-columns:${sH}fr ${sA}fr"><div style="background:${H.colors.primary}"></div><div style="background:${A.colors.primary}"></div></div>
+    ${(() => { const dn = derbyName(w, fx.h, fx.a); if (!dn) return ''; const hh = headToHead(w, w.userClubId, w.userClubId === H.id ? A.id : H.id); const ch = choreoActive(w, H, A, { big: true }); return `<p class="derby-line">🔥 <b>${esc(dn)}</b> · Derby-Bilanz: ${hh.games ? `${hh.w} S · ${hh.d} U · ${hh.l} N (${hh.gf}:${hh.ga})` : 'noch kein Duell'}${H.id === w.userClubId ? (ch ? ' · 🎨 Deine Kurve zeigt eine Choreo' : ' · Tipp: Gestalte unter Stadion → Fankurve eine Choreo') : ''}</p>`; })()}
     <div class="row-actions center">
       <button class="btn primary lg" id="play3d">▶ Live im 3D-Stadion</button>
       <button class="btn lg" id="instant">⏭ Sofortsimulation</button>
@@ -156,7 +160,10 @@ function liveMatch(app, el, params) {
   const cond0 = friendly ? null : conditions(w, fx);
   engine.weather = cond0?.weather || 'klar';
   engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06 }[engine.weather] || 1;
-  engine.bigMatch = !friendly && isBigMatch(w, fx);
+  const derby = !friendly ? derbyName(w, H.id, A.id) : null;
+  engine.bigMatch = !friendly && (isBigMatch(w, fx) || !!derby);
+  engine.derby = derby;
+  engine.choreo = !friendly && !params.wm ? choreoActive(w, H, A, { big: engine.bigMatch }) : null;
   // match preparation from the training week and team spirit (v2.0)
   for (const T of engine.teams) { const c = T.club; if (c.matchPrep?.week === w.week) T.familiarity = Math.min(1, (T.familiarity ?? 0.8) + c.matchPrep.prep * 0.05); if (c.spirit != null) T.familiarity = Math.min(1, Math.max(0.4, (T.familiarity ?? 0.8) + (c.spirit - 60) / 400)); }
   if (!friendly && userTeam >= 0 && talkDone(w)) engine.setFocus(userTeam, w.talk.focus);
@@ -173,6 +180,7 @@ function liveMatch(app, el, params) {
     if (min > 45) engine.startKickoff?.(1 - (engine.firstKickoff ?? 0), true);
   }
   engine.pyro = S.pyro || 'normal';
+  engine.manualSP = S.manualSP !== false && !director; // v6.0
   if (S.var === false) engine.varRate = 0;
   // Konferenz: the other matches of this matchday are decided now and revealed minute by minute
   const others = [];
@@ -195,7 +203,7 @@ function liveMatch(app, el, params) {
     <div class="lower-third" id="lt"></div>
     <div class="comm" id="comm"><i>🎙️</i><span></span></div>
     <div class="replay-tag" id="replay"><span>⟲ WIEDERHOLUNG</span><button class="btn sm" id="skipRep">Überspringen ⏭</button></div>
-    <div class="intro" id="intro"><div class="bar-top"><small>Live · ${esc(H.stadium.name)}</small><b>${esc(H.name)} – ${esc(A.name)}</b><small style="color:#cfe0ff;letter-spacing:.1em">${params.wm ? 'FIFA WM 2026' : friendly ? 'Testspiel' : `${esc(w.leagues.find((l) => l.id === H.leagueId).name)} · Spieltag ${w.week + 1}`}</small></div>
+    <div class="intro" id="intro"><div class="bar-top"><small>Live · ${esc(H.stadium.name)}</small><b>${esc(H.name)} – ${esc(A.name)}</b><small style="color:#cfe0ff;letter-spacing:.1em">${params.wm ? 'FIFA WM 2026' : params.tourney ? esc(w.tourney?.name || 'Turnier') : friendly ? 'Testspiel' : derby ? `🔥 ${esc(derby)} · ${esc(w.leagues.find((l) => l.id === H.leagueId).name)}` : `${esc(w.leagues.find((l) => l.id === H.leagueId).name)} · Spieltag ${w.week + 1}`}</small></div>
       <div class="lineups">${[T0, T1].map((T) => `<div class="lu" style="--c1:${T.kit.primary}"><b>${esc(T.club.short)} · ${T.formation}</b>${T.players.map((p) => `${p.data.number} ${esc(p.data.lastName)}`).join('<br>')}</div>`).join('')}</div>
       <button class="btn primary skip" id="skipIntro">Anpfiff ▶</button></div>
     <div class="ticker" id="ticker"></div>
@@ -218,6 +226,7 @@ function liveMatch(app, el, params) {
     </div>
     <div class="panel" id="panel"></div>
     <div class="overlay" id="overlay"></div>
+    <div class="aim-ov" id="aim"></div>
   </div>`;
   const $ = (s) => el.querySelector(s);
   const camSel = $('#cam'); camSel.value = S.camera || 'tv';
@@ -316,6 +325,7 @@ function liveMatch(app, el, params) {
       const b = $('#banner');
       if (b) { b.innerHTML = `<div style="--c1:${e.overturned ? '#ff4d4d' : '#3ddc84'}"><b>${e.overturned ? 'KEIN TOR' : 'TOR ZÄHLT'}</b><span>Videobeweis</span><small>${esc(e.text.replace(/^[^ ]+ /, ''))}</small></div>`; b.classList.add('show'); setTimeout(() => b.classList.remove('show'), 3400); }
     }
+    if (e.type === 'aim') { if (!view || instantRunning) engine.setAim(null); else showAim(e.kind); }
     if (e.type === 'halftime') setTimeout(() => showBreak(false), 50);
     if (e.type === 'fulltime') setTimeout(() => showBreak(true), 50);
   });
@@ -475,9 +485,53 @@ function liveMatch(app, el, params) {
     };
   }
 
+  // v6.0 set pieces taken by the user: aim in the goal, then time the power bar
+  function showAim(kind) {
+    const A = $('#aim'); if (!A) return;
+    view.setPaused(true);
+    const tk = engine.aimRequest?.taker || '';
+    const done = (aim) => { A.classList.remove('show'); A.innerHTML = ''; engine.setAim(aim); view?.setPaused(false); const pb = $('#pause'); if (pb) pb.textContent = '⏸'; };
+    if (kind === 'corner') {
+      A.innerHTML = `<div class="aim-card"><h3>🚩 Ecke · ${esc(tk)}</h3><p class="muted">Wohin soll die Ecke?</p><div class="aim-row">${[['nah', '⤴ Erster Pfosten'], ['fern', '⤵ Zweiter Pfosten'], ['mix', '🎯 Elfmeterpunkt'], ['kurz', '↔ Kurz ausführen']].map(([k, l]) => `<button class="btn" data-r="${k}">${l}</button>`).join('')}</div><button class="btn ghost sm" data-r="ai">🤖 KI entscheiden lassen</button></div>`;
+      A.classList.add('show');
+      A.querySelectorAll('[data-r]').forEach((b) => (b.onclick = () => done(b.dataset.r === 'ai' ? null : { routine: b.dataset.r })));
+      return;
+    }
+    const keeper = kind === 'keep';
+    const title = keeper ? `🧤 Elfmeter gegen dich – ${esc(tk)} läuft an` : kind === 'pen' ? `⚽ Elfmeter · ${esc(tk)}` : `🎯 Freistoß · ${esc(tk)}`;
+    A.innerHTML = `<div class="aim-card"><h3>${title}</h3><p class="muted" id="aimhint">${keeper ? 'Tippe, in welche Ecke dein Torwart springt.' : 'Tippe ins Tor, wohin du schießen willst.'}</p>
+      <svg viewBox="-20 -14 340 130" class="aim-goal" id="aimgoal"><rect x="-20" y="96" width="340" height="20" fill="#2f7a3a"/><rect x="0" y="0" width="300" height="100" fill="rgba(255,255,255,.06)" stroke="#fff" stroke-width="5"/>
+        <g stroke="rgba(255,255,255,.18)" stroke-width="1">${Array.from({ length: 14 }, (_, i) => `<line x1="${i * 21.4}" y1="0" x2="${i * 21.4}" y2="100"/>`).join('')}${Array.from({ length: 5 }, (_, i) => `<line x1="0" y1="${i * 20}" x2="300" y2="${i * 20}"/>`).join('')}</g>
+        ${!keeper && kind === 'fk' ? '<g fill="#223" opacity=".85"><rect x="70" y="40" width="20" height="60" rx="8"/><rect x="92" y="38" width="20" height="62" rx="8"/><rect x="114" y="40" width="20" height="60" rx="8"/><rect x="136" y="39" width="20" height="61" rx="8"/></g>' : ''}
+        <circle id="aimdot" r="9" cx="-100" cy="-100" fill="#ffd400" stroke="#000" stroke-width="2"/></svg>
+      <div class="aim-power" id="aimpow" hidden><div class="aim-bar"><i class="sweet"></i><i class="mark" id="aimmark"></i></div><button class="btn primary lg" id="aimgo">Schießen!</button><small class="muted">Stoppe den Balken im grünen Bereich. Zu viel Kraft = über die Latte.</small></div>
+      <button class="btn ghost sm" id="aimai">🤖 ${keeper ? 'Torwart selbst entscheiden lassen' : 'KI schießen lassen'}</button></div>`;
+    A.classList.add('show');
+    let target = null, raf = 0, t0 = 0;
+    A.querySelector('#aimai').onclick = () => { cancelAnimationFrame(raf); done(null); };
+    const svg = A.querySelector('#aimgoal');
+    svg.onclick = (ev) => {
+      if (target && !keeper) return;
+      const r = svg.getBoundingClientRect();
+      const px = ((ev.clientX - r.left) / r.width) * 340 - 20, py = ((ev.clientY - r.top) / r.height) * 130 - 14;
+      const z = ((px - 150) / 150) * 3.66, y = Math.max(0.1, ((100 - py) / 100) * 2.44);
+      const dot = A.querySelector('#aimdot'); dot.setAttribute('cx', px); dot.setAttribute('cy', py);
+      target = { z, y };
+      if (keeper) { setTimeout(() => done({ dive: z, dy: y }), 250); return; }
+      A.querySelector('#aimhint').textContent = 'Jetzt im richtigen Moment schießen!';
+      A.querySelector('#aimpow').hidden = false;
+      const mark = A.querySelector('#aimmark'); t0 = performance.now();
+      const loop = (now) => { const ph = ((now - t0) / 1100) % 2, v = ph < 1 ? ph : 2 - ph; mark.style.left = (v * 100) + '%'; mark.dataset.v = v; raf = requestAnimationFrame(loop); };
+      raf = requestAnimationFrame(loop);
+      const fire = () => { cancelAnimationFrame(raf); const v = +mark.dataset.v || 0; const q = 1 - Math.min(1, Math.abs(v - 0.7) / 0.32); done({ z: target.z, y: target.y, q, power: v }); };
+      A.querySelector('#aimgo').onclick = fire;
+    };
+  }
+
   function runInstant() {
     if (instantRunning || finished) return;
     instantRunning = true;
+    engine.manualSP = false; if (engine.aimRequest) { engine.setAim(null); $('#aim')?.classList.remove('show'); }
     view?.dispose(); view = null;
     const O = $('#overlay');
     O.classList.add('show');
@@ -519,7 +573,7 @@ function liveMatch(app, el, params) {
       };
       step();
     });
-    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, scene: params.scene, wm: params.wm, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
+    el.querySelector('#cont').onclick = () => commitResult(app, { r, H, A, friendly, scene: params.scene, prep: params.prep, wm: params.wm, tourney: params.tourney, record: (w2) => { const ui = engine.teams.findIndex((T) => T.club.id === w2.userClubId); if (ui >= 0) recordLive(w2, engine.teams, ui, r.stats?.[ui]?.possession); } });
   }
 
   if (params.mode === 'instant') { runInstant(); }
@@ -528,9 +582,11 @@ function liveMatch(app, el, params) {
 }
 
 // v3.1: shared by the classic 3D mode and the Unity mode – books the result into the season
-export async function commitResult(app, { r, H, A, friendly, record, wm, scene }) {
+export async function commitResult(app, { r, H, A, friendly, record, wm, scene, prep, tourney }) {
   const w = app.world;
   if (wm) return wmCommit(app, r, wm);
+  if (tourney) return tourneyCommit(app, r, tourney);
+  if (prep) { recordFriendly(w, H, A, r.hg, r.ag); app.go('prep'); return; }
   if (scene) { sceneOutcome(w, scene, r); app.go('editor', { tab: 'scene' }); return; }
   if (friendly) { app.world = null; app.go('start'); return; }
   const rng = newRng(w);

@@ -6,6 +6,7 @@ import { clamp } from '../core/rng.js';
 import { skillRank } from './progress.js';
 import { computeOverall, POS_WEIGHTS, OUTFIELD_ATTRS, GK_ATTRS } from '../data/attributes.js';
 import { marketValue } from '../data/generator.js';
+import { wScale } from './gender.js';
 
 export const TRAINING_FOCUS = {
   ausgewogen: { name: 'Ausgewogen', attrs: null, desc: 'Entwicklung entsprechend der Position.' },
@@ -144,9 +145,9 @@ export function weeklyTraining(world, club, rng) {
       if (club.id === world.userClubId) report.push({ type: 'injury', player: p.id, text: `${p.lastName} hat sich im Training verletzt (${p.injury} Wo.).` });
     }
     if (p.ovr > before) {
-      p.value = marketValue(p.ovr, p.age, p.pot);
+      p.value = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p));
       if (club.id === world.userClubId) report.push({ type: 'up', player: p.id, text: `${p.lastName} verbessert sich auf ${p.ovr} (+${p.ovr - before}).`, gains });
-    } else if (p.ovr < before) p.value = marketValue(p.ovr, p.age, p.pot);
+    } else if (p.ovr < before) p.value = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p));
     p.playedThisWeek = false;
   }
   // tactical familiarity

@@ -4,6 +4,7 @@ import { isHumanClub } from './hotseat.js';
 import { clamp } from '../core/rng.js';
 import { skillRank } from './progress.js';
 import { ensureStadium, weeklyConstruction, hospitalityIncome, interiorIncome, interiorWeekly, standingShare, screensBonus, lightsBonus, awayIncome, familyBonus } from './stadiumBuild.js';
+import { wScale } from './gender.js';
 
 export const FACILITIES = {
   training: { name: 'Trainingsgelände', desc: 'Schnellere Spielerentwicklung im Training.', max: 5 },
@@ -58,8 +59,8 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
     F.lastAttendance = att;
   }
   add('tv', 'TV-Gelder', (league.tv * 1e6 * (0.3 + 0.55 * (club.rep / 100)) * lightsBonus(club)) / W);
-  add('sponsors', club.sponsorDeals ? 'Kleinere Partner' : 'Sponsoren', (Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf) * (club.sponsorDeals ? 0.35 : 1)) / W);
-  add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
+  add('sponsors', club.sponsorDeals ? 'Kleinere Partner' : 'Sponsoren', (Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf) * (club.sponsorDeals ? 0.35 : 1) * wScale(club)) / W);
+  add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * wScale(club) * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
   add('sponsors', 'Museum & Medienzentrum', interiorWeekly(club));
   if (club.biz) add('sponsors', 'Mitgliedsbeiträge', (club.biz.members * (club.biz.fee || 72)) / W);
   if (club.stadium.naming) add('sponsors', `Namensrechte ${club.stadium.naming.brand}`, club.stadium.naming.perSeason / W);

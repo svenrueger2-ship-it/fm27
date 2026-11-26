@@ -44,7 +44,7 @@ export function createWM(nat, seed = (Math.random() * 1e9) | 0) {
   const rng = new RNG(seed + 26);
   w.mode = 'wm';
   const byNat = {};
-  for (const p of Object.values(w.players)) if (p.clubId != null && !p.youthOf) (byNat[p.nation] ||= []).push(p);
+  for (const p of Object.values(w.players)) if (p.clubId != null && !p.youthOf && !p.women) (byNat[p.nation] ||= []).push(p);
   const ids = {};
   let id = 9000;
   const league = { id: 'wm', name: 'WM 2026', country: 'WM', tier: 0, promo: 0, releg: 0, clubIds: [], fixtures: [] };

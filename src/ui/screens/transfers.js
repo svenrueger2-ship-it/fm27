@@ -3,7 +3,7 @@ import { IS_MOBILE } from '../../core/device.js';
 // loans with buy option, incoming offers, transfer list, contract extensions, history.
 import {
   searchMarket, askingPrice, estimate, assignScout, makeBid, signPending, contractDemand, extendContract,
-  loanTerms, requestLoan, exerciseOption, toggleListed, respondOffer, windowInfo, maxScouts, knowledge, wageRoom, executeTransfer,
+  loanTerms, requestLoan, exerciseOption, toggleListed, respondOffer, swapValue, windowInfo, maxScouts, knowledge, wageRoom, executeTransfer,
 } from '../../manager/transfers.js';
 import { squadNeeds } from '../../manager/clubAI.js';
 import { taskEvent } from '../../manager/progress.js';
@@ -196,16 +196,19 @@ function bidDialog(app, p, onChange) {
   const m = modal(`<h3>Angebot für ${esc(pname(p))}</h3><p>${crest(c, 22)} ${esc(c.name)} · Marktwert ${money(p.value)} · Forderung ca. <b>${money(ask)}</b></p>
     <label class="field">Ablösesumme${moneyInput('fee', ask, { step: 250000 })}</label>
     <input type="range" id="feeR" min="${Math.round(ask * 0.5)}" max="${Math.round(ask * 1.5)}" step="10000" value="${ask}" style="width:100%">
-    <p class="muted">Dein Budget: ${money(app.club.budget)}${p.releaseClause ? ` · Ausstiegsklausel: ${money(p.releaseClause)} (wird immer akzeptiert)` : ''}</p>
+    <p class="muted">Dein Budget: ${money(app.club.budget)}${p.releaseClause ? ` · Ausstiegsklausel: ${money(p.releaseClause)} (wird immer akzeptiert)` : ''}${p.buyBack?.club === app.club.id && w.season <= p.buyBack.until ? ` · <b>Deine Rückkaufoption: ${money(p.buyBack.price)}</b>` : ''}${pitchOf(w, p) ? ` · 📞 Berater-Rabatt ${Math.round(pitchOf(w, p).discount * 100)} %` : ''}</p>
+    <details class="swap-box"><summary>🔁 Spieler zum Tausch anbieten (max. 2)</summary><div class="swap-list">${app.club.squad.map((id) => w.players[id]).filter((q) => q && !q.loan && q.id !== p.id).sort((a, b) => b.value - a.value).map((q) => `<label class="check"><input type="checkbox" data-swap="${q.id}"> ${esc(pname(q))} <small class="muted">${q.pos} · ${q.ovr} · Wert für ${esc(c.short)} ca. ${money(swapValue(w, c, q))}</small></label>`).join('')}</div></details>
     <div id="msg"></div><div class="row-actions end"><button class="btn primary" id="send">Angebot senden</button></div>`);
+  const swaps = () => [...m.el.querySelectorAll('[data-swap]:checked')].map((x) => +x.dataset.swap).slice(0, 2);
+  m.el.querySelectorAll('[data-swap]').forEach((x) => (x.onchange = () => { if (swaps().length > 2) x.checked = false; }));
   const fee = m.el.querySelector('#fee'), feeR = m.el.querySelector('#feeR');
   feeR.oninput = () => (fee.value = fmtMoneyInput(feeR.value));
   fee.addEventListener('change', () => { feeR.value = readMoney(fee); });
   m.el.querySelector('#send').onclick = () => {
-    const r = makeBid(w, p.id, readMoney(fee));
+    const r = makeBid(w, p.id, readMoney(fee), swaps());
     const msg = m.el.querySelector('#msg');
-    if (r.result === 'accepted') { m.close(); toast(`${c.short} akzeptiert ${money(r.fee)}${r.clause ? ' (Klausel)' : ''}! Jetzt Vertrag verhandeln.`); negotiate(app, p, 'buy', onChange); }
-    else if (r.result === 'countered') { msg.innerHTML = `<p class="tag y" style="display:block;padding:.5rem">↩ ${esc(r.reason)}</p><button class="btn sm" id="acc">Gegenangebot (${moneyExact(r.counter)}) annehmen</button>`; msg.querySelector('#acc').onclick = () => { fee.value = fmtMoneyInput(r.counter); m.el.querySelector('#send').click(); }; }
+    if (r.result === 'accepted') { m.close(); toast(`${c.short} akzeptiert ${money(r.fee)}${r.swaps?.length ? ` + ${r.swaps.length} Tauschspieler` : ''}${r.clause ? ' (Klausel)' : ''}! Jetzt Vertrag verhandeln.`); negotiate(app, p, 'buy', onChange); }
+    else if (r.result === 'countered') { msg.innerHTML = `<p class="tag y" style="display:block;padding:.5rem">↩ ${esc(r.reason)}</p><button class="btn sm" id="acc">Gegenangebot (${moneyExact(r.counter)}${r.wantPlayer ? ` + ${esc(pname(w.players[r.wantPlayer]))}` : ''}) annehmen</button>`; msg.querySelector('#acc').onclick = () => { fee.value = fmtMoneyInput(r.counter); m.el.querySelectorAll('[data-swap]').forEach((x) => (x.checked = (r.swaps || []).includes(+x.dataset.swap))); m.el.querySelector('#send').click(); }; }
     else msg.innerHTML = `<p class="tag r" style="display:block;padding:.5rem">✕ ${esc(r.reason)}</p>`;
   };
 }
@@ -353,8 +356,15 @@ function angebote(app, el, redraw) {
   const offers = w.transfer.offers;
   el.innerHTML = `<div class="card"><h3>Eingehende Angebote</h3>
     ${offers.map((o) => { const p = w.players[o.playerId], c = w.clubs[o.clubId]; return `<div class="facility"><div>${crest(c, 40)}</div><div><b>${esc(c.name)}</b> bietet <b class="pos-amt">${money(o.fee)}</b> für ${esc(pname(p))} (${p.pos}, ${p.ovr})<br><small>Marktwert ${money(p.value)} · Angebot gültig bis Woche ${o.week + 3}</small></div>
-      <div class="row-actions"><button class="btn primary sm" data-o="${o.id}" data-a="accept">Annehmen</button><button class="btn sm" data-o="${o.id}" data-a="sellon" title="10 % weniger Ablöse, dafür 15 % bei jedem Weiterverkauf">Annehmen + 15 % Weiterverkauf</button><button class="btn sm" data-o="${o.id}" data-a="counter" ${o.countered ? 'disabled' : ''}>Nachverhandeln</button><button class="btn sm danger" data-o="${o.id}" data-a="reject">Ablehnen</button></div></div>`; }).join('') || '<p class="muted">Keine Angebote. Setze Spieler auf die Transferliste, um Interessenten anzulocken (nur im Transferfenster).</p>'}</div>`;
+      <div class="row-actions"><button class="btn primary sm" data-o="${o.id}" data-a="accept">Annehmen</button><button class="btn sm" data-o="${o.id}" data-a="sellon" title="10 % weniger Ablöse, dafür 15 % bei jedem Weiterverkauf">Annehmen + 15 % Weiterverkauf</button><button class="btn sm" data-o="${o.id}" data-a="buyback" title="8 % weniger Ablöse, dafür darfst du ihn 2 Saisons lang für 150 % zurückholen">Annehmen + Rückkaufoption</button><button class="btn sm" data-o="${o.id}" data-a="counter" ${o.countered ? 'disabled' : ''}>Nachverhandeln</button><button class="btn sm danger" data-o="${o.id}" data-a="reject">Ablehnen</button></div></div>`; }).join('') || '<p class="muted">Keine Angebote. Setze Spieler auf die Transferliste, um Interessenten anzulocken (nur im Transferfenster).</p>'}</div>`;
   el.querySelectorAll('[data-o]').forEach((b) => (b.onclick = () => { const r = respondOffer(w, +b.dataset.o, b.dataset.a, newRng(w)); toast(r.msg); app.render(); }));
+  const pit = (w.transfer.pitches || []).filter((x) => w.players[x.playerId] && w.week - x.week < 2);
+  if (pit.length) {
+    const card = document.createElement('div'); card.className = 'card';
+    card.innerHTML = `<h3>📞 Berater-Angebote</h3>${pit.map((x) => { const p = w.players[x.playerId], c = p.clubId ? w.clubs[p.clubId] : null; return `<div class="facility"><div>${c ? crest(c, 32) : '🆓'}</div><div><b>${esc(pname(p))}</b> (${p.pos}, ${p.age} J., ${p.ovr}) · ${c ? esc(c.name) : 'vereinslos'}<br><small class="muted">${esc(x.agent)} · ${Math.round(x.discount * 100)} % Rabatt auf die Ablöse · nur bis Woche ${x.week + 2}</small></div><div class="row-actions"><button class="btn sm primary" data-pitch="${p.id}">Ansehen & bieten</button></div></div>`; }).join('')}`;
+    el.prepend(card);
+    card.querySelectorAll('[data-pitch]').forEach((b) => (b.onclick = () => bidDialog(app, w.players[+b.dataset.pitch], () => app.render())));
+  }
 }
 
 // ------------------------------------------------------------------ own squad: contracts & selling
@@ -380,3 +390,5 @@ function historie(app, el) {
     ${H.map((h) => `<tr class="${h.to === w.userClubId || h.from === w.userClubId ? 'me' : ''}"><td>${h.season} · W${h.week}</td><td>${esc(h.name)}</td><td>${h.from ? `${crest(w.clubs[h.from], 18)} ${esc(w.clubs[h.from].short)}` : 'vereinslos'}</td><td>${crest(w.clubs[h.to], 18)} ${esc(w.clubs[h.to].short)}</td><td><b>${h.fee ? money(h.fee) : 'ablösefrei'}</b></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Noch keine Transfers.</td></tr>'}
     </tbody></table></div>`;
 }
+
+const pitchOf = (w, p) => (w.transfer?.pitches || []).find((x) => x.playerId === p.id && w.week - x.week < 2);

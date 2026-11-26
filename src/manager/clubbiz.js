@@ -15,7 +15,7 @@ export function ensureBiz(world, club = world.clubs[world.userClubId]) {
   if (club.biz) return club.biz;
   const tier = leagueOf(world, club).tier ?? 1;
   club.biz = {
-    members: Math.round(clamp(Math.pow(club.rep / 100, 2.6) * 330000 * (tier === 1 ? 1 : 0.7), 2500, 400000) / 100) * 100,
+    members: Math.round(clamp(Math.pow(club.rep / 100, 2.6) * 330000 * (tier === 1 ? 1 : 0.7) * (club.women ? 0.04 : 1), club.women ? 600 : 2500, 400000) / 100) * 100,
     fee: 72, shop: 1, owner: null, investorOffer: null, licence: null, credit: 0, warnings: 0, deduction: 0, transferBan: false,
   };
   return club.biz;
@@ -41,7 +41,7 @@ export function weeklyBiz(world, rng) {
   const B = ensureBiz(world, club), M = ensureMood(world);
   // members grow with fan mood and success, shrink in crises
   const g = (M.fans - 55) / 4000 + (club.formRun || 0) * 0.0008;
-  B.members = Math.max(1500, Math.round(B.members * (1 + clamp(g, -0.006, 0.012))));
+  B.members = Math.max(club.women ? 400 : 1500, Math.round(B.members * (1 + clamp(g, -0.006, 0.012))));
   // debts: credit line and warnings
   if (club.budget < 0) {
     B.warnings++;

@@ -1,4 +1,5 @@
 // Transfer market: windows, asking prices, bids & counter offers, contract negotiations, release clauses,
+import { genderOk } from './gender.js';
 import { diff } from './difficulty.js';
 // loans with buy option, incoming offers for own players, contract extensions, free agents,
 // scouting knowledge/reports and AI-to-AI transfers.
@@ -125,7 +126,7 @@ export function contractDemand(world, p, club) {
   const own = p.clubId === club.id && !(p.loan && p.loan.to === club.id);
   const ceiling = club.rep * 0.45 + 58 + (own ? 4 : 0);
   const willing = p.ovr <= ceiling || (own && p.morale > 60);
-  let wage = Math.max(p.wage * (own ? 1.08 : 1.15), Math.min(p.value * 0.1, 8e6 + p.value * 0.06), 20000);
+  let wage = Math.max(p.wage * (own ? 1.08 : 1.15), Math.min(p.value * 0.1, 8e6 + p.value * 0.06), p.women ? 6000 : 20000);
   wage *= 1 + clamp((p.ovr - (club.rep * 0.4 + 45)) / 60, -0.2, 0.5);
   if (own) wage *= p.morale > 75 ? 0.95 : p.morale < 45 ? 1.15 : 1;
   const minY = p.age >= 31 ? 1 : 2, maxY = p.age >= 32 ? 2 : 5;
@@ -150,7 +151,12 @@ export function extendContract(world, playerId, wage, years) {
 }
 
 // ----------------------------------------------------------------- user buying
-export function makeBid(world, playerId, fee) {
+/** v6.0: value the selling club puts on a player offered in a swap */
+export function swapValue(world, seller, sp) {
+  const want = clubWants(world, seller, sp);
+  return Math.round((askingPrice(world, sp, true) * (want >= 1 ? 0.85 : want > 0.3 ? 0.65 : 0.4)) / 1e4) * 1e4;
+}
+export function makeBid(world, playerId, fee, swaps = []) {
   const ban = world.clubs[world.userClubId].biz?.transferBan;
   if (ban && world.week < 20) return { result: 'rejected', reason: 'Transfersperre (Lizenzauflage) – Käufe erst ab dem Winter möglich.' };
   const T = ensureTransferState(world);
@@ -163,14 +169,30 @@ export function makeBid(world, playerId, fee) {
   const seller = world.clubs[p.clubId];
   if (p.loan) return { result: 'rejected', reason: 'Der Spieler ist derzeit verliehen.' };
   if (p.releaseClause && fee >= p.releaseClause) { T.pending = { playerId, fee, type: 'buy' }; return { result: 'accepted', fee, clause: true }; }
-  const ask = askingPrice(world, p);
+  if (p.buyBack?.club === buyer.id && world.season <= p.buyBack.until && fee >= p.buyBack.price) { T.pending = { playerId, fee, type: 'buy' }; return { result: 'accepted', fee, clause: true, buyBack: true }; }
+  const pitch = (T.pitches || []).find((x) => x.playerId === playerId && world.week - x.week < 2);
+  swaps = (swaps || []).filter((id) => buyer.squad.includes(id) && id !== playerId && !world.players[id]?.loan).slice(0, 2);
+  const sv = swaps.reduce((a, id) => a + swapValue(world, seller, world.players[id]), 0);
+  if (swaps.length && seller.squad.length + swaps.length > 32) return { result: 'rejected', reason: `${seller.name} hat keinen Platz im Kader für Tauschspieler.` };
+  let ask = askingPrice(world, p);
+  if (pitch) ask = Math.round((ask * (1 - pitch.discount)) / 1e4) * 1e4;
   const r = clubRankOf(world, seller, p);
   if (r >= 0 && r < 3 && seller.rep > buyer.rep + 12) return { result: 'rejected', reason: `${seller.name} gibt einen Leistungsträger nicht an einen kleineren Verein ab.` };
   if (seller.squad.length <= 19) return { result: 'rejected', reason: `${seller.name} hat einen zu kleinen Kader, um zu verkaufen.` };
-  if (fee >= ask) { T.pending = { playerId, fee, type: 'buy' }; return { result: 'accepted', fee }; }
-  if (fee >= ask * 0.8) {
-    const counter = Math.round((ask * (0.95 + Math.random() * 0.06)) / 1e4) * 1e4;
-    return { result: 'countered', counter, reason: `${seller.name} verlangt ${eur(counter)}.` };
+  if (fee + sv >= ask) { T.pending = { playerId, fee, type: 'buy', swaps }; return { result: 'accepted', fee, swaps }; }
+  if (fee + sv >= ask * 0.6) {
+    // v6.0: the AI often asks for one of your players instead of the missing money
+    const gap = ask - fee - sv;
+    const wantP = buyer.squad.map((id) => world.players[id]).filter((q) => q && q.id !== playerId && !swaps.includes(q.id) && !q.loan && clubWants(world, seller, q) >= 1)
+      .map((q) => ({ q, v: swapValue(world, seller, q) })).filter((x) => x.v >= gap * 0.6 && x.v <= gap * 1.6).sort((a, b) => Math.abs(a.v - gap) - Math.abs(b.v - gap))[0];
+    if (wantP && Math.random() < 0.6) {
+      const rest = Math.max(0, Math.round((fee + gap - wantP.v) / 1e4) * 1e4);
+      return { result: 'countered', counter: rest, wantPlayer: wantP.q.id, swaps: [...swaps, wantP.q.id], reason: `${seller.name} schlägt vor: ${eur(rest)} plus ${wantP.q.firstName} ${wantP.q.lastName}.` };
+    }
+    if (fee + sv >= ask * 0.8 || Math.random() < 0.5) {
+      const counter = Math.max(0, Math.round((ask * (0.95 + Math.random() * 0.06) - sv) / 1e4) * 1e4);
+      return { result: 'countered', counter, swaps, reason: `${seller.name} verlangt ${eur(counter)}${swaps.length ? ' zusätzlich zum Tauschspieler' : ''}.` };
+    }
   }
   return { result: 'rejected', reason: `${seller.name} lehnt ab – das Angebot ist zu niedrig.` };
 }
@@ -188,13 +210,20 @@ export function signPending(world, wage, years) {
     return { ok: false, msg: `${p.lastName} fordert ${eur(d.wage)} pro Jahr (Versuch ${pend.tries}/3).` };
   }
   if (!wageRoom(world, club, wage)) return { ok: false, msg: 'Das Gehaltsbudget reicht dafür nicht aus. Verkaufe Spieler oder biete weniger.' };
-  if (pend.type === 'buy') executeTransfer(world, p, p.clubId ? world.clubs[p.clubId] : null, club, pend.fee, wage, years);
+  if (pend.type === 'buy') {
+    const seller = p.clubId ? world.clubs[p.clubId] : null;
+    executeTransfer(world, p, seller, club, pend.fee, wage, years);
+    if (seller) for (const sid of pend.swaps || []) { const sp = world.players[sid]; if (sp && sp.clubId === club.id) executeTransfer(world, sp, club, seller, 0, sp.wage, Math.max(2, sp.contract || 2)); }
+    if (p.buyBack?.club === club.id) p.buyBack = null;
+    T.pitches = (T.pitches || []).filter((x) => x.playerId !== p.id);
+  }
   T.pending = null;
   return { ok: true };
 }
 
 export function executeTransfer(world, p, from, to, fee, wage, years) {
   ensureTransferState(world);
+  if (!genderOk(to, p)) return; // v6.0 women's and men's football stay separate
   if (from && fee && p.sellOn && p.sellOn.club !== to.id) { const share = Math.round((fee * p.sellOn.pct) / 100 / 1e4) * 1e4; from.budget -= share; paySellOn(world, p, fee); }
   if (p.preContract && p.preContract.club !== to.id) p.preContract = null;
   if (world.userClubId != null && (from?.id === world.userClubId || to.id === world.userClubId)) statTransfer(world, p, from, to, fee);
@@ -296,7 +325,7 @@ export function generateOffers(world, rng) {
     if (p.loan || T.offers.some((o) => o.playerId === id)) continue;
     const listed = T.listed.includes(id) || p.wantsOut;
     if (!rng.chance(listed ? 0.55 : p.ovr > 72 ? 0.05 : 0.015)) continue;
-    const cands = clubs.filter((c) => c.rep * 0.45 + 58 >= p.ovr && c.budget > askingPrice(world, p) * 0.8 && c.squad.length < 30);
+    const cands = clubs.filter((c) => genderOk(c, p) && !c.nation && c.rep * 0.45 + 58 >= p.ovr && c.budget > askingPrice(world, p) * 0.8 && c.squad.length < 30);
     if (!cands.length) continue;
     // clubs with a real need for this position are far more likely to bid
     const buyer = rng.weighted(cands, (c) => clubWants(world, c, p) + 0.02);
@@ -324,9 +353,11 @@ export function respondOffer(world, offerId, action, rng) {
   const d = contractDemand(world, p, buyer);
   let fee = o.fee;
   if (action === 'sellon') { fee = Math.round((o.fee * 0.9) / 1e4) * 1e4; }
+  if (action === 'buyback') { fee = Math.round((o.fee * 0.92) / 1e4) * 1e4; }
   executeTransfer(world, p, me, buyer, fee, Math.max(d.wage, p.wage), Math.max(d.minY, 3));
   if (action === 'sellon') p.sellOn = { club: me.id, pct: 15 };
-  return { ok: true, msg: `${p.lastName} verkauft für ${eur(fee)}${action === 'sellon' ? ' plus 15 % Weiterverkaufsbeteiligung' : ''}.` };
+  if (action === 'buyback') p.buyBack = { club: me.id, price: Math.round((o.fee * 1.5) / 1e5) * 1e5, until: world.season + 2 };
+  return { ok: true, msg: `${p.lastName} verkauft für ${eur(fee)}${action === 'sellon' ? ' plus 15 % Weiterverkaufsbeteiligung' : action === 'buyback' ? ` mit Rückkaufoption über ${eur(p.buyBack.price)} (bis Saison ${p.buyBack.until})` : ''}.` };
 }
 
 // ----------------------------------------------------------------- AI clubs
@@ -348,6 +379,7 @@ export function weeklyTransfers(world, rng) {
     weeklyScouting(world);
     if (world.userClubId != null) weeklyAgents(world, rng);
     generateOffers(world, rng);
+    if (world.userClubId != null) weeklyPitches(world, rng); // v6.0
     if (win.open) rollRumours(world, rng, isDeadlineDay(win) ? 5 : 2);
     if (isDeadlineDay(win)) generateOffers(world, rng); // Deadline Day: late offers for the user's players
     // contract expiry warnings
@@ -387,8 +419,8 @@ export function seasonTransfers(world, rng) {
     while (club.squad.length < 23 && guard++ < 8) {
       const need = weakestSlot(world, club);
       const cap = club.rep * 0.45 + 58;
-      const fa = world.freeAgents.map((id) => world.players[id]).filter((p) => p && p.ovr <= cap && (!need || POS_COMPAT[need.pos]?.includes(p.pos))).sort((a, b) => b.ovr - a.ovr)[0]
-        || world.freeAgents.map((id) => world.players[id]).filter((p) => p && p.ovr <= cap).sort((a, b) => b.ovr - a.ovr)[0];
+      const fa = world.freeAgents.map((id) => world.players[id]).filter((p) => p && genderOk(club, p) && p.ovr <= cap && (!need || POS_COMPAT[need.pos]?.includes(p.pos))).sort((a, b) => b.ovr - a.ovr)[0]
+        || world.freeAgents.map((id) => world.players[id]).filter((p) => p && genderOk(club, p) && p.ovr <= cap).sort((a, b) => b.ovr - a.ovr)[0];
       if (!fa) break;
       const d = contractDemand(world, fa, club);
       executeTransfer(world, fa, null, club, 0, d.wage, rng.int(d.minY, d.maxY));
@@ -410,7 +442,7 @@ function userSeasonSquad(world) {
     let guard = 0;
     while (me.squad.length < 16 && guard++ < 20) {
       const need = weakestSlot(world, me);
-      const pool = world.freeAgents.map((id) => world.players[id]).filter((p) => p && p.ovr <= me.rep * 0.45 + 52);
+      const pool = world.freeAgents.map((id) => world.players[id]).filter((p) => p && genderOk(me, p) && p.ovr <= me.rep * 0.45 + 52);
       const fa = pool.filter((p) => !need || POS_COMPAT[need.pos]?.includes(p.pos)).sort((a, b) => b.ovr - a.ovr)[0] || pool.sort((a, b) => b.ovr - a.ovr)[0];
       if (!fa) break;
       const d = contractDemand(world, fa, me);
@@ -428,6 +460,7 @@ export function searchMarket(world, f = {}) {
   const out = [];
   for (const p of Object.values(world.players)) {
     if (p.clubId === uc || (p.loan && p.loan.to === uc)) continue;
+    if (!genderOk(world.clubs[uc], p)) continue;
     if (f.pos && f.pos !== 'ALLE' && p.pos !== f.pos) continue;
     if (f.maxAge && p.age > f.maxAge) continue;
     if (f.league && f.league !== 'ALLE') { if (f.league === 'FREI') { if (p.clubId) continue; } else if (!p.clubId || world.clubs[p.clubId].leagueId !== f.league) continue; }
@@ -441,4 +474,22 @@ export function searchMarket(world, f = {}) {
   }
   out.sort((a, b) => (f.sort === 'pot' ? b.est.potHi - a.est.potHi : f.sort === 'price' ? a.price - b.price : f.sort === 'age' ? a.p.age - b.p.age : b.est.ovr - a.est.ovr));
   return out.slice(0, 120);
+}
+
+// ----------------------------------------------------------------- v6.0 agents pitch players to you
+const AGENT_NAMES = ['Pini Zahavi Jr.', 'Volker Struth-Agentur', 'Rogon Sportmanagement', 'Gestifute Partner', 'ProSoccer Consulting', 'Elite Football Agency', 'Stellar Group', 'Lagardère Talents', 'Unique Sports Group'];
+export function weeklyPitches(world, rng) {
+  const T = ensureTransferState(world), uc = world.clubs[world.userClubId];
+  T.pitches = (T.pitches || []).filter((x) => world.week - x.week < 2 && world.players[x.playerId] && world.players[x.playerId].clubId !== uc.id);
+  if (!windowInfo(world).open || T.pitches.length >= 3 || !rng.chance(0.45)) return;
+  const need = weakestSlot(world, uc);
+  const strength = uc.squad.map((id) => world.players[id]?.ovr || 0).sort((a, b) => b - a)[10] || 60;
+  const pool = [...(world.freeAgents || []), ...(T.listed || []), ...Object.values(world.clubs).filter((c) => c.id !== uc.id && !c.nation).flatMap((c) => c.squad.slice(-6))]
+    .map((id) => world.players[id]).filter((p) => p && !p.loan && p.clubId !== uc.id && (!need || p.pos === need.pos) && p.ovr >= strength - 4 && p.ovr <= strength + 8 && genderOk(uc, p));
+  if (!pool.length) return;
+  const p = rng.pick(pool);
+  if (T.pitches.some((x) => x.playerId === p.id)) return;
+  const agent = rng.pick(AGENT_NAMES), discount = rng.pick([0.08, 0.1, 0.12, 0.15]);
+  T.pitches.push({ id: (T.nextId = (T.nextId || 1) + 1), playerId: p.id, agent, discount, week: world.week });
+  news(world, `📞 Berater-Angebot: ${agent} bietet dir ${p.firstName} ${p.lastName} (${p.pos}, ${p.age}) an – ${Math.round(discount * 100)} % unter der üblichen Ablöse, nur diese Woche.`);
 }

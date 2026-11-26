@@ -1,5 +1,6 @@
 // Procedural world generator: clubs + players for all leagues.
 import { RNG, clamp } from '../core/rng.js';
+import { feminize } from '../manager/gender.js';
 import { NATIONS, NATION_MIX } from './names.js';
 import { LEAGUES, KIT_COLORS } from './leagues.js';
 import { OUTFIELD_ATTRS, GK_ATTRS, POS_WEIGHTS, computeOverall } from './attributes.js';
@@ -217,8 +218,8 @@ export function realSquadsForNewLeagues(world, rng) {
 
 function buildLeague(world, L, rng, clubId) {
   {
-    const league = { id: L.id, name: L.name, country: L.country, tier: L.tier, promo: L.promo, releg: L.releg, upper: L.upper, lower: L.lower, tv: L.tv, clubIds: [], fixtures: [] };
-    for (const [name, short, rep, fixedKit, stadiumName, stadiumCap] of L.clubs) {
+    const league = { id: L.id, name: L.name, country: L.country, tier: L.tier, promo: L.promo, releg: L.releg, upper: L.upper, lower: L.lower, tv: L.tv, clubIds: [], fixtures: [], ...(L.women ? { women: true } : {}) };
+    for (const [name, short, rep, fixedKit, stadiumName, stadiumCap, menShort] of L.clubs) {
       const kit = fixedKit || KIT_COLORS[(clubId * 7 + short.charCodeAt(0)) % KIT_COLORS.length];
       const away = KIT_COLORS[(clubId * 13 + 5) % KIT_COLORS.length];
       const capacity = Math.round((6000 + Math.pow(rep / 100, 2.4) * 78000) / 500) * 500;
@@ -232,7 +233,9 @@ function buildLeague(world, L, rng, clubId) {
         stats: { titles: 0 }, history: [],
         info: { founded: CLUB_INFO[short]?.founded ?? CLUB_FOUNDED[short] ?? null, titles: CLUB_INFO[short]?.titles ?? null },
       };
+      if (L.women) { club.women = true; if (menShort) club.menShort = menShort; }
       fillSquad(world, club, L, rng, rep, short);
+      if (L.women) { for (const pid of club.squad) feminize(rng, world.players[pid]); club.wageBudget = Math.round(club.squad.reduce((s, id) => s + world.players[id].wage, 0) * 1.15); club.budget = Math.round(club.budget * 0.12 / 1e4) * 1e4; }
       world.clubs[club.id] = club;
       league.clubIds.push(club.id);
       clubId++;

@@ -4,6 +4,7 @@ import { generatePlayer, marketValue } from '../data/generator.js';
 import { registerCustomClubs } from '../data/customRegistry.js';
 import { CRESTS } from '../data/crests.js';
 import { RNG } from '../core/rng.js';
+import { wScale } from './gender.js';
 
 export const SYMBOLS = {
   none: '',
@@ -89,7 +90,7 @@ export function foundClub(world, cfg) {
     if (age < 22) p.pot = Math.min(85, p.ovr + rng.int(8, 22));
     p.clubId = club.id; let n; do n = rng.int(1, 40); while (used.has(n)); used.add(n); p.number = n;
     p.contract = rng.int(1, 3); p.wage = Math.round((12000 + ovr * 900) / 1000) * 1000;
-    p.value = marketValue(p.ovr, p.age, p.pot);
+    p.value = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p));
     world.players[p.id] = p; club.squad.push(p.id);
   }
   registerCustomClubs(world);

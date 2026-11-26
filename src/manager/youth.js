@@ -5,6 +5,7 @@ import { generatePlayer, marketValue } from '../data/generator.js';
 import { trainPlayer } from './training.js';
 import { skillRank } from './progress.js';
 import { ensureStats } from './achievements.js';
+import { feminize, wScale } from './gender.js';
 
 const YPOS = ['TW', 'IV', 'IV', 'LV', 'RV', 'DM', 'ZM', 'ZM', 'OM', 'LA', 'RA', 'ST', 'ST'];
 
@@ -17,8 +18,9 @@ function makeYouth(world, rng, club, age) {
   const country = world.leagues.find((l) => l.id === club.leagueId).country;
   const y = generatePlayer(rng, world.nextPlayerId++, rng.pick(YPOS), Math.round(clamp(27 + club.rep * 0.14 + lvl * 1.6 + (age - 15) * 2.5 + rng.normal(0, 4), 26, 62)), age, country, club.rep);
   y.pot = clamp(Math.round(44 + club.rep * 0.18 + lvl * 2 + rng.normal(0, 6) + (rng.chance(0.03 + lvl * 0.015) ? rng.int(6, 12) : 0)), y.ovr + 4, 94);
+  if (club.women) feminize(rng, y);
   y.clubId = null; y.youthOf = club.id; y.contract = 0; y.wage = 0; y.prog = {}; y.loan = null; y.releaseClause = null; y.career = []; y.moves = [];
-  y.value = marketValue(y.ovr, y.age, y.pot);
+  y.value = Math.round(marketValue(y.ovr, y.age, y.pot) * wScale(y));
   rollStyleTalent(y, rng);
   world.players[y.id] = y;
   return y;
@@ -38,8 +40,8 @@ export function weeklyYouth(world, rng) {
   if (!world.youth) return;
   const club = world.clubs[world.userClubId];
   const lvl = club.facilities?.youth ?? 2;
-  const fake = { ...club, facilities: { ...club.facilities, training: Math.max(1, lvl - 1) }, coachFactor: 0.55 };
-  for (const p of youthPlayers(world)) { if (p.styleTalent === undefined) rollStyleTalent(p, rng); p.playedThisWeek = true; trainPlayer(p, fake, rng, skillRank(world, 'jugend')); p.value = marketValue(p.ovr, p.age, p.pot); }
+  const fake = { ...club, facilities: { ...club.facilities, training: Math.max(1, lvl - 1) }, coachFactor: 0.55 + (club.campus?.internat || 0) * 0.07 };
+  for (const p of youthPlayers(world)) { if (p.styleTalent === undefined) rollStyleTalent(p, rng); p.playedThisWeek = true; trainPlayer(p, fake, rng, skillRank(world, 'jugend')); p.value = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p)); }
 }
 
 export function promoteYouth(world, id) {
@@ -77,10 +79,10 @@ export function seasonYouth(world, rng) {
 }
 
 // ------------------------------------------------------------------ market values
-const LEAGUE_VALUE = { en1: 1.45, es1: 1.12, it1: 1.05, de1: 1.0, fr1: 0.85, en2: 0.5, de2: 0.38, de3: 0.16 };
+const LEAGUE_VALUE = { dew1: 0.05, enw1: 0.07, en1: 1.45, es1: 1.12, it1: 1.05, de1: 1.0, fr1: 0.85, en2: 0.5, de2: 0.38, de3: 0.16 };
 const POS_VALUE = { TW: 0.72, IV: 0.95, LV: 0.92, RV: 0.92, DM: 0.98, ZM: 1.0, LM: 1.0, RM: 1.0, OM: 1.08, LA: 1.12, RA: 1.12, ST: 1.15 };
 export function playerValue(world, p) {
-  let v = marketValue(p.ovr, p.age, p.pot);
+  let v = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p));
   const club = p.clubId != null ? world.clubs[p.clubId] : null;
   v *= club ? LEAGUE_VALUE[club.leagueId] ?? 0.8 : 0.6;
   v *= POS_VALUE[p.pos] ?? 1;

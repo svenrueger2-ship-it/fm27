@@ -4,7 +4,9 @@ import { STAND_NAMES, standName, interiorOptions, interiorIncome, interiorWeekly
 import { attendance } from '../../manager/economy.js';
 import { userLeague, computeTable, newRng } from '../../manager/season.js';
 import { createStadiumPreview } from '../../render/stadiumPreview.js';
-import { esc, money, toast, confirmDialog, modal } from '../dom.js';
+import { esc, money, toast, confirmDialog, modal, crest } from '../dom.js';
+import { CHOREO_STYLES, CHOREO_WHEN, defaultChoreo, drawChoreo, rivalsOf, headToHead } from '../../manager/derby.js';
+import { crestImage } from '../../render/crestImages.js';
 
 export function stadiumScreen(app, el) {
   const w = app.world;
@@ -26,7 +28,7 @@ export function stadiumScreen(app, el) {
     };
     const g = globalOptions(club), inner = interiorOptions(club);
     const projects = `<div class="card"><h3>🏗️ Laufende Bauprojekte</h3>${st.projects.length ? st.projects.map((p) => `<div class="sb-proj"><span>${esc(p.label)}</span><div class="meter"><i style="width:${Math.round((1 - p.weeks / p.total) * 100)}%"></i></div><small>noch ${p.weeks} Wo.</small></div>`).join('') : '<p class="muted">Keine Baustelle. Wähle in den Reitern einen Ausbau.</p>'}</div>`;
-    const TABS = [['overview', '🏟️ Übersicht'], ['stands', '🧱 Tribünen'], ['interior', '🍺 Innenausbau'], ['tech', '⚙️ Technik & Rasen']];
+    const TABS = [['overview', '🏟️ Übersicht'], ['stands', '🧱 Tribünen'], ['interior', '🍺 Innenausbau'], ['tech', '⚙️ Technik & Rasen'], ['fans', '🎨 Fankurve & Derbys']];
     let body = '';
     if (tab === 'overview') body = `<div class="sb-top">
         <div class="card sb-view"><div class="sb-canvas" id="sb3d"></div><div class="sb-overlay"><b>${esc(st.name)}</b><small>Ziehen zum Drehen · Mausrad/Pinch zum Zoomen</small></div><button class="btn sm primary sb-big" id="bigview" style="position:absolute;right:12px;bottom:12px;top:auto;left:auto;z-index:3">⛶ Großansicht</button></div>
@@ -46,12 +48,14 @@ export function stadiumScreen(app, el) {
         <p class="muted">Aktuelle Zusatzeinnahmen: ${money(interiorIncome(club))} pro Heimspiel + ${money(interiorWeekly(club))} pro Woche (Museum & Medienzentrum). Kabinentrakt: +${(L.interior?.kabine || 0) * 2} Fitness pro Woche.</p>`;
     if (tab === 'tech') body = `<div class="grid-2"><div class="card"><h3>⚙️ Stadiontechnik & Rasen</h3><div class="sb-misc"><span>💡 Flutlicht ${L.lights}/3</span><span>📺 ${L.screens} Videowand/-wände</span><span>🌱 ${PITCH_NAMES[L.pitch]}</span><span>Gästeblock: ${['klein', 'mit Trennzaun', 'groß'][L.away ?? 1]}</span><span>Familienbereich: ${['keiner', 'vorhanden', 'groß'][L.family ?? 0]}</span></div>
         ${g.length ? g.map((o, k) => `<div class="facility"><div><b>${esc(o.label)}</b><br><small>${esc(o.desc)}</small></div><button class="btn sm primary" data-g="${k}" ${club.budget < o.cost ? 'disabled' : ''}>${money(o.cost)} · ${o.weeks} Wo.</button></div>`).join('') : '<p class="muted">Alles auf dem neuesten Stand.</p>'}</div>${projects}</div>`;
+    if (tab === 'fans') body = fansHtml(w, club);
     el.innerHTML = `<div class="page"><div class="page-head"><h2>🏟️ ${esc(st.name)}</h2><div class="row-actions"><button class="btn sm" id="rename">✏️ Stadion umbenennen</button><button class="btn sm primary" id="naming">💼 Namensrechte</button></div></div>
       <div class="tabs sb-tabs">${TABS.map(([k, l]) => `<button class="${tab === k ? 'active' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>${body}</div>`;
     preview?.dispose(); preview = null; clearTimeout(pvT);
     const host = el.querySelector('#sb3d');
     if (host) pvT = setTimeout(() => { if (host.isConnected) preview = createStadiumPreview(host, { club, quality: app.settings.quality }); }, 30);
     el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = app.stadiumTab = b.dataset.tab; draw(); }));
+    if (tab === 'fans') bindFans(app, el, draw);
     const go = async (opt, standIdx) => {
       if (!(await confirmDialog(`${standIdx != null ? standName(club, standIdx) + ': ' : ''}${opt.label} für ${money(opt.cost)}? Bauzeit ${opt.weeks} Wochen.`, 'Bauen'))) return;
       const r = startProject(w, club, opt, standIdx);
@@ -110,4 +114,33 @@ function namingDialog(app, club, done) {
     if (rng.chance(0.55)) { o.perSeason = Math.round(o.perSeason * 1.15 / 1e5) * 1e5; toast(`${o.brand} legt nach: ${money(o.perSeason)} pro Saison`); sign(o); m.close(); }
     else { toast(`${o.brand} zieht sein Angebot zurück.`); offers.splice(pick, 1); m.close(); st.namingRound = (st.namingRound || 0) + 1; }
   };
+}
+
+// ------------------------------------------------------------------ v6.0 Fankurve: choreo designer & derbies
+function fansHtml(w, club) {
+  const C = (club.choreoDraft ||= { ...(club.choreo || defaultChoreo(club)) });
+  const rivals = rivalsOf(w, club);
+  return `<div class="grid-2"><div class="card"><h3>🎨 Choreo-Designer</h3>
+    <p class="muted small">Die Choreo hängt vor dem Anpfiff als Blockfahne über der ${esc(standName(club, 2))} und wird nach ein paar Minuten eingerollt.</p>
+    <div class="opt-row">${Object.entries(CHOREO_STYLES).map(([k, l]) => `<button class="chip-btn ${C.style === k ? 'on' : ''}" data-cstyle="${k}">${l}</button>`).join('')}</div>
+    <div class="opt-row"><label>Farbe 1 <input type="color" id="cc1" value="${C.c1}"></label><label>Farbe 2 <input type="color" id="cc2" value="${C.c2}"></label><label>Akzent <input type="color" id="cc3" value="${C.c3}"></label></div>
+    <label class="field">Spruch<input id="ctext" maxlength="32" value="${esc(C.text || '')}" placeholder="z. B. NUR DER SVW"></label>
+    <div class="opt-row"><span class="muted">Wann:</span>${Object.entries(CHOREO_WHEN).map(([k, l]) => `<button class="chip-btn ${C.when === k ? 'on' : ''}" data-cwhen="${k}">${l}</button>`).join('')}</div>
+    <label class="check"><input type="checkbox" id="cpyro" ${C.pyro ? 'checked' : ''}> Bengalos zum Einlaufen (Pyro-Einstellung im Spiel beachten)</label>
+    <div class="row-actions end"><button class="btn" id="cdefault">↺ Vereinsfarben</button><button class="btn primary" id="csave">💾 Choreo speichern</button></div></div>
+    <div class="card"><h3>Vorschau</h3><canvas id="cprev" width="1024" height="320" class="choreo-prev"></canvas>
+    <h3 style="margin-top:14px">🔥 Derbys & Rivalen</h3>${rivals.length ? rivals.map((r) => { const h = headToHead(w, club.id, r.club.id); return `<div class="facility"><div>${crest(r.club, 22)} <b>${esc(r.name)}</b> gegen ${esc(r.club.name)}<br><small class="muted">${h.games ? `${h.games} Duelle · ${h.w} S · ${h.d} U · ${h.l} N · Tore ${h.gf}:${h.ga}${h.biggest ? ` · höchstes Ergebnis ${h.biggest.hg}:${h.biggest.ag} (${h.biggest.s})` : ''}` : 'Noch kein Duell in deiner Karriere'}</small></div></div>`; }).join('') : '<p class="muted">Dein Verein hat keinen klassischen Derbygegner im Spiel. Spiele gegen Vereine aus derselben Stadt zählen trotzdem als Stadtderby.</p>'}
+    <p class="muted small">Derbys sind enger als normale Spiele, ziehen mehr Zuschauer und wirken stärker auf Moral und Fanstimmung.</p></div></div>`;
+}
+function bindFans(app, el, draw) {
+  const club = app.club, C = club.choreoDraft;
+  const prev = () => { const cv = el.querySelector('#cprev'); if (cv) drawChoreo(cv, { ...C, stars: club.titles?.length || 3 }, club, crestImage(club.short)); };
+  prev(); setTimeout(prev, 400);
+  el.querySelectorAll('[data-cstyle]').forEach((b) => (b.onclick = () => { C.style = b.dataset.cstyle; draw(); }));
+  el.querySelectorAll('[data-cwhen]').forEach((b) => (b.onclick = () => { C.when = b.dataset.cwhen; draw(); }));
+  for (const k of ['c1', 'c2', 'c3']) el.querySelector('#c' + k).oninput = (e) => { C[k] = e.target.value; prev(); };
+  el.querySelector('#ctext').oninput = (e) => { C.text = e.target.value; prev(); };
+  el.querySelector('#cpyro').onchange = (e) => { C.pyro = e.target.checked; };
+  el.querySelector('#cdefault').onclick = () => { club.choreoDraft = { ...defaultChoreo(club), when: C.when }; draw(); };
+  el.querySelector('#csave').onclick = () => { club.choreo = { ...C }; toast('Choreo gespeichert – die Kurve probt schon'); };
 }

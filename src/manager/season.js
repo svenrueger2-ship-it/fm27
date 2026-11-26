@@ -8,7 +8,9 @@ import { generatePlayer, marketValue, addMissingLeagues } from '../data/generato
 import { weeklyFinance, seasonFinanceClose } from './economy.js';
 import { weeklyTraining, recoverInjury } from './training.js';
 import { weeklyStock } from './stock.js';
+import { weeklyCampus, campusUpkeep } from './campus.js';
 import { aiEdge } from './difficulty.js';
+import { derbyName, recordDerby } from './derby.js';
 import { weeklyStyleTrain } from '../data/styles.js';
 import { weeklyTransfers, seasonTransfers } from './transfers.js';
 import { rollEvent, moodAfterMatch, sponsorSeasonClose, ensureMood, moodChange } from './events.js';
@@ -21,11 +23,13 @@ import { weeklyKabine, seasonKabine } from './kabine.js';
 import { mediaAfterMatch, weeklyMedia, seasonRecords, addTitleToLegends } from './media.js';
 import { weeklyBiz, seasonBiz, applyLicence } from './clubbiz.js';
 import { weeklyCareer, careerSeasonEnd } from './career.js';
-import { intlBreak, playTournament, ensureIntl } from './nationals.js';
+import { intlBreak, ensureIntl } from './nationals.js';
+import { startTourney, simToEnd } from './tourney.js';
 import { weeklyNet } from './scoutnet.js';
 import { weeklyPlayers, weeklyLoans, seasonLoanDecisions } from './players.js';
 import { ensureClubAI, weeklyCoaches, tickBounce, coachEdge, seasonCoaches } from './clubAI.js';
 import { coachDecides, coachTrainingFactor, coachAfterMatch, isDirector, ensureCoach } from './director.js';
+import { feminize, wScale } from './gender.js';
 
 export function buildFixtures(clubIds, rng) {
   const ids = [...clubIds];
@@ -91,8 +95,9 @@ export function quickSim(world, m, rng) {
   const dH = dOn ? aiEdge(world, hH) : 0, dA = dOn ? aiEdge(world, hA) : 0;
   const sh = teamStrength(H, world.players) + coachEdge(world, H) + prepE(H) + dH, sa = teamStrength(A, world.players) + coachEdge(world, A) + prepE(A) + dA;
   const mh = (H.tactic.mentality - 0.5) * 0.4, ma = (A.tactic.mentality - 0.5) * 0.4;
-  const lh = clamp(1.45 * Math.exp((sh - sa) * 0.075) * (1 + mh) * (1 + ma * 0.5), 0.15, 5);
-  const la = clamp(1.12 * Math.exp((sa - sh) * 0.075) * (1 + ma) * (1 + mh * 0.5), 0.1, 5);
+  const dk = derbyName(world, H.id, A.id) ? 0.055 : 0.075; // v6.0: derbies have their own rules – the gap matters less
+  const lh = clamp(1.45 * Math.exp((sh - sa) * dk) * (1 + mh) * (1 + ma * 0.5), 0.15, 5);
+  const la = clamp(1.12 * Math.exp((sa - sh) * dk) * (1 + ma) * (1 + mh * 0.5), 0.1, 5);
   m.hg = rng.poisson(lh); m.ag = rng.poisson(la);
   const events = [];
   for (const [club, goals, side] of [[H, m.hg, 'h'], [A, m.ag, 'a']]) {
@@ -159,6 +164,7 @@ export function applyMatchResult(world, m, result, rng) {
       if (inXI) p.form = clamp(p.form + (d > 0 ? 4 : d < 0 ? -4 : 0) + rng.int(-3, 3), 10, 99);
     }
   }
+  recordDerby(world, m); // v6.0
 }
 
 // ---- v3.0.2 daily background world: the calendar runs these on their weekday, finishWeek catches up the rest ----
@@ -196,6 +202,7 @@ export function dailyTick(world, rng, day = world.day || 0) {
 
 // Plays every remaining fixture of the current week (except optionally the user's 3D match) and advances.
 export function finishWeek(world, rng) {
+  if (world.tourney && !world.tourney.done) simToEnd(world, rng); // v6.0: the summer tournament ends before the season starts
   ensureClubAI(world, rng);
   if (!world.cups) { createCups(world, rng); catchUpCups(world, rng, quickSim); }
   dailyTick(world, rng, 1); dailyTick(world, rng, 3); // market + scouting if the calendar skipped them
@@ -227,6 +234,7 @@ export function finishWeek(world, rng) {
       const rank = table.findIndex((r) => r.id === id) + 1;
       weeklyFinance(world, club, league, { homeGame: md.some((m) => m.h === id), rank });
       if (club.stock?.listed) weeklyStock(world, club, league, rank, rng);
+      if (club.campus) { weeklyCampus(world, club); const up = campusUpkeep(club); if (up && club.finance) { club.budget -= up; club.finance.season.facilities = (club.finance.season.facilities || 0) - up; } } // v6.0
       const rep = weeklyTraining(world, club, rng);
       if (isHumanClub(world, id)) forEachHuman(world, () => { if (world.userClubId !== id) return; for (const t of weeklyStyleTrain(world, club, rng)) { rep.unshift({ type: 'up', text: t }); world.news.unshift({ season: world.season, week: world.week, text: t }); } world.trainingReport = { season: world.season, week: world.week + 1, items: rep }; });
     }
@@ -256,7 +264,7 @@ function developPlayer(p, rng) {
   if (p.age >= 24) p.pot = Math.max(p.ovr, p.pot - rng.int(0, p.age >= 28 ? 3 : 1));
   else if (rng.chance(0.15)) p.pot = Math.min(97, p.pot + rng.int(1, 4)); // late bloomer
   p.ovr = computeOverall(p.attrs, p.pos);
-  p.value = marketValue(p.ovr, p.age, p.pot);
+  p.value = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p));
 }
 
 // Promotion/relegation rules of the leagues linked in this game (season 2026/27).
@@ -309,8 +317,11 @@ export function endSeason(world, rng) {
   // simulate all remaining fixtures of every league
   while (world.week < seasonLength(world)) finishWeek(world, rng);
   seasonLoanDecisions(world, rng);
-  const tournament = playTournament(world, rng);
-  const summary = { season: world.season, champions: {}, promoted: [], relegated: [], user: null, tournament: tournament ? { name: tournament.name, winner: tournament.winner, runnerUp: tournament.runnerUp, topScorer: tournament.topScorer } : null };
+  if (world.tourney && !world.tourney.done) simToEnd(world, rng);
+  world.tourney = null;
+  const tournament = null; // v6.0: EURO / World Cup are now played round by round in the summer (tourney.js)
+  const upcoming = startTourney(world, rng);
+  const summary = { season: world.season, champions: {}, promoted: [], relegated: [], user: null, tournament: upcoming ? { name: upcoming.name, pending: true } : null };
   const tables = {};
   for (const l of world.leagues) { tables[l.id] = computeTable(l); summary.champions[l.id] = tables[l.id][0].id; world.clubs[tables[l.id][0].id].stats.titles++; }
   for (const l of world.leagues) tables[l.id].forEach((r, i) => { summary.prizes = summary.prizes || {}; summary.prizes[r.id] = seasonFinanceClose(world, world.clubs[r.id], l, i + 1); });
@@ -391,7 +402,7 @@ export function endSeason(world, rng) {
         club.squad = club.squad.filter((x) => x !== id);
         delete world.players[id];
         const y = generatePlayer(rng, world.nextPlayerId++, p.pos, Math.round(clamp(40 + club.rep * 0.25 + rng.normal(0, 4), 35, 75)), rng.int(16, 18), country, club.rep);
-        y.clubId = club.id; y.number = p.number; y.pot = clamp(y.pot + rng.int(0, 10), y.ovr, 96);
+        y.clubId = club.id; y.number = p.number; y.pot = clamp(y.pot + rng.int(0, 10), y.ovr, 96); if (club.women) feminize(rng, y);
         world.players[y.id] = y; club.squad.push(y.id);
         if (isHumanClub(world, club.id)) world.news.unshift({ week: 0, season: world.season + 1, text: `${p.firstName} ${p.lastName} beendet seine Karriere. Jugendspieler ${y.firstName} ${y.lastName} (${y.age}) rückt in den Kader.` });
       }

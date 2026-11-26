@@ -2,6 +2,7 @@
 // quality, and plans its squad like a real sporting director: it analyses gaps (depth, quality, age,
 // expiring contracts), scouts fitting targets, bids, gets refused or countered, fights bidding wars,
 // sells surplus players, loans out talents and sacks its coach when results do not match expectations.
+import { genderOk } from './gender.js';
 import { isHumanClub, forEachHuman, isHot } from './hotseat.js';
 import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
@@ -114,7 +115,7 @@ function findTargets(world, rng, buyer, need) {
   const ids = Object.keys(world.players);
   const out = [];
   const consider = (p) => {
-    if (!p || p.youthOf || p.loan || p.clubId === buyer.id || isHumanClub(world, p.clubId)) return;
+    if (!p || p.youthOf || p.loan || p.clubId === buyer.id || isHumanClub(world, p.clubId) || !genderOk(buyer, p)) return;
     if (!require_compat(need.pos, p.pos) || p.ovr < need.minOvr || p.ovr > cap) return;
     if (p.clubId && world.clubs[p.clubId].squad.length <= 20) return;
     const fee = p.clubId ? askingPrice(world, p, true) : 0;

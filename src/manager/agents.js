@@ -93,7 +93,7 @@ export function weeklyAgents(world, rng) {
       const p = world.players[id];
       if (!p || p.contract !== 1 || p.preContract || p.loan || p.ovr < 62) continue;
       if (!rng.chance(0.04 + (p.wantsOut ? 0.08 : 0) + (p.morale < 45 ? 0.04 : 0))) continue;
-      const suitors = Object.values(world.clubs).filter((c) => c.id !== me.id && c.rep * 0.45 + 58 >= p.ovr && c.rep >= me.rep - 8);
+      const suitors = Object.values(world.clubs).filter((c) => c.id !== me.id && !c.nation && !!c.women === !!me.women && c.rep * 0.45 + 58 >= p.ovr && c.rep >= me.rep - 8);
       if (!suitors.length) continue;
       const c = rng.pick(suitors);
       p.preContract = { club: c.id };

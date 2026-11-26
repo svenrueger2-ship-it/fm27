@@ -1,6 +1,5 @@
 import { IS_MOBILE } from '../../core/device.js';
 // Start menu, new game / club selection, save slots, settings, season end.
-import { wmStartHtml, bindWmStart } from './wm.js';
 import { isHot, allSeasonsOver, setupHotseat, humanName } from '../../manager/hotseat.js';
 import { endWeek } from '../turn.js';
 import { buildStory, showStory } from '../story.js';
@@ -59,8 +58,8 @@ function careerHtml(w, save) {
 function welcomeHtml() {
   return `<div class="sv-welcome"><div class="kicker"><i></i> Live-3D-Matchengine · v${GAME_VERSION}</div>
     <h1><span>Fussball</span><span>Manager</span><b>2027</b></h1><p class="by">© BAKUSA</p>
-    <p class="sub">Übernimm einen von 224 echten Vereinen aus zwölf Ligen, verhandle Transfers, entwickle Talente – und verfolge jedes Spiel live in einer 3D-Partie, die von der KI gespielt wird.</p>
-    <div class="sv-feat"><div><b>12</b><small>Ligen</small></div><div><b>224</b><small>Vereine</small></div><div><b>3D</b><small>Live-Spiele</small></div><div><b>∞</b><small>Saisons</small></div></div>
+    <p class="sub">Übernimm einen von 252 echten Vereinen aus vierzehn Ligen – Männer und Frauen –, verhandle Transfers, entwickle Talente – und verfolge jedes Spiel live in einer 3D-Partie, die von der KI gespielt wird.</p>
+    <div class="sv-feat"><div><b>14</b><small>Ligen</small></div><div><b>252</b><small>Vereine</small></div><div><b>3D</b><small>Live-Spiele</small></div><div><b>∞</b><small>Saisons</small></div></div>
     <button class="btn primary lg" data-go="new">▶ Karriere starten</button></div>`;
 }
 
@@ -71,20 +70,14 @@ export function startScreen(app, el) {
       <aside class="sm-nav">
         <div class="sm-brand"><b>FUSSBALL MANAGER</b><span>2027</span><small>© BAKUSA</small></div>
         <nav>
-          <button data-go="new"><i>▶</i>Karriere starten</button>
-          <button data-go="continue" id="m-cont"><i>▶</i>Karriere fortsetzen</button>
-          <button data-go="load"><i>💾</i>Spielstand laden</button>
-          <button data-go="clubs"><i>🛡️</i>Vereinsauswahl</button>
-          <button data-go="comps"><i>🏆</i>Wettbewerbe</button>
-          <button data-go="stats"><i>📊</i>Statistiken</button>
-          <button data-go="scenarios"><i>🎬</i>Szenarien</button>
-          <button data-go="wm"><i>🏆</i>WM 2026</button>
-          <button data-go="quick"><i>⚽</i>Schnelles 3D-Spiel</button>
+          <button data-go="continue" id="m-cont"><i>▶</i>Weiterspielen</button>
+          <button data-go="play"><i>✨</i>Neues Spiel</button>
+          <button data-go="load"><i>💾</i>Spielstände</button>
+          <button data-go="world"><i>🌍</i>Fußballwelt</button>
           <button data-go="settings"><i>⚙️</i>Einstellungen</button>
-          <button data-go="credits"><i>✦</i>Credits</button>
           <button data-go="quit" class="quit"><i>⏻</i>Beenden</button>
         </nav>
-        ${langPicker('sm-lang')}<p class="sm-ver">Version ${GAME_VERSION} · ${isDesktop() ? 'Windows' : /FM27-Android/.test(navigator.userAgent) ? 'Android-App' : 'Browser'}</p>
+        ${langPicker('sm-lang')}<p class="sm-ver">Version ${GAME_VERSION} · ${isDesktop() ? 'Windows' : /FM27-Android/.test(navigator.userAgent) ? 'Android-App' : 'Browser'} · <a href="#" data-go="credits">Credits</a></p>
       </aside>
       <main class="sm-center" id="m-center">${welcomeHtml()}</main>
       <aside class="sm-notes"><div class="pn-top"><small>BAKUSA</small><h3>Patchnotes</h3></div><div class="pn-list">${patchHtml()}</div></aside>
@@ -104,6 +97,16 @@ export function startScreen(app, el) {
   const actions = {
     new: () => app.go('new'),
     clubs: () => app.go('new'),
+    play: () => {
+      center.innerHTML = `<div class="sv-panel"><h2>✨ Neues Spiel</h2><div class="play-grid">
+        <button class="play-card main" data-go="new"><span>🏟️</span><b>Karriere</b><small>Übernimm einen von 252 Vereinen – Männer oder Frauen – oder gründe deinen eigenen. Mit Europapokal, EM und WM.</small></button>
+        <button class="play-card" data-go="scenarios"><span>🎬</span><b>Szenario</b><small>Steig mitten in eine Saison ein – mit einer klaren Mission.</small></button>
+        <button class="play-card" data-go="quick"><span>⚽</span><b>Schnelles 3D-Spiel</b><small>Sofort ein Topspiel live in 3D erleben.</small></button></div></div>`;
+    },
+    world: (tab = 'comps') => needWorld((w) => {
+      center.innerHTML = `<div class="tabs" style="margin-bottom:10px"><button data-wt="comps" class="${tab === 'comps' ? 'active' : ''}">🏆 Wettbewerbe</button><button data-wt="stats" class="${tab === 'stats' ? 'active' : ''}">📊 Statistiken</button></div>${tab === 'comps' ? competitionsHtml(w) : statsHtml(w, !!latestWorld)}`;
+      center.querySelectorAll('[data-wt]').forEach((b) => (b.onclick = () => actions.world(b.dataset.wt)));
+    }),
     continue: async () => {
       if (!latest) return toast('Noch kein Spielstand vorhanden – starte eine neue Karriere.');
       const w = latestWorld || (await loadGame(latest.slot));
@@ -127,7 +130,6 @@ export function startScreen(app, el) {
         app.go('home');
       }));
     },
-    wm: () => { center.innerHTML = wmStartHtml(); bindWmStart(app, center); },
     quick: () => {
       const w = generateWorld();
       const ids = [...w.leagues[0].clubIds].sort((a, b) => w.clubs[b].rep - w.clubs[a].rep);
@@ -140,7 +142,7 @@ export function startScreen(app, el) {
       <p class="muted">3D-Grafik: three.js · Desktop: Electron · Schriften: Barlow Condensed, Inter<br>Ligen, Kader und Wappen: Stand Saison 2026/27. Ratings und Alter sind Schätzungen des Spiels.</p>`),
     quit: () => { if (window.bakusa?.close) window.bakusa.close(); else if (window.bakusa?.quit) window.bakusa.quit(); else { try { window.close(); } catch {} toast('Im Browser bitte einfach den Tab schließen.'); } },
   };
-  el.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => actions[b.dataset.go]?.()));
+  el.querySelectorAll('[data-go]').forEach((b) => (b.onclick = (e) => { e.preventDefault(); actions[b.dataset.go]?.(); }));
   center.addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g && center.contains(g)) actions[g.dataset.go]?.(); });
   // load the most recent save for "Karriere fortsetzen" and the career overview
   (async () => {
@@ -148,7 +150,7 @@ export function startScreen(app, el) {
       const saves = (await listSaves()).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
       latest = saves[0] || null;
       const btn = el.querySelector('#m-cont');
-      if (!latest) { btn.classList.add('dim'); return; }
+      if (!latest) { btn.style.display = 'none'; return; }
       latestWorld = await loadGame(latest.slot);
       if (latestWorld && el.isConnected && center.querySelector('.sv-welcome')) center.innerHTML = `<div class="sv-panel">${careerHtml(latestWorld, latest)}<div class="row-actions"><button class="btn primary lg" data-go="continue">▶ Karriere fortsetzen</button><button class="btn lg" data-go="new">Neue Karriere</button></div></div>`;
     } catch (e) { console.warn('start overview', e); }
@@ -365,7 +367,8 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
     ablauf: () => `
       ${sel('s-ev', 'Ereignisse & Entscheidungen', 'Wie oft Anfragen wie Spenden, Benefiz oder Sponsorendeals auftauchen', s.events || 'normal', [['oft', 'Oft'], ['normal', 'Normal'], ['selten', 'Selten'], ['aus', 'Aus']])}
       ${tog('s-auto', 'Automatisch speichern', 'Nach jedem Spieltag in den Autosave-Platz', !!s.autosave)}
-      ${tog('s-subs', 'Automatische Auswechslungen', 'Der Co-Trainer wechselt bei Verletzungen und Müdigkeit', s.autoSubs !== false)}`,
+      ${tog('s-subs', 'Automatische Auswechslungen', 'Der Co-Trainer wechselt bei Verletzungen und Müdigkeit', s.autoSubs !== false)}
+      ${tog('s-msp', 'Standards selbst ausführen', 'Elfmeter, direkte Freistöße und Ecken im 3D-Spiel selbst schießen – und als Torwart die Ecke raten', s.manualSP !== false)}`,
     daten: () => `
       <div class="set-row"><span><b>Spielstand exportieren</b><small>Als Datei sichern – z. B. für einen anderen PC</small></span><button class="btn sm" id="s-exp" ${app.world ? '' : 'disabled'}>⬇ Exportieren</button></div>
       <div class="set-row"><span><b>Spielstand importieren</b><small>Eine exportierte .fm27-Datei laden</small></span><label class="btn sm">⬆ Importieren<input type="file" id="s-imp" accept=".fm27,.json" hidden></label></div>
@@ -382,7 +385,7 @@ function bindSettings(app, root, redraw) {
     's-q': (v) => (s.quality = v), 's-sp': (v) => (s.speed = v === 'highlights' ? v : +v), 's-cam': (v) => (s.camera = v), 's-ui': (v) => (s.uiScale = +v),
     's-theme': (v) => (s.theme = v), 's-ev': (v) => { s.events = v; if (window.ufm?.world) window.ufm.world.eventRate = v; }, 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v), 's-eng': (v) => (s.engine3d = v),
   };
-  const bools = { 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-hl': 'highlights', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
+  const bools = { 's-msp': 'manualSP', 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-hl': 'highlights', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
   const commit = () => { saveSettings(s); applyTheme(s, window.ufm?.world ? window.ufm.club : null); toast('Einstellungen gespeichert', 1200); };
   for (const [id, fn] of Object.entries(map)) { const el = $(`#${id}`); if (!el) continue; el.addEventListener(el.type === 'range' ? 'input' : 'change', () => { fn(el.value); if (el.nextElementSibling?.tagName === 'OUTPUT') el.nextElementSibling.textContent = `${Math.round(el.value * 100)} %`; }); el.addEventListener('change', commit); }
   for (const [id, key] of Object.entries(bools)) { const el = $(`#${id}`); if (el) el.addEventListener('change', () => { s[key] = el.checked; commit(); }); }
@@ -456,7 +459,7 @@ export function seasonEndScreen(app, el) {
     const champs = Object.entries(s.champions).map(([lid, cid]) => `<li>${esc(w.leagues.find((l) => l.id === lid).name)}: <b>${esc(w.clubs[cid].name)}</b></li>`).join('');
     w.news.unshift({ season: w.season, week: 0, text: `Neue Saison ${w.season}/${String((w.season + 1) % 100).padStart(2, '0')} beginnt. Letzte Saison: Platz ${s.user.rank}.` });
     el.querySelector('#sum').innerHTML = `<div class="card"><h3>Meister</h3><ul>${champs}</ul><h3>Aufsteiger</h3><p>${esc(promo.join(', ') || '–')}</p><h3>Absteiger</h3><p>${esc(rel.join(', ') || '–')}</p>
-      ${s.tournament ? `<h3>🌍 ${esc(s.tournament.name)}</h3><p>${flag(s.tournament.winner)} <b>${esc(nationName(s.tournament.winner))}</b> gewinnt das Turnier gegen ${esc(nationName(s.tournament.runnerUp))}.${s.tournament.topScorer ? ` Torschützenkönig: ${esc(s.tournament.topScorer.name)} (${s.tournament.topScorer.goals} Tore).` : ''}</p>` : ''}
+      ${s.tournament?.pending ? `<h3>🌍 ${esc(s.tournament.name)}</h3><p>Der Turniersommer beginnt! Verfolge Nominierungen, Gruppen und K.-o.-Runde unter Wettbewerbe → EM / WM.</p>` : s.tournament ? `<h3>🌍 ${esc(s.tournament.name)}</h3><p>${flag(s.tournament.winner)} <b>${esc(nationName(s.tournament.winner))}</b> gewinnt das Turnier gegen ${esc(nationName(s.tournament.runnerUp))}.${s.tournament.topScorer ? ` Torschützenkönig: ${esc(s.tournament.topScorer.name)} (${s.tournament.topScorer.goals} Tore).` : ''}</p>` : ''}
       ${s.playoffs?.length ? `<h3>Relegation & Play-offs</h3><ul class="po-list">${s.playoffs.map((po) => `<li><span>${esc(po.name)}</span><b>${esc(w.clubs[po.first].short)} – ${esc(w.clubs[po.second].short)}</b> <em>${esc(po.text)}</em> → <strong>${esc(w.clubs[po.winner].name)}</strong></li>`).join('')}</ul>` : ''}
       ${s.humans ? `<h3>👥 Hotseat</h3><ul>${s.humans.map((x, i) => `<li>${esc(humanName(w, i))} (${esc(w.clubs[w.hot.humans[i].clubId].short)}): Platz <b>${x.user.rank}</b> in der ${esc(x.user.league)}${x.cupWins.length ? ` · 🏆 ${esc(x.cupWins.join(', '))}` : ''}</li>`).join('')}</ul>` : ''}
       <button class="btn primary" id="cont">Weiter zur neuen Saison</button></div>`;

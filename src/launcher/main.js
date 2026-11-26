@@ -78,7 +78,7 @@ function renderStats() {
 function renderContinue() {
   const s = state.saves[0];
   $('#continue').innerHTML = s ? `<button class="cont" id="cont" style="--c1:${s.meta?.colors?.primary || '#6b5bd6'}">${badge(s, 52)}<span class="cont-txt"><small>WEITERSPIELEN</small><b>${esc(s.club)}</b><em>${s.meta?.scenario ? `🎬 ${esc(s.meta.scenario)} · ` : ''}Saison ${seasonTxt(s.season)} · Spieltag ${s.week + 1} · ${ago(s.savedAt)}</em></span><span class="cont-arrow">→</span></button>`
-    : `<div class="cont empty"><span class="cont-txt"><small>WILLKOMMEN</small><b>Starte deine erste Karriere</b><em>Wähle aus 224 Vereinen in 12 Ligen oder gründe deinen eigenen.</em></span></div>`;
+    : `<div class="cont empty"><span class="cont-txt"><small>WILLKOMMEN</small><b>Starte deine erste Karriere</b><em>Wähle aus 252 Vereinen in 14 Ligen – Männer und Frauen – oder gründe deinen eigenen.</em></span></div>`;
   $('#cont')?.addEventListener('click', () => launch(s.slot));
   $('#cont')?.addEventListener('pointerenter', sfx.tick);
 }

@@ -4,6 +4,7 @@ import { FACE_ATLAS, FACE_COUNT, FACE_COLS, FACE_ROWS } from '../data/faces.js';
 import { NATIONS } from '../data/names.js';
 import { NATIONS_EXTRA } from '../data/nationsExtra.js';
 import { CRESTS } from '../data/crests.js';
+import '../data/womenCrests.js';
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -83,6 +84,7 @@ const photoKey = (p) => `${p.firstName}${p.lastName}`.toLowerCase().normalize('N
 export function portrait(p, club, size = 64) {
   const ph = p.photo || PLAYER_PHOTOS[photoKey(p)];
   if (ph) { const c1 = club?.colors?.primary || '#3a3358'; return `<span class="portrait pphoto" aria-hidden="true" style="width:${size}px;height:${size}px;--c1:${c1};background-image:url(${ph}),linear-gradient(160deg,color-mix(in srgb,var(--c1) 70%,#1a1530),#120d24 85%)"></span>`; } // v6.0 own photo
+  if (p.women) return svgPortrait(p, club, size); // v6.0: drawn portraits with long hair / ponytails for women
   if (!faceCssReady) { const b64 = FACE_ATLAS.slice(FACE_ATLAS.indexOf(',') + 1), bin = atob(b64), u8 = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
     const url = URL.createObjectURL(new Blob([u8], { type: 'image/webp' })); // a blob URL – large data: URLs are not drawn in CSS
     const st = document.createElement('style'); st.textContent = `.pface{background-image:url("${url}"),linear-gradient(160deg,color-mix(in srgb,var(--c1) 70%,#1a1530),#120d24 85%)}`; document.head.appendChild(st); faceCssReady = true; }
@@ -97,7 +99,7 @@ export function svgPortrait(p, club, size = 64) {
   const h = (k) => { let x = (p.id * 2654435761 + k * 40503) >>> 0; x ^= x >>> 15; return (x % 1000) / 1000; };
   const uid = `pt${p.id}_${size}`;
   const fw = 12 + h(1) * 2.6, fh = 14.5 + h(2) * 2;          // face width / height
-  const jaw = 0.78 + h(3) * 0.16;                             // jaw narrowness
+  const jaw = (p.women ? 0.68 : 0.78) + h(3) * 0.16;          // jaw narrowness
   const eyeY = 29 + h(4) * 1.4, eyeDx = 5 + h(5) * 0.8;
   const brow = 0.9 + h(6) * 1.3;
   const eyeCol = ['#2b1d14', '#3b2a1c', '#4a6a8a', '#3d6b4a', '#1c1c1c'][Math.floor(h(7) * 5)];
@@ -115,7 +117,7 @@ export function svgPortrait(p, club, size = 64) {
     // 4 bald / shaved
     `<path d="M${32 - fw + 1} ${top + 10} C${32 - fw + 2} ${top + 4} ${32 + fw - 2} ${top + 4} ${32 + fw - 1} ${top + 10}" fill="none" stroke="${hair}" stroke-width=".8" opacity=".35"/>`,
   ];
-  const bt = L.beard ? Math.floor(h(9) * 3) : -1;
+  const bt = L.beard && !p.women ? Math.floor(h(9) * 3) : -1;
   const beard = bt === 0 ? `<path d="M${32 - fw * jaw} 33 C${32 - fw * 0.7} ${30 + fh} ${32 + fw * 0.7} ${30 + fh} ${32 + fw * jaw} 33 C${32 + 6} 40 ${32 - 6} 40 ${32 - fw * jaw} 33Z" fill="${hair}" opacity=".9"/>`
     : bt === 1 ? `<path d="M${32 - fw * jaw} 32 C${32 - fw * 0.7} ${30 + fh} ${32 + fw * 0.7} ${30 + fh} ${32 + fw * jaw} 32" fill="none" stroke="${hair}" stroke-width="2.4" opacity=".35"/>`
     : bt === 2 ? `<path d="M29 38.5 Q32 ${30 + fh + 1} 35 38.5 Q32 40.5 29 38.5Z M28 36.4 Q32 35 36 36.4" fill="${hair}" stroke="${hair}" stroke-width=".9" opacity=".85"/>` : '';
@@ -129,10 +131,13 @@ export function svgPortrait(p, club, size = 64) {
     <path d="M4 64 C6 50 18 45.5 32 45.5" fill="none" stroke="${shade(shirt, 0.7)}" stroke-width="1.2"/>
     <path d="M25.5 46 L32 52.5 L38.5 46" fill="none" stroke="${sec}" stroke-width="2.6" stroke-linejoin="round"/>
     <text x="48" y="60" font-size="8" font-weight="800" text-anchor="middle" fill="${sec}" opacity=".85" font-family="Arial">${p.number || ''}</text>
+    ${p.women ? (h(10) < 0.45
+      ? `<path d="M${32 - fw - 3} ${top + 10} C${32 - fw - 5} ${top + 28} ${32 - fw - 4} 44 ${32 - fw + 1} 50 L${32 + fw - 1} 50 C${32 + fw + 4} 44 ${32 + fw + 5} ${top + 28} ${32 + fw + 3} ${top + 10} C${32 + fw} ${top - 3} ${32 - fw} ${top - 3} ${32 - fw - 3} ${top + 10}Z" fill="${hair}"/>`
+      : `<ellipse cx="${32 + fw + 3.5}" cy="${top + 13}" rx="3.2" ry="8.5" transform="rotate(-18 ${32 + fw + 3.5} ${top + 13})" fill="${hair}"/><circle cx="${32 + fw + 0.6}" cy="${top + 6.5}" r="1.6" fill="${shade(hair, 0.6)}"/>`) : ''}
     <path d="M27 ${30 + fh - 4} L27 47 Q32 50 37 47 L37 ${30 + fh - 4}Z" fill="${shade(skin, 0.86)}"/>
     <ellipse cx="${32 - fw - 0.6}" cy="30" rx="1.9" ry="3" fill="${shade(skin, 0.9)}"/><ellipse cx="${32 + fw + 0.6}" cy="30" rx="1.9" ry="3" fill="${shade(skin, 0.9)}"/>
     <path d="${face}" fill="url(#${uid}s)"/>
-    ${hairs[style] || hairs[0]}
+    ${p.women ? `<path d="M${32 - fw - 1.5} ${top + 14} C${32 - fw - 2} ${top - 2} ${32 + fw + 2} ${top - 3} ${32 + fw + 1.5} ${top + 14} C${32 + fw - 1} ${top + 7} ${34} ${top + 5} ${29} ${top + 8} C${26} ${top + 9.5} ${32 - fw + 2} ${top + 9} ${32 - fw - 1.5} ${top + 14}Z" fill="${hair}"/>` : hairs[style] || hairs[0]}
     <path d="M${32 - eyeDx - 2.6} ${eyeY - 3.2} Q${32 - eyeDx} ${eyeY - 4.4} ${32 - eyeDx + 2.6} ${eyeY - 3.3}" stroke="${shade(hair, 0.8)}" stroke-width="${brow}" fill="none" stroke-linecap="round"/>
     <path d="M${32 + eyeDx - 2.6} ${eyeY - 3.3} Q${32 + eyeDx} ${eyeY - 4.4} ${32 + eyeDx + 2.6} ${eyeY - 3.2}" stroke="${shade(hair, 0.8)}" stroke-width="${brow}" fill="none" stroke-linecap="round"/>
     <ellipse cx="${32 - eyeDx}" cy="${eyeY}" rx="2.1" ry="1.25" fill="#f4f1ea"/><ellipse cx="${32 + eyeDx}" cy="${eyeY}" rx="2.1" ry="1.25" fill="#f4f1ea"/>

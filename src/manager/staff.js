@@ -23,8 +23,8 @@ export const ROLES = { assistant: 'Co-Trainer', physio: 'Physiotherapeut', youth
 const FIRST = ['Lars', 'Mats', 'Felix', 'Jonas', 'Tim', 'Ole', 'Paul', 'Erik', 'Hannes', 'Kai', 'Nils', 'Moritz', 'Jan', 'Rafael', 'Diego', 'Simon'];
 const LAST = ['Becker', 'Wolf', 'Schreiber', 'Krause', 'Hofmann', 'Brandt', 'Peters', 'Graf', 'Engel', 'Seidel', 'Vogel', 'Roth', 'Kuhn', 'Pohl', 'Arnold', 'Busch'];
 
-function makeStaff(rng, role, q) {
-  return { role, name: `${rng.pick(FIRST)} ${rng.pick(LAST)}`, quality: q, wage: Math.round((60000 + q * q * 45000) / 1e4) * 1e4 };
+function makeStaff(rng, role, q, f = 1) {
+  return { role, name: `${rng.pick(FIRST)} ${rng.pick(LAST)}`, quality: q, wage: Math.round(((60000 + q * q * 45000) * f) / 1e4) * 1e4 };
 }
 
 export function ensureStaff(world, rng) {
@@ -32,7 +32,7 @@ export function ensureStaff(world, rng) {
   const club = world.clubs[world.userClubId];
   const q = clamp(Math.round((club.rep - 30) / 18), 1, 4);
   world.staff = {
-    members: Object.fromEntries(Object.keys(ROLES).map((r) => [r, makeStaff(rng, r, q)])),
+    members: Object.fromEntries(Object.keys(ROLES).map((r) => [r, makeStaff(rng, r, q, club.women ? 0.25 : 1)])),
     delegate: { lineup: 'me', training: 'auto', contracts: 'ask', youth: 'ask', scouting: 'ask', offers: 'me', press: 'me' },
   };
   world.inbox ||= [];
@@ -45,7 +45,7 @@ export const staffWages = (world) => Object.values(world.staff?.members || {}).r
 
 export function staffCandidates(world, rng, role) {
   const cur = staffQ(world, role);
-  return [cur, cur + 1, cur + 2].filter((q) => q <= 5).map((q) => ({ ...makeStaff(rng, role, q), fee: Math.round((q * q * 50000) / 1e4) * 1e4 }));
+  return [cur, cur + 1, cur + 2].filter((q) => q <= 5).map((q) => { const fw = world.clubs[world.userClubId]?.women ? 0.25 : 1; return { ...makeStaff(rng, role, q, fw), fee: Math.round((q * q * 50000 * fw) / 1e4) * 1e4 }; });
 }
 export function hireStaff(world, cand) {
   const club = world.clubs[world.userClubId];

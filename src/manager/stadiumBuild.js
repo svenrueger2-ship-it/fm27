@@ -3,6 +3,7 @@
 // projects that cost money and take weeks; while a stand is being rebuilt it holds fewer spectators.
 // The same layout drives the capacity, matchday income and the 3D stadium.
 import { clamp } from '../core/rng.js';
+import { wScale } from './gender.js';
 
 export const STAND_NAMES = ['Haupttribüne', 'Gegengerade', 'Heimkurve', 'Gästekurve'];
 // v5.2: stands can carry their own names (e.g. "Südtribüne", "Uwe-Seeler-Tribüne")
@@ -205,7 +206,7 @@ export function pitchInjuryFactor(club) { return { natur: 1, hybrid: 0.88, heizu
 // naming-rights offers
 const NAMING_BRANDS = ['Allianz', 'Volta Energie', 'Nordbank', 'Krone Mobil', 'Solaris', 'Orbita', 'Turbo Telecom', 'Lumen Air', 'Bergquell', 'PixelWerk', 'Hansa Logistik', 'Alpenbank'];
 export function namingOffers(club, rng, leagueTier = 1) {
-  const base = Math.pow(club.rep, 2) * 1400 * (leagueTier === 1 ? 1 : leagueTier === 2 ? 0.45 : 0.2) * (club.stadium.capacity / 40000 + 0.4);
+  const base = Math.pow(club.rep, 2) * 1400 * (leagueTier === 1 ? 1 : leagueTier === 2 ? 0.45 : 0.2) * (club.stadium.capacity / 40000 + 0.4) * wScale(club);
   return [0, 1, 2].map((k) => {
     const brand = NAMING_BRANDS[(club.id * 3 + k * 5 + (club.stadium.namingRound || 0)) % NAMING_BRANDS.length];
     const years = [3, 5, 8][k];

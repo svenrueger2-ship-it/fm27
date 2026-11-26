@@ -1,5 +1,6 @@
 // Preloaded crest images for canvas textures (kits, video walls).
 import { CRESTS } from '../data/crests.js';
+import '../data/womenCrests.js';
 const cache = new Map();
 export function crestImage(short) {
   if (!CRESTS[short]) return null;

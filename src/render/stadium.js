@@ -283,6 +283,7 @@ export function buildStadium(scene, opts = {}) {
     { let d0 = st.off, h0 = 0;
       for (let t = 0; t < S.tiers; t++) { const rows = rows3D(S, t); tiers.push({ rows, d0, h0 }); d0 += rows * stepD * 0.72 + 2.5; h0 += rows * stepH + 4.2; } }
     const rows1 = tiers[0].rows;
+    st.tiers = tiers; // v6.0 choreo placement
     for (const t of tiers) {
       for (let r = 0; r < t.rows; r++) {
         const h = t.h0 + (r + 1) * stepH, d = t.d0 + r * stepD, len = st.len + (t.d0 - st.off + r * stepD) * 1.4;
@@ -554,9 +555,42 @@ export function buildStadium(scene, opts = {}) {
     }
     const city = new THREE.Mesh(mergeGeometries(bg), bm); root.add(city);
   }
+  // ------------------------------------------------------------------ v6.0 choreo (Blockfahne over the lower tier of the home end)
+  let choreo = null;
+  const showChoreo = (canvas) => {
+    if (choreo) { root.remove(choreo.mesh); choreo = null; }
+    if (!canvas) return;
+    const st = stands[2], T = st.tiers?.[0]; if (!T) return;
+    const d0 = T.d0 + 0.2, d1 = T.d0 + T.rows * stepD - 0.2, h0 = 0.7, h1 = T.rows * stepH + 1.1, len = st.len + (d1 - d0) * 0.9;
+    const SX = 28, SY = 8;
+    const geo = new THREE.PlaneGeometry(1, 1, SX, SY);
+    const base = [];
+    const pos = geo.attributes.position, uv = geo.attributes.uv;
+    for (let i = 0; i < pos.count; i++) { const u = uv.getX(i), v = uv.getY(i); base.push([u, v]); }
+    const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.85, metalness: 0, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.18 }));
+    mesh.frustumCulled = false;
+    root.add(mesh);
+    choreo = { mesh, geo, base, d0, d1, h0, h1, len, roll: 0, rolling: false, t: 0 };
+    layoutChoreo(0);
+  };
+  const layoutChoreo = (time) => {
+    const C = choreo, pos = C.geo.attributes.position, st = stands[2];
+    const top = 1 - C.roll; // rolling up from the top edge towards the front row
+    for (let i = 0; i < C.base.length; i++) {
+      const [u, v0] = C.base[i], v = v0 * top;
+      const d = C.d0 + (C.d1 - C.d0) * v, h = C.h0 + (C.h1 - C.h0) * v;
+      const along = (u - 0.5) * C.len;
+      const wave = Math.sin(time * 1.6 + u * 9 + v * 4) * 0.18 * (0.4 + v);
+      pos.setXYZ(i, st.sign * (d - wave * 0.5), h + wave, along);
+    }
+    pos.needsUpdate = true; C.geo.computeVertexNormals();
+  };
   // ------------------------------------------------------------------ per-frame updates
   let t = 0;
   return {
+    showChoreo,
+    rollChoreo() { if (choreo) choreo.rolling = true; },
     fanSpots,
     root,
     tvAnchor: { z: mainBack - 1.5, y: mainTop + 4.5 },
@@ -574,6 +608,11 @@ export function buildStadium(scene, opts = {}) {
       crowdUniforms.uTense.value = Math.max(0, crowdUniforms.uTense.value - dt * 0.45);
       adTex.offset.x = (adTex.offset.x + dt * 0.02) % 1;
       for (const r of ribbons) r.offset.x = (r.offset.x - dt * 0.03) % 1;
+      if (choreo) {
+        if (choreo.rolling) choreo.roll = Math.min(1, choreo.roll + dt * 0.35);
+        if (choreo.roll >= 1) { root.remove(choreo.mesh); choreo.geo.dispose(); choreo = null; }
+        else layoutChoreo(t);
+      }
     },
   };
 }

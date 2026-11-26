@@ -2,6 +2,7 @@
 // (position, max. age). They raise the knowledge of players there week by week, deliver reports with
 // their best finds and — in regions outside the big leagues — discover unknown talents that can be
 // signed as free agents.
+import { genderOk, feminize, userIsW, wScale } from './gender.js';
 import { clamp } from '../core/rng.js';
 import { generatePlayer, marketValue } from '../data/generator.js';
 import { NATIONS } from '../data/names.js';
@@ -61,9 +62,10 @@ function discover(world, rng, s, R) {
   const p = generatePlayer(rng, world.nextPlayerId++, pos, Math.round(clamp(46 + s.quality * 3 + rng.normal(0, 5) + (age - 16) * 2, 40, 72)), age, 'DE', 50);
   const pool = NATIONS[nat] || EXTRA_NAMES[nat] || NATIONS[NAME_LIKE[nat] || 'ENG'];
   p.firstName = rng.pick(pool.first); p.lastName = rng.pick(pool.last);
+  if (userIsW(world)) feminize(rng, p);
   p.pot = clamp(Math.round(p.ovr + 14 + s.quality * 2.5 + rng.normal(0, 5)), p.ovr + 6, 93);
   p.nation = nat; p.clubId = null; p.contract = 0; p.faSince = world.season; p.discovered = true; p.wage = 15000;
-  p.value = marketValue(p.ovr, p.age, p.pot);
+  p.value = Math.round(marketValue(p.ovr, p.age, p.pot) * wScale(p));
   world.players[p.id] = p;
   ensureTransferState(world);
   world.freeAgents.push(p.id);
@@ -86,7 +88,7 @@ export function weeklyNet(world, rng) {
     if (!s.region) continue;
     const R = REGIONS[s.region]; s.weeks++;
     const gain = 6 + s.quality * 3 + chief * 1.5;
-    const fits = (p) => p.clubId !== world.userClubId && !p.youthOf && (s.focus.pos === 'ALLE' || p.pos === s.focus.pos) && p.age <= (s.focus.maxAge || 40) && inRegion(world, p, R);
+    const fits = (p) => p.clubId !== world.userClubId && !p.youthOf && genderOk(world.clubs[world.userClubId], p) && (s.focus.pos === 'ALLE' || p.pos === s.focus.pos) && p.age <= (s.focus.maxAge || 40) && inRegion(world, p, R);
     const pool = all.filter(fits);
     for (let i = 0; i < Math.min(pool.length, 12 + s.quality * 4); i++) { const p = rng.pick(pool); K[p.id] = clamp((K[p.id] ?? 15) + gain, 0, 100); }
     // report every 3 weeks: the best (fully scouted) players that match the focus

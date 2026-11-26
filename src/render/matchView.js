@@ -6,6 +6,8 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { drawChoreo } from '../manager/derby.js';
+import { crestImage } from './crestImages.js';
 import { buildStadium, setupLights, createBall, createRain, createSnow, createPyro } from './stadium.js';
 import { createPlayerModel, animatePlayer } from './playerModel.js';
 import { StadiumAudio } from './audio.js';
@@ -50,10 +52,17 @@ export class MatchView {
     this.snow = weather === 'schnee' ? createSnow(this.scene, quality === 'niedrig' ? 1200 : quality === 'ultra' ? 5000 : 3000) : null;
     if (weather === 'nebel') this.scene.fog = new THREE.Fog(tod === 'nacht' ? 0x3a404c : 0xb9c2cc, 55, 240);
     else if (weather === 'schnee') this.scene.fog = new THREE.Fog(tod === 'nacht' ? 0x30343c : 0xd8dee6, 60, 260);
+    // v6.0 choreo of the home end before kick-off; rolled up after a few minutes of play
+    if (engine.choreo) {
+      const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 320;
+      drawChoreo(cv, engine.choreo, home, crestImage(home.short));
+      this.stadium.showChoreo(cv);
+      this.choreoUntil = 150; // seconds of match time
+    }
     // pyro in the fan blocks (v1.0): at the intro of big matches and after goals
     this.pyro = createPyro(this.scene);
     this.pyroMode = engine.pyro ?? 'normal';
-    if (this.pyroMode !== 'aus' && (engine.bigMatch || Math.random() < 0.35)) setTimeout(() => this.pyro?.fire(this.stadium.fanSpots.home, quality === 'niedrig' ? 5 : 10), 600);
+    if (this.pyroMode !== 'aus' && (engine.bigMatch || engine.choreo?.pyro || Math.random() < 0.35)) setTimeout(() => this.pyro?.fire(this.stadium.fanSpots.home, quality === 'niedrig' ? 5 : engine.choreo?.pyro ? 16 : 10), 600);
 
     // post-processing
     if (quality !== 'niedrig' && (!IS_MOBILE || quality !== 'mittel')) { // v3.0.2: bloom on phones from 'hoch' (Xiaomi 15T Pro handles it)
@@ -298,6 +307,7 @@ export class MatchView {
       }
       this.sync(E.phase === 'fulltime' || E.phase === 'halftime' ? dt : simDt);
     }
+    if (this.choreoUntil && E.time > this.choreoUntil) { this.choreoUntil = 0; this.stadium.rollChoreo(); }
     this.stadium.update(dt);
     this.rain?.update(dt, this.camera.position);
     this.snow?.update(dt, this.camera.position);

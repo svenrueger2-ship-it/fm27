@@ -1,4 +1,5 @@
 // Off-pitch life of the user's club: sponsor deals, board & fan mood, press conferences,
+import { genderOk, feminize, wScale } from './gender.js';
 import { diff } from './difficulty.js';
 // random events with decisions, transfer rumours and Deadline Day.
 import { money } from '../core/fmt.js';
@@ -27,7 +28,7 @@ export function moodAfterMatch(world, diff, strengthGap) {
 export const SPONSOR_SLOTS = { shirt: { name: 'Trikotsponsor', share: 0.4 }, kit: { name: 'Ausrüster', share: 0.18 }, sleeve: { name: 'Ärmelsponsor', share: 0.12 } };
 const BRANDS = { shirt: ['Volta Energie', 'Nordbank', 'Turbo Telecom', 'Lumen Air', 'Orbita Versicherung', 'Hansa Logistik', 'Krone Mobil', 'Solaris'], kit: ['Strider', 'Velox Sport', 'Apex', 'Kinetic', 'Puma-Line', 'Fennek'], sleeve: ['PixelWerk', 'Bergquell', 'Alpenbank', 'Nova Bet', 'Zephyr', 'Kaiser Brau'] };
 
-export function genericSponsorValue(club, league) { return Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf(league)); }
+export function genericSponsorValue(club, league) { return Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf(league)) * wScale(club); }
 
 export function ensureSponsors(world, club) {
   if (club.sponsorDeals) return club.sponsorDeals;
@@ -160,7 +161,7 @@ export function resolveEvent(world, k, rng) {
   if (eff.youth) {
     const L = leagueOf(world, c);
     const y = generatePlayer(rng, world.nextPlayerId++, rng.pick(['ZM', 'OM', 'ST', 'IV', 'LA', 'RA']), Math.round(46 + c.rep * 0.15 + rng.normal(0, 3)), 16, L.country, c.rep);
-    y.pot = clamp(y.ovr + rng.int(22, 34), y.ovr, 94); y.clubId = c.id; y.contract = 3; y.wage = 24000; y.prog = {}; y.loan = null; y.releaseClause = null; y.career = []; y.moves = [];
+    y.pot = clamp(y.ovr + rng.int(22, 34), y.ovr, 94); y.clubId = c.id; y.contract = 3; y.wage = 24000; if (c.women) feminize(rng, y); y.prog = {}; y.loan = null; y.releaseClause = null; y.career = []; y.moves = [];
     const used = new Set(c.squad.map((id) => world.players[id].number)); let n = 36; while (used.has(n)) n++; y.number = n;
     world.players[y.id] = y; c.squad.push(y.id);
     msg += ` – ${y.firstName} ${y.lastName} (${y.pos}, Potenzial ~${y.pot}) ist jetzt in deinem Kader.`;
@@ -178,8 +179,8 @@ export function rollRumours(world, rng, n = 3) {
   world.rumours ||= [];
   const clubs = Object.values(world.clubs);
   for (let i = 0; i < n; i++) {
-    const buyer = rng.pick(clubs.filter((c) => c.rep > 60));
-    const cands = clubs.filter((c) => c.id !== buyer.id && c.rep < buyer.rep + 5).flatMap((c) => c.squad.map((id) => world.players[id])).filter((p) => p && p.ovr >= buyer.rep * 0.62 + 20 && p.ovr <= buyer.rep * 0.62 + 34);
+    const buyer = rng.pick(clubs.filter((c) => c.rep > 60 && !c.nation));
+    const cands = clubs.filter((c) => c.id !== buyer.id && genderOk(c, buyer) && c.rep < buyer.rep + 5).flatMap((c) => c.squad.map((id) => world.players[id])).filter((p) => p && p.ovr >= buyer.rep * 0.62 + 20 && p.ovr <= buyer.rep * 0.62 + 34);
     if (!cands.length) continue;
     const p = rng.pick(cands);
     const [src, rel] = rng.pick(SOURCES);

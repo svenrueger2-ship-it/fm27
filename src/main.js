@@ -22,6 +22,7 @@ if (IS_MOBILE) {
 }
 const app = new App(root);
 window.ufm = app; // handy for debugging in the console
+import('./manager/tourney.js').then((m) => { window.ufmDev = { startTourney: m.startTourney }; }).catch(() => {});
 preloadCrests().finally(async () => {
   app.render();
   // v2.6: the launcher can open the game straight into a save (#continue=slot)

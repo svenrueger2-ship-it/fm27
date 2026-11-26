@@ -183,6 +183,9 @@ export class MatchEngine {
   }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
+  /** v6.0: answer to an 'aim' event. aim = { z, y, q, power } for shots (goal-local, shooter's view: +z = right),
+   *  { dive: z } for the keeper, { routine } for corners, or null to let the AI take it. */
+  setAim(aim) { const sp = this.setPiece; this.aimRequest = null; if (!sp) return; sp.aimDone = true; sp.aim = aim || null; }
   emit(e) { for (const fn of this.listeners) fn(e); }
 
   dirOf(t) { const base = t === 0 ? 1 : -1; return this.half === 1 ? base : -base; }
@@ -366,7 +369,7 @@ export class MatchEngine {
 
   releaseKick(p, ac) {
     const kind = ac.kind || ac.type;
-    if (ac.type === 'shot') this.shoot(p, ac.pressure, false, ac.penalty);
+    if (ac.type === 'shot') this.shoot(p, ac.pressure, false, ac.penalty, ac.aim);
     else if (kind === 'pass') {
       const blk = this.laneBlocked(p, ac.tx, ac.tz);
       if (blk) {
@@ -440,7 +443,7 @@ export class MatchEngine {
     this.shot = null;
   }
 
-  shoot(p, pressure, header = false, penalty = false) {
+  shoot(p, pressure, header = false, penalty = false, aim = null) {
     const b = this.ball, a = p.a, rng = this.rng, t = p.team, T = this.teams[t];
     const opp = this.teams[1 - t];
     const gk = opp.active.find((q) => q.isGK);
@@ -462,6 +465,24 @@ export class MatchEngine {
     const skill = header ? a.kopfball : a.abschluss;
     let err = 0.02 + (100 - skill) * 0.0011 + this.pressureFactor(pressure) * 0.035 + (1 - p.energy) * 0.02 + Math.max(0, dist - 18) * 0.0015;
     if (penalty) err = 0.008 + (100 - a.abschluss) * 0.0006;
+    if (aim) { // v6.0 user-aimed shot: target, timing quality and power from the mini-game
+      const zt2 = clamp(aim.z, -GOAL_HW - 0.6, GOAL_HW + 0.6), yt2 = clamp(aim.y + Math.max(0, (aim.power ?? 0.7) - 0.78) * 2.2, 0.1, 3.2);
+      const w2 = toWorld(this, t, HALF_L + 0.3, zt2), dx2 = w2.x - b.pos.x, dz2 = w2.z - b.pos.z, dh2 = Math.hypot(dx2, dz2);
+      const v2 = (penalty ? 20 : 22) + a.schusskraft * 0.08 + ((aim.power ?? 0.7) - 0.5) * 8;
+      const th2 = dh2 / (v2 * (1 - 0.004 * dh2)), vy2 = (yt2 - b.pos.y + 0.5 * G * th2 * th2) / th2;
+      const e2 = (penalty ? 0.004 : 0.01) + (1 - clamp(aim.q ?? 0.5, 0, 1)) * 0.05 + (100 - a.abschluss) * 0.0003;
+      const ang2 = Math.atan2(dz2, dx2) + rng.normal(0, e2);
+      this.kick(p, Math.cos(ang2) * v2, vy2 + rng.normal(0, e2 * v2 * 0.5), Math.sin(ang2) * v2, { x: 0, y: rng.range(-6, 6), z: 0 });
+      const xg2 = penalty ? 0.76 : shotXg(bl.x, bl.z);
+      this.shot = { team: t, player: p, t0: this.simTime, xg: xg2, user: true };
+      this.shot.entry = { x: bl.x, z: bl.z, xg: xg2, goal: false, name: p.data.lastName, min: this.minute() };
+      T.analysis.shots.push(this.shot.entry); this.pass = null;
+      T.stats.shots++; T.stats.xg += xg2; p.stats.shots++;
+      const pr2 = predictBall(b, 2.5, 0.05), cr2 = pr2.find((s2) => Math.abs(s2.x) >= HALF_L);
+      if (cr2 && Math.abs(cr2.z) < GOAL_HW && cr2.y < GOAL_H) { T.stats.onTarget++; p.rating += 0.12; this.shot.onTarget = true; }
+      this.emit({ type: 'shot', team: t, player: p.id });
+      return;
+    }
     const ang = Math.atan2(dz, dx) + rng.normal(0, err);
     const vh = v * (1 + rng.normal(0, 0.03));
     this.kick(p, Math.cos(ang) * vh, vy + rng.normal(0, err * v * 0.7), Math.sin(ang) * vh, { x: 0, y: rng.range(-8, 8), z: 0 });
@@ -847,6 +868,12 @@ export class MatchEngine {
     if (sp.timer < (SETPIECE_DELAY[sp.type] || 2) + injuredDelay) return;
     if (!tk.atSpot && sp.timer < 4) return; // don't let the game stand still while the taker jogs over
     if (!tk.atSpot) { tk.pos.x = tk.target.x; tk.pos.z = tk.target.z; }
+    // v6.0: the user takes penalties, direct free kicks and corners himself (and guesses the corner as keeper)
+    if (this.manualSP && this.userTeam >= 0 && !sp.aimDone) {
+      const mine = sp.team === this.userTeam;
+      const kind = sp.type === 'penalty' ? (mine ? 'pen' : 'keep') : sp.type === 'freekick' && sp.direct && mine ? 'fk' : sp.type === 'corner' && mine ? 'corner' : null;
+      if (kind) { if (!this.aimRequest) { this.aimRequest = { kind, team: sp.team, taker: tk.data.lastName }; this.emit({ type: 'aim', kind, team: sp.team }); } return; }
+    }
     this.executeSetPiece();
   }
 
@@ -876,7 +903,7 @@ export class MatchEngine {
       const q = cands.sort((a, c) => openness(c) - openness(a))[0] || mates[0];
       doKick('throw', q, q.pos.x, q.pos.z);
     } else if (sp.type === 'corner') {
-      const routine = T.tactic.setPieces?.cornerRoutine || 'mix';
+      const routine = sp.aim?.routine || T.tactic.setPieces?.cornerRoutine || 'mix';
       const side = Math.sign(toLocal(this, sp.team, sp.spot.x, sp.spot.z).z) || 1;
       const short = mates.filter((q) => !q.isGK && Math.hypot(q.pos.x - tk.pos.x, q.pos.z - tk.pos.z) < 16).sort((a, c) => openness(c) - openness(a))[0];
       if (routine === 'kurz' && short) { doKick('pass', short, short.pos.x, short.pos.z); return; }
@@ -897,13 +924,27 @@ export class MatchEngine {
         doKick('pass', cb, cb.pos.x, cb.pos.z);
       }
     } else if (sp.type === 'freekick') {
-      if (sp.direct) { tk.faceTarget = g; tk.startAction('shot', 0.5, { kick: true, release: 0.25, done: false, pressure: 9 }); }
+      if (sp.direct) { tk.faceTarget = g; tk.startAction('shot', 0.5, { kick: true, release: 0.25, done: false, pressure: 9, aim: sp.aim?.z != null ? sp.aim : null }); }
       else { tk.setKick = false; b.owner = null; this.gainPossession(tk); }
     } else if (sp.type === 'penalty') {
       const gk = opp.find((q) => q.isGK);
-      if (gk) gk.diveQueued = { locked: true, at: this.simTime + 0.32, dir: rng.pick([-1, 1]), need: rng.chance(0.2) ? 0 : 1.8, y: rng.range(0.3, 1.5) };
+      let shotAim = null;
+      if (sp.aim?.z != null) shotAim = sp.aim; // user shoots
+      else if (sp.aim?.dive != null) { // user keeper guessed: the AI picks its corner
+        const zz = rng.pick([-1, 1]) * rng.range(1.2, GOAL_HW - 0.4), yy = rng.chance(0.6) ? rng.range(0.2, 0.7) : rng.range(1.0, 2.0);
+        shotAim = { z: rng.chance(0.12) ? rng.range(-0.4, 0.4) : zz, y: yy, q: 0.55 + tk.a.abschluss / 250, power: 0.7, ai: true };
+      }
+      if (gk) {
+        let dir = rng.pick([-1, 1]), need = rng.chance(0.2) ? 0 : 1.8;
+        if (sp.aim?.dive != null) { const wz = toWorld(this, sp.team, HALF_L, sp.aim.dive).z; dir = Math.sign(wz - gk.pos.z) || 1; need = Math.abs(sp.aim.dive) < 0.8 ? 0 : 1.8; }
+        else if (shotAim) { // AI keeper vs user penalty: guesses right ~ 1/3 + reflexes
+          const wz = toWorld(this, sp.team, HALF_L, shotAim.z).z, right = Math.sign(wz - gk.pos.z) || 1;
+          dir = rng.chance(0.3 + gk.a.reflexe / 400) ? right : -right; need = Math.abs(shotAim.z) < 0.8 && rng.chance(0.3) ? 0 : 1.8;
+        }
+        gk.diveQueued = { locked: true, at: this.simTime + 0.32, dir, need, y: sp.aim?.dy ?? shotAim?.y ?? rng.range(0.3, 1.5) };
+      }
       tk.faceTarget = g;
-      tk.startAction('shot', 0.55, { kick: true, release: 0.3, done: false, pressure: 9, penalty: true });
+      tk.startAction('shot', 0.55, { kick: true, release: 0.3, done: false, pressure: 9, penalty: true, aim: shotAim });
     }
   }
 
