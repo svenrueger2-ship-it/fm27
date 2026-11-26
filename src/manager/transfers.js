@@ -165,7 +165,7 @@ export function makeBid(world, playerId, fee, swaps = []) {
   if (!free && !windowInfo(world).open) return { result: 'rejected', reason: 'Das Transferfenster ist geschlossen.' };
   if (buyer.squad.length >= 32) return { result: 'rejected', reason: 'Dein Kader ist voll (max. 32 Spieler).' };
   if (free) { T.pending = { playerId, fee: 0, type: 'buy' }; return { result: 'accepted', fee: 0 }; }
-  if (fee > buyer.budget) return { result: 'rejected', reason: 'Dafür reicht dein Budget nicht.' };
+  if (fee > transferAvail(buyer)) return { result: 'rejected', reason: buyer.transferBudget != null && fee <= buyer.budget ? 'Der Vorstand gibt dafür kein Transferbudget frei.' : 'Dafür reicht dein Budget nicht.' };
   const seller = world.clubs[p.clubId];
   if (p.loan) return { result: 'rejected', reason: 'Der Spieler ist derzeit verliehen.' };
   if (p.releaseClause && fee >= p.releaseClause) { T.pending = { playerId, fee, type: 'buy' }; return { result: 'accepted', fee, clause: true }; }
@@ -221,6 +221,9 @@ export function signPending(world, wage, years) {
   return { ok: true };
 }
 
+/** v7.0.4: money the board allows for transfers (FM-style transfer budget, never more than the bank balance) */
+export const transferAvail = (club) => Math.max(0, club.transferBudget != null ? Math.min(club.budget, club.transferBudget) : club.budget);
+
 export function executeTransfer(world, p, from, to, fee, wage, years) {
   ensureTransferState(world);
   if (!genderOk(to, p)) return; // v6.0 women's and men's football stay separate
@@ -232,6 +235,8 @@ export function executeTransfer(world, p, from, to, fee, wage, years) {
     if (from.lineup) { from.lineup = null; }
     bookTransfer(from, fee, `Verkauf ${p.firstName} ${p.lastName} an ${to.short}`, world);
   } else world.freeAgents = world.freeAgents.filter((id) => id !== p.id);
+  if (fee && to.transferBudget != null) to.transferBudget = Math.max(0, to.transferBudget - fee);
+  if (fee && from?.transferBudget != null) from.transferBudget += Math.round(fee * 0.5 / 1e4) * 1e4; // half of a sale goes back into the transfer budget
   bookTransfer(to, -fee, `Kauf ${p.firstName} ${p.lastName}${from ? ' von ' + from.short : ' (ablösefrei)'}`, world);
   to.squad.push(p.id);
   to.lineup = null;
@@ -325,7 +330,7 @@ export function generateOffers(world, rng) {
     if (p.loan || T.offers.some((o) => o.playerId === id)) continue;
     const listed = T.listed.includes(id) || p.wantsOut;
     if (!rng.chance(listed ? 0.55 : p.ovr > 72 ? 0.05 : 0.015)) continue;
-    const cands = clubs.filter((c) => genderOk(c, p) && !c.nation && c.rep * 0.45 + 58 >= p.ovr && c.budget > askingPrice(world, p) * 0.8 && c.squad.length < 30);
+    const cands = clubs.filter((c) => genderOk(c, p) && !c.nation && c.rep * 0.45 + 58 >= p.ovr && transferAvail(c) > askingPrice(world, p) * 0.8 && c.squad.length < 30);
     if (!cands.length) continue;
     // clubs with a real need for this position are far more likely to bid
     const buyer = rng.weighted(cands, (c) => clubWants(world, c, p) + 0.02);
@@ -345,7 +350,7 @@ export function respondOffer(world, offerId, action, rng) {
   if (action === 'counter') {
     if (o.countered) return { ok: false, msg: 'Du hast bereits nachverhandelt.' };
     o.countered = true;
-    if (rng.chance(0.55) && buyer.budget > o.fee * 1.15) { o.fee = Math.round((o.fee * 1.15) / 1e4) * 1e4; return { ok: true, msg: `${buyer.name} erhöht auf ${eur(o.fee)}.` }; }
+    if (rng.chance(0.55) && transferAvail(buyer) > o.fee * 1.15) { o.fee = Math.round((o.fee * 1.15) / 1e4) * 1e4; return { ok: true, msg: `${buyer.name} erhöht auf ${eur(o.fee)}.` }; }
     T.offers = T.offers.filter((x) => x !== o);
     return { ok: true, msg: `${buyer.name} zieht das Angebot zurück.` };
   }

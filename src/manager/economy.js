@@ -124,6 +124,7 @@ export function expandStadium(world, club) {
 
 // End-of-season prize money by final rank & new wage budget.
 export function seasonFinanceClose(world, club, league, rank) {
+  if (club.transferBudget != null) club.transferBudget = Math.round(Math.max(club.transferBudget * 0.5, Math.max(0, club.budget) * 0.3) / 1e5) * 1e5; // v7.0.4: new transfer budget from the board
   ensureEconomy(club, league);
   const n = league.clubIds.length;
   const prize = Math.round(league.tv * 1e6 * 0.25 * ((n - rank + 1) / n));

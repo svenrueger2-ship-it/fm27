@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.4', date: '27.11.2026', title: 'Echte Transferbudgets (FM26)',
+    neu: ['Transferbudgets aller 183 Vereine aus den Männerligen nach den Startbudgets von Football Manager 2026 – Brighton, Sporting und Barça haben am meisten, Celtic, Lyon oder Rangers starten ohne Transfergeld', 'Transferbudget vom Vorstand: getrennt vom Kontostand, oben in der Leiste, bei Finanzen und im Transfermarkt sichtbar – Verkäufe füllen es zur Hälfte wieder auf, zur neuen Saison gibt es ein neues Budget'],
+    verbessert: ['Gehaltsbudgets orientieren sich an den FM26-Werten (bis maximal 10 % über den aktuellen Gehältern)', 'Auch die KI-Vereine kaufen nur noch im Rahmen ihres Transferbudgets'],
+    behoben: [],
+    geplant: [],
+  },
+  {
     version: '7.0.3', date: '27.11.2026', title: 'Patchnotes im Hauptmenü repariert',
     neu: [],
     verbessert: [],

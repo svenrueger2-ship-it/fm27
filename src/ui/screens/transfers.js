@@ -3,8 +3,7 @@ import { IS_MOBILE } from '../../core/device.js';
 // loans with buy option, incoming offers, transfer list, contract extensions, history.
 import {
   searchMarket, askingPrice, estimate, assignScout, makeBid, signPending, contractDemand, extendContract,
-  loanTerms, requestLoan, exerciseOption, toggleListed, respondOffer, swapValue, windowInfo, maxScouts, knowledge, wageRoom, executeTransfer,
-} from '../../manager/transfers.js';
+  loanTerms, requestLoan, exerciseOption, toggleListed, respondOffer, swapValue, windowInfo, maxScouts, knowledge, wageRoom, executeTransfer, transferAvail } from '../../manager/transfers.js';
 import { squadNeeds } from '../../manager/clubAI.js';
 import { taskEvent } from '../../manager/progress.js';
 import { projectPlayer, projectionSvg } from '../../manager/projection.js';
@@ -31,7 +30,7 @@ export function transfersScreen(app, el) {
     el.innerHTML = `<div class="page">
       <div class="page-head"><h2>Transfers & Scouting</h2>
         <div class="row-actions"><span class="chip">${win.open ? `🔓 ${win.name} – noch ${win.closesIn} Woche(n)` : `🔒 ${win.name} – öffnet in ${win.opensIn} Woche(n)`}</span>
-        <span class="chip">💶 Budget ${money(club.budget)}</span><span class="chip">📄 Gehälter ${money(wages)} / ${money(club.wageBudget)}</span></div></div>
+        <span class="chip">💶 Transferbudget ${money(transferAvail(club))}</span><span class="chip">📄 Gehälter ${money(wages)} / ${money(club.wageBudget)}</span></div></div>
       <div class="tabs">${[['markt', '🔎 Transfermarkt'], ['swipe', '🃏 Swipe'], ['scouting', `🕵️ Scouting (${w.scouting.assignments.length}/${maxScouts(w)})`], ['angebote', `📨 Angebote${offers.length ? ` <b class="badge">${offers.length}</b>` : ''}`], ['kader', '📄 Verträge & Verkauf'], ['leihen', '🔁 Leihen'], ['historie', '🗂️ Transferhistorie']]
         .map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'active' : ''}">${l}</button>`).join('')}</div>
       <div id="tab"></div></div>`;
@@ -47,7 +46,7 @@ export function transfersScreen(app, el) {
 function swipeDeck(app) {
   const w = app.world, club = app.club, skip = (w.swipeSkip ||= []);
   const needs = squadNeeds(w, club).slice(0, 3);
-  const budget = club.budget;
+  const budget = transferAvail(club);
   const pools = (needs.length ? needs : [{ pos: 'ALLE', minOvr: 0, reason: 'beste verfügbare Spieler' }]).map((n) => searchMarket(w, { pos: n.pos, minOvr: Math.max(0, n.minOvr - 3), maxPrice: Math.max(budget * 0.9, 5e5), sort: 'ovr' }).map((r) => ({ ...r, need: n })));
   const seen = new Set(), deck = [];
   for (let i = 0; deck.length < 24 && i < 60; i++) for (const P of pools) { const r = P[i]; if (r && !seen.has(r.p.id) && !skip.includes(r.p.id) && !w.scouting.watch.includes(r.p.id)) { seen.add(r.p.id); deck.push(r); } }
@@ -196,7 +195,7 @@ function bidDialog(app, p, onChange) {
   const m = modal(`<h3>Angebot für ${esc(pname(p))}</h3><p>${crest(c, 22)} ${esc(c.name)} · Marktwert ${money(p.value)} · Forderung ca. <b>${money(ask)}</b></p>
     <label class="field">Ablösesumme${moneyInput('fee', ask, { step: 250000 })}</label>
     <input type="range" id="feeR" min="${Math.round(ask * 0.5)}" max="${Math.round(ask * 1.5)}" step="10000" value="${ask}" style="width:100%">
-    <p class="muted">Dein Budget: ${money(app.club.budget)}${p.releaseClause ? ` · Ausstiegsklausel: ${money(p.releaseClause)} (wird immer akzeptiert)` : ''}${p.buyBack?.club === app.club.id && w.season <= p.buyBack.until ? ` · <b>Deine Rückkaufoption: ${money(p.buyBack.price)}</b>` : ''}${pitchOf(w, p) ? ` · 📞 Berater-Rabatt ${Math.round(pitchOf(w, p).discount * 100)} %` : ''}</p>
+    <p class="muted">Dein Transferbudget: ${money(transferAvail(app.club))}${p.releaseClause ? ` · Ausstiegsklausel: ${money(p.releaseClause)} (wird immer akzeptiert)` : ''}${p.buyBack?.club === app.club.id && w.season <= p.buyBack.until ? ` · <b>Deine Rückkaufoption: ${money(p.buyBack.price)}</b>` : ''}${pitchOf(w, p) ? ` · 📞 Berater-Rabatt ${Math.round(pitchOf(w, p).discount * 100)} %` : ''}</p>
     <details class="swap-box"><summary>🔁 Spieler zum Tausch anbieten (max. 2)</summary><div class="swap-list">${app.club.squad.map((id) => w.players[id]).filter((q) => q && !q.loan && q.id !== p.id).sort((a, b) => b.value - a.value).map((q) => `<label class="check"><input type="checkbox" data-swap="${q.id}"> ${esc(pname(q))} <small class="muted">${q.pos} · ${q.ovr} · Wert für ${esc(c.short)} ca. ${money(swapValue(w, c, q))}</small></label>`).join('')}</div></details>
     <div id="msg"></div><div class="row-actions end"><button class="btn primary" id="send">Angebot senden</button></div>`);
   const swaps = () => [...m.el.querySelectorAll('[data-swap]:checked')].map((x) => +x.dataset.swap).slice(0, 2);

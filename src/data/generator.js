@@ -15,6 +15,7 @@ import { CLUB_FOUNDED } from './clubInfoExtra.js';
 import { createCups } from '../manager/cups.js';
 import { updateValues } from '../manager/youth.js';
 import { ensureClubAI } from '../manager/clubAI.js';
+import { FM_BUDGETS } from './budgets.js';
 
 const SQUAD_TEMPLATE = ['TW', 'TW', 'TW', 'IV', 'IV', 'IV', 'IV', 'LV', 'LV', 'RV', 'RV', 'DM', 'DM', 'ZM', 'ZM', 'ZM', 'OM', 'LM', 'RM', 'LA', 'RA', 'ST', 'ST', 'ST'];
 const PERSONALITIES = [
@@ -235,6 +236,8 @@ function buildLeague(world, L, rng, clubId) {
       };
       if (L.women) { club.women = true; if (menShort) club.menShort = menShort; }
       fillSquad(world, club, L, rng, rep, short);
+      const fmb = !L.women && FM_BUDGETS[short]; // v7.0.4: real starting budgets (FM26)
+      if (fmb) { const wages = club.squad.reduce((t, id) => t + world.players[id].wage, 0); club.transferBudget = fmb[0]; club.wageBudget = Math.round(Math.min(Math.max(fmb[1], wages * 1.02), wages * 1.1)); }
       if (L.women) { for (const pid of club.squad) feminize(rng, world.players[pid]); club.wageBudget = Math.round(club.squad.reduce((s, id) => s + world.players[id].wage, 0) * 1.15); club.budget = Math.round(club.budget * 0.12 / 1e4) * 1e4; }
       world.clubs[club.id] = club;
       league.clubIds.push(club.id);
