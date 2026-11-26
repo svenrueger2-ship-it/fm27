@@ -61,7 +61,7 @@ export function showStory(S, world, after) {
     host.className = 'story';
     host.style.setProperty('--c1', S.club.colors.primary); host.style.setProperty('--c2', S.club.colors.secondary);
     host.innerHTML = `<div class="st-frame"><div class="st-bars">${sl.map(() => '<i><b></b></i>').join('')}</div><button class="st-x" aria-label="Schließen">✕</button>
-      <div class="st-body"></div><div class="st-tap st-l"></div><div class="st-tap st-r"></div><p class="st-hint">Tippen: weiter · halten: Pause</p></div>`;
+      <div class="st-body"></div><div class="st-tap st-l"></div><div class="st-tap st-r"></div><p class="st-hint">Tippen: weiter · halten: Pause</p><button class="st-skip">Überspringen ⏭</button></div>`;
     document.body.appendChild(host);
     const body = host.querySelector('.st-body'), bars = [...host.querySelectorAll('.st-bars b')];
     const DUR = 5200;
@@ -76,15 +76,25 @@ export function showStory(S, world, after) {
       if (!paused) { const u = (t - t0) / DUR; bars[i].style.width = `${Math.min(100, u * 100)}%`; if (u >= 1) show(i + 1); }
       raf = requestAnimationFrame(tick);
     };
-    const close = () => { cancelAnimationFrame(raf); removeEventListener('keydown', key); host.classList.add('out'); setTimeout(() => { host.remove(); resolve(); }, 300); };
+    let closed = false;
+    const close = () => { if (closed) return; closed = true; cancelAnimationFrame(raf); removeEventListener('keydown', key); host.classList.add('out'); setTimeout(() => { host.remove(); resolve(); }, 300); };
     const key = (e) => { if (e.key === 'ArrowRight' || e.key === ' ') show(i + 1); else if (e.key === 'ArrowLeft') show(i - 1); else if (e.key === 'Escape') close(); };
     addEventListener('keydown', key);
-    host.querySelector('.st-r').onclick = () => show(i + 1);
-    host.querySelector('.st-l').onclick = () => show(i - 1);
-    host.querySelector('.st-x').onclick = close;
+    // v6.0 (Android fix): taps are handled on pointerup – on touch devices a long press or a cancelled
+    // touch could leave the story paused forever, and clicks after a press were sometimes swallowed.
     const frame = host.querySelector('.st-frame');
-    frame.addEventListener('pointerdown', () => { paused = true; pauseAt = performance.now(); });
-    frame.addEventListener('pointerup', () => { if (paused) { t0 += performance.now() - pauseAt; paused = false; } });
+    let downAt = 0, downX = 0;
+    const resume = () => { if (paused) { t0 += performance.now() - pauseAt; paused = false; } };
+    frame.addEventListener('pointerdown', (e) => { if (e.target.closest('.st-x, .st-skip')) return; downAt = performance.now(); downX = e.clientX; paused = true; pauseAt = downAt; });
+    frame.addEventListener('pointerup', (e) => {
+      if (e.target.closest('.st-x, .st-skip')) return;
+      const held = performance.now() - downAt; resume();
+      if (held < 350) { const r = frame.getBoundingClientRect(); show(downX - r.left < r.width * 0.3 ? i - 1 : i + 1); }
+    });
+    frame.addEventListener('pointercancel', resume); frame.addEventListener('pointerleave', resume);
+    const xb = host.querySelector('.st-x'); xb.addEventListener('pointerup', (e) => { e.stopPropagation(); close(); }); xb.onclick = close;
+    const sk = host.querySelector('.st-skip'); sk.addEventListener('pointerup', (e) => { e.stopPropagation(); close(); }); sk.onclick = close;
     show(0); raf = requestAnimationFrame(tick);
   });
 }
+if (typeof window !== "undefined") Object.assign((window.ufmFx ||= {}), { story: showStory, buildStory });

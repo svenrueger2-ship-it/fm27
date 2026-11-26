@@ -34,7 +34,8 @@ export function ceremony(app, { title, sub, club, onClose }) {
   const cv = host.querySelector('canvas'), g = cv.getContext('2d');
   const fit = () => { cv.width = innerWidth; cv.height = innerHeight; }; fit(); addEventListener('resize', fit);
   const cols = [club.colors.primary, club.colors.secondary, '#ffd24a', '#ffffff'];
-  const P = Array.from({ length: 220 }, () => ({ x: Math.random() * cv.width, y: -Math.random() * cv.height, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3, r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.3, w: 6 + Math.random() * 8, h: 3 + Math.random() * 5, c: cols[Math.floor(Math.random() * cols.length)] }));
+  const mobile = document.documentElement.classList.contains('mobile') || matchMedia('(pointer: coarse)').matches;
+  const P = Array.from({ length: mobile ? 70 : 220 }, () => ({ x: Math.random() * cv.width, y: -Math.random() * cv.height, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3, r: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.3, w: 6 + Math.random() * 8, h: 3 + Math.random() * 5, c: cols[Math.floor(Math.random() * cols.length)] }));
   let raf;
   const loop = () => {
     g.clearRect(0, 0, cv.width, cv.height);
@@ -42,8 +43,15 @@ export function ceremony(app, { title, sub, club, onClose }) {
     raf = requestAnimationFrame(loop);
   };
   loop();
-  const close = () => { cancelAnimationFrame(raf); removeEventListener('resize', fit); host.classList.add('out'); setTimeout(() => { host.remove(); onClose?.(); }, 400); };
-  host.querySelector('button').onclick = close;
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; cancelAnimationFrame(raf); clearTimeout(auto); removeEventListener('resize', fit); host.classList.add('out'); setTimeout(() => { host.remove(); onClose?.(); }, 400); };
+  // v6.0 (Android fix): the button could sit below the screen edge in landscape – now a tap anywhere
+  // closes the ceremony, the back button works too, and it closes by itself after 10 seconds.
+  const btn = host.querySelector('button');
+  btn.onclick = close; btn.addEventListener('pointerup', close);
+  const t0 = performance.now();
+  host.addEventListener('pointerup', () => { if (performance.now() - t0 > 700) close(); });
+  const auto = setTimeout(close, 10000);
 }
 
 export function queueCeremony(world, c) { (world.ceremonies ||= []).push(c); }
@@ -52,4 +60,4 @@ export function runCeremonies(app) {
   const c = w.ceremonies.shift();
   ceremony(app, { title: c.title, sub: c.sub, club: w.clubs[c.clubId] || app.club });
 }
-window.ufmFx = { ceremony };
+(window.ufmFx ||= {}).ceremony = ceremony;

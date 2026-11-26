@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.3.1', date: '26.11.2026', title: 'Hotfix: Meister-Feier auf Android',
+    neu: [],
+    verbessert: ['Meister- und Pokal-Feier: ein Tipp irgendwo schließt sie, nach 10 Sekunden schließt sie von selbst', 'Saison-Story: neuer Knopf „Überspringen“, Tippen funktioniert zuverlässig auf Touchscreens'],
+    behoben: ['Android: Die Meister-Animation blieb als Standbild hängen und ließ sich nicht überspringen'],
+    geplant: ['6.0: Derbys & Choreos, Standards selbst schießen, Saisonvorbereitung, Trainingszentrum, Transfer-KI 2.0, Frauen-Fußball'],
+  },
+  {
     version: '5.3.0', date: '24.11.2026', title: 'Sprachauswahl: Deutsch & English',
     neu: ['Sprachauswahl im Launcher, im Hauptmenü und in den Einstellungen: Deutsch oder English', 'Komplettes Spiel auf Englisch: Menüs, Nachrichten, Ereignisse, TV-Kommentar, Erfolge, Datum und Beträge'],
     verbessert: ['Beim Sprachwechsel wird die Karriere gespeichert und direkt wieder geladen'],
