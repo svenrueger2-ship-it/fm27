@@ -68,6 +68,7 @@ function push(world, item) {
   world.inbox.unshift({ id, season: world.season, week: world.week, done: false, ...rest });
   world.inbox = world.inbox.slice(0, 60);
 }
+export const addInbox = (world, item) => push(world, item); // v7.0: other modules can ask the user via the inbox
 export const openInbox = (world) => (world.inbox || []).filter((x) => !x.done && x.actions?.length);
 function note(world, area, text) { push(world, { area, from: whoFor(area), title: text, text: '', actions: [], done: true, auto: true }); }
 const whoFor = (area) => ({ lineup: 'assistant', training: 'assistant', press: 'assistant', contracts: 'assistant', offers: 'assistant', youth: 'youth', scouting: 'scout' }[area]);

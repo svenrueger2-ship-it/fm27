@@ -51,8 +51,9 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
   const rows = [];
   const add = (key, label, amount) => { if (!amount) return; F.season[key] += amount; rows.push({ key, label, amount: Math.round(amount) }); };
   if (homeGame) {
-    const att = attendance(club, league, rank);
-    add('tickets', `Ticketverkauf (${att.toLocaleString('de-DE')} Zuschauer)`, att * F.ticketPrice * (1 - standingShare(club.stadium.layout) * 0.45));
+    const att = Math.round(attendance(club, league, rank) * (club.id === world.userClubId && world.fans?.protest?.type === 'boycott' ? 0.82 : 1));
+    const st = club.seasonTix?.season === world.season ? club.seasonTix.share * 0.92 : 0; // v7.0: season tickets were paid in advance
+    add('tickets', `Ticketverkauf (${att.toLocaleString('de-DE')} Zuschauer)`, att * F.ticketPrice * (1 - standingShare(club.stadium.layout) * 0.45) * (1 - st));
     add('hospitality', 'VIP-Logen & Hospitality', hospitalityIncome(club));
     add('tickets', 'Gästeblock', awayIncome(club));
     add('hospitality', 'Catering, Fanshop & Fan-Zone', interiorIncome(club));
@@ -60,7 +61,7 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
   }
   add('tv', 'TV-Gelder', (league.tv * 1e6 * (0.3 + 0.55 * (club.rep / 100)) * lightsBonus(club)) / W);
   add('sponsors', club.sponsorDeals ? 'Kleinere Partner' : 'Sponsoren', (Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf) * (club.sponsorDeals ? 0.35 : 1) * wScale(club)) / W);
-  add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * wScale(club) * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
+  add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * wScale(club) * (club.merchMult || 1) * (club.retroBoost ? 1.08 : 1) * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
   add('sponsors', 'Museum & Medienzentrum', interiorWeekly(club));
   if (club.biz) add('sponsors', 'Mitgliedsbeiträge', (club.biz.members * (club.biz.fee || 72)) / W);
   if (club.stadium.naming) add('sponsors', `Namensrechte ${club.stadium.naming.brand}`, club.stadium.naming.perSeason / W);

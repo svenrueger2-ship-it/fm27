@@ -695,7 +695,7 @@ export class MatchEngine {
     const lastMan = vl.x > 20 && Math.abs(vl.z) < 20 && this.teams[def.team].active.filter((q) => !q.isGK && toLocal(this, victim.team, q.pos.x, q.pos.z).x > vl.x).length === 0;
     if (lastMan && rng.chance(0.15)) this.card(def, 'red');
     else if (rng.chance(0.004 + (slide && behind ? 0.015 : 0))) this.card(def, 'red');
-    else if (rng.chance(((slide ? 0.2 : 0.06) + (behind ? 0.1 : 0)) * (0.75 + temperOf(def.data) * 0.6))) this.card(def, 'yellow');
+    else if (rng.chance(((slide ? 0.2 : 0.06) + (behind ? 0.1 : 0)) * (0.75 + temperOf(def.data) * 0.6) * (this.refStrict || 1))) this.card(def, 'yellow');
     if (rng.chance(0.035)) {
       const weeks = rng.chance(0.4) ? 0 : rng.int(1, 6);
       victim.injured = true; victim.injuryTimer = 4; victim.mustLeave = weeks >= 2;
@@ -1031,7 +1031,7 @@ export class MatchEngine {
 
   result() {
     const sideOf = (t) => (t === 0 ? 'h' : 'a');
-    const events = this.events.filter((e) => ['goal', 'yellow', 'red', 'injury'].includes(e.type)).map((e) => ({
+    const events = this.events.filter((e) => ['goal', 'yellow', 'red', 'injury', 'nogoal'].includes(e.type)).map((e) => ({
       type: e.type, side: e.side, player: e.player, assist: e.assist ?? null, minute: e.minute, weeks: e.weeks, own: e.own,
     }));
     const fitness = {}, played = { h: [], a: [] }, ratings = {};

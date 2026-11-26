@@ -12,7 +12,7 @@ import { weeklyCampus, campusUpkeep } from './campus.js';
 import { aiEdge } from './difficulty.js';
 import { derbyName, recordDerby } from './derby.js';
 import { weeklyStyleTrain } from '../data/styles.js';
-import { weeklyTransfers, seasonTransfers } from './transfers.js';
+import { weeklyTransfers, seasonTransfers, news } from './transfers.js';
 import { rollEvent, moodAfterMatch, sponsorSeasonClose, ensureMood, moodChange } from './events.js';
 import { createCups, weeklyCups, catchUpCups, cupFixturesOfWeek, resolveCupFixture, advanceCups } from './cups.js';
 import { ensureYouth, weeklyYouth, seasonYouth, updateValues } from './youth.js';
@@ -30,6 +30,13 @@ import { weeklyPlayers, weeklyLoans, seasonLoanDecisions } from './players.js';
 import { ensureClubAI, weeklyCoaches, tickBounce, coachEdge, seasonCoaches } from './clubAI.js';
 import { coachDecides, coachTrainingFactor, coachAfterMatch, isDirector, ensureCoach } from './director.js';
 import { feminize, wScale } from './gender.js';
+import { matchFactors, wearPitch, ensurePitch, KEEPER_COST } from './weather.js';
+import { refFor, bookRef, checkControversy } from './referees.js';
+import { fanEffects, weeklyFans } from './fans.js';
+import { weeklyPolitics, seasonPolitics, styleOf } from './politics.js';
+import { weeklyYouthLeague } from './youthLeague.js';
+import { recordKit } from './museum.js';
+import { addInbox } from './staff.js';
 
 export function buildFixtures(clubIds, rng) {
   const ids = [...clubIds];
@@ -96,8 +103,11 @@ export function quickSim(world, m, rng) {
   const sh = teamStrength(H, world.players) + coachEdge(world, H) + prepE(H) + dH, sa = teamStrength(A, world.players) + coachEdge(world, A) + prepE(A) + dA;
   const mh = (H.tactic.mentality - 0.5) * 0.4, ma = (A.tactic.mentality - 0.5) * 0.4;
   const dk = derbyName(world, H.id, A.id) ? 0.055 : 0.075; // v6.0: derbies have their own rules – the gap matters less
-  const lh = clamp(1.45 * Math.exp((sh - sa) * dk) * (1 + mh) * (1 + ma * 0.5), 0.15, 5);
-  const la = clamp(1.12 * Math.exp((sa - sh) * dk) * (1 + ma) * (1 + mh * 0.5), 0.1, 5);
+  // v7.0: weather, pitch, fans and the referee change the game
+  const WX = matchFactors(world, m), FH = fanEffects(world, H), FA = fanEffects(world, A), REF = refFor(world, m);
+  const edge = WX.homeEdge + FH.home - (FA.away || 0);
+  const lh = clamp(1.45 * Math.exp((sh - sa + edge) * dk) * (1 + mh) * (1 + ma * 0.5) * WX.goals, 0.15, 5);
+  const la = clamp(1.12 * Math.exp((sa - sh - edge) * dk) * (1 + ma) * (1 + mh * 0.5) * WX.goals, 0.1, 5);
   m.hg = rng.poisson(lh); m.ag = rng.poisson(la);
   const events = [];
   for (const [club, goals, side] of [[H, m.hg, 'h'], [A, m.ag, 'a']]) {
@@ -109,18 +119,22 @@ export function quickSim(world, m, rng) {
       events.push({ type: 'goal', side, player: scorer, assist, minute: rng.int(1, 90) });
     }
     L.xi.forEach((id) => {
-      if (rng.chance(0.11)) events.push({ type: 'yellow', side, player: id, minute: rng.int(1, 90) });
-      if (rng.chance(0.012)) events.push({ type: 'injury', side, player: id, minute: rng.int(1, 90), weeks: rng.int(1, 6) });
+      if (rng.chance(0.11 * REF.strict)) events.push({ type: 'yellow', side, player: id, minute: rng.int(1, 90) });
+      if (rng.chance(0.0035 * REF.strict)) events.push({ type: 'red', side, player: id, minute: rng.int(20, 90) });
+      if (rng.chance(0.012 * WX.injury)) events.push({ type: 'injury', side, player: id, minute: rng.int(1, 90), weeks: rng.int(1, 6) });
     });
   }
-  m.goals = events.filter((e) => e.type === 'goal').map((e) => ({ side: e.side, min: e.minute })).sort((a, b) => a.min - b.min);
-  applyMatchResult(world, m, { events, minutes: null, fitness: null }, rng);
+  m.goals = events.filter((e) => e.type === 'goal').map((e) => ({ side: e.side, min: e.minute, p: e.player })).sort((a, b) => a.min - b.min);
+  if (WX.postpone && (isHumanClub(world, H.id) || isHumanClub(world, A.id))) news(world, `❄️ Platz gefroren: ${H.short} gegen ${A.short} wird auf Mittwoch verschoben – beide Teams verlieren Frische.`);
+  m.weather = WX.weather;
+  applyMatchResult(world, m, { events, minutes: null, fitness: null, fatigue: WX.fatigue * (WX.postpone ? 1.2 : 1) }, rng);
   return m;
 }
 
 // Applies results to player database (shared by 3D engine & quick sim).
 export function applyMatchResult(world, m, result, rng) {
   const H = world.clubs[m.h], A = world.clubs[m.a];
+  if (!m.friendly) bookRef(world, m, result.events);
   for (const [club, side] of [[H, 'h'], [A, 'a']]) {
     const xi = club.lineup.xi;
     const played = result.played?.[side] || xi;
@@ -129,7 +143,7 @@ export function applyMatchResult(world, m, result, rng) {
       p.stats.apps++;
       p.playedThisWeek = true;
       const fit = result.fitness?.[id];
-      p.fitness = clamp(fit != null ? fit : p.fitness - rng.range(18, 30) * (1.3 - p.attrs.ausdauer / 140), 25, 100);
+      p.fitness = clamp(fit != null ? fit : p.fitness - rng.range(18, 30) * (1.3 - p.attrs.ausdauer / 140) * (result.fatigue || 1), 25, 100);
     }
     for (const id of club.squad) if (world.players[id].suspension > 0 && !played.includes(id)) world.players[id].suspension--;
   }
@@ -154,6 +168,7 @@ export function applyMatchResult(world, m, result, rng) {
     const opp = uc.id === H.id ? A : H;
     moodAfterMatch(world, d, teamStrength(uc, world.players) - teamStrength(opp, world.players));
     mediaAfterMatch(world, { ...m, events: result.events, ratings: result.ratings, stats: result.stats, played: result.played }, rng);
+    if (!m.friendly) checkControversy(world, m, result.events, uc.id === H.id ? 'h' : 'a', rng, (item) => addInbox(world, item));
     if (!m.cup) coachAfterMatch(world, d > 0 ? 3 : d === 0 ? 1 : 0);
   }
   for (const [club, d] of [[H, diff], [A, -diff]]) {
@@ -233,6 +248,8 @@ export function finishWeek(world, rng) {
       const club = world.clubs[id];
       const rank = table.findIndex((r) => r.id === id) + 1;
       weeklyFinance(world, club, league, { homeGame: md.some((m) => m.h === id), rank });
+      { const hm = md.find((m) => m.h === id); wearPitch(world, club, !!hm, hm?.weather); } // v7.0 pitch
+      if (isHumanClub(world, id) && club.pitch?.keeper) { const kc = KEEPER_COST[club.pitch.keeper] * (club.women ? 0.25 : 1); club.budget -= kc; if (club.finance) club.finance.season.facilities = (club.finance.season.facilities || 0) - kc; }
       if (club.stock?.listed) weeklyStock(world, club, league, rank, rng);
       if (club.campus) { weeklyCampus(world, club); const up = campusUpkeep(club); if (up && club.finance) { club.budget -= up; club.finance.season.facilities = (club.finance.season.facilities || 0) - up; } } // v6.0
       const rep = weeklyTraining(world, club, rng);
@@ -242,6 +259,7 @@ export function finishWeek(world, rng) {
   ensureIntl(world); intlBreak(world, rng);
   forEachHuman(world, () => { if (world.userClubId != null) {
     ensureYouth(world, rng); weeklyYouth(world, rng); rollEvent(world, rng);
+    weeklyFans(world, rng); weeklyPolitics(world, rng); weeklyYouthLeague(world, rng); // v7.0
     const fam = world.clubs[world.userClubId].stadium.layout?.family || 0; if (fam && rng.chance(fam * 0.3)) moodChange(world, 0, 1); // family stand wins young fans
   } });
   updateValues(world);
@@ -346,6 +364,13 @@ export function endSeason(world, rng) {
   summary.bizNotes = seasonBiz(world, summary.user.rank);
   for (const t of summary.bizNotes) world.news.unshift({ season: world.season + 1, week: 0, text: t });
   for (const t of summary.sponsorNotes) world.news.unshift({ season: world.season + 1, week: 0, text: `🤝 ${t}` });
+  { // v7.0: museum kit gallery, election, president's budget policy, new fan-shop season
+    const uc = world.clubs[world.userClubId];
+    recordKit(world, uc);
+    const el = seasonPolitics(world, rng); if (el) summary.election = { name: el.win.name, pct: el.winPct };
+    uc.wageBudget = Math.round(uc.wageBudget * styleOf(world).wage);
+    uc.merchMult = 1;
+  }
   const md = ensureMood(world); md.board = Math.round(md.board * 0.7 + 18); md.fans = Math.round(md.fans * 0.7 + 20);
   };
   forEachHuman(world, (w, hi) => { partA(); perH[hi] = { user: summary.user, career: summary.career, sponsorNotes: summary.sponsorNotes, bizNotes: summary.bizNotes, cupWins }; });

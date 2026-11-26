@@ -68,7 +68,9 @@ export function seasonYouth(world, rng) {
   const league = world.leagues.find((l) => l.id === club.leagueId);
   const field = league.clubIds.map((id) => ({ id, s: id === club.id ? str : 24 + world.clubs[id].rep * 0.25 + (world.clubs[id].facilities?.youth ?? 2) * 2 + rng.normal(0, 3) }));
   field.sort((a, b) => b.s - a.s);
-  const rank = field.findIndex((f) => f.id === club.id) + 1;
+  let rank = field.findIndex((f) => f.id === club.id) + 1;
+  const U = world.u19; // v7.0: the U19 league was really played
+  if (U && U.season === world.season && U.table?.[club.id]) { const t = Object.values(U.table).sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga)); rank = t.findIndex((r) => r.id === club.id) + 1; field.length = t.length; }
   world.youthLeague = { season: world.season, rank, of: field.length, name: `U19-${league.country === 'DE' ? 'Bundesliga' : 'Liga'}` };
   const gone = [];
   for (const p of ys) { p.age++; if (p.age >= 20) { gone.push(p); releaseYouth(world, p.id); } }

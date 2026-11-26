@@ -33,7 +33,8 @@ export function startCampus(world, club, key, league) {
   const o = campusOptions(club, league).find((x) => x.key === key);
   if (!o || o.done) return { ok: false, msg: 'Maximale Stufe erreicht' };
   if (club.budget < o.cost) return { ok: false, msg: 'Nicht genug Geld' };
-  club.budget -= o.cost;
+  const disc = club.buildDiscount || 0; club.buildDiscount = 0; // v7.0 board subsidy
+  club.budget -= Math.round(o.cost * (1 - disc));
   if (club.finance) { club.finance.season.construction -= o.cost; club.finance.ledger.unshift({ season: world.season, week: world.week + 1, rows: [{ key: 'construction', label: `Trainingszentrum: ${o.name} → Stufe ${o.level + 1}`, amount: -o.cost }], net: -o.cost }); }
   C.build = { key, weeks: o.weeks, total: o.weeks, name: o.name };
   return { ok: true };

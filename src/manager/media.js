@@ -74,7 +74,7 @@ export function seasonRecords(world, rank, pts) {
   for (const id of me.squad) {
     const p = world.players[id]; if (!p || !p.stats.apps) continue;
     const L = (world.legends[id] ||= { id, name: `${p.firstName} ${p.lastName}`, pos: p.pos, nation: p.nation, club: me.id, apps: 0, goals: 0, assists: 0, seasons: 0, titles: 0, ratingSum: 0 });
-    L.apps += p.stats.apps; L.goals += p.stats.goals; L.assists += p.stats.assists; L.seasons++; L.ratingSum += (p.stats.rating || 6.5) * p.stats.apps; L.name = `${p.firstName} ${p.lastName}`;
+    L.apps += p.stats.apps; L.goals += p.stats.goals; L.assists += p.stats.assists; L.seasons++; L.ratingSum += (p.stats.rating || 6.5) * p.stats.apps; L.name = `${p.firstName} ${p.lastName}`; if (p.number) L.number = p.number;
   }
 }
 export function addTitleToLegends(world) { for (const id of world.clubs[world.userClubId].squad) if (world.legends?.[id]) world.legends[id].titles++; }

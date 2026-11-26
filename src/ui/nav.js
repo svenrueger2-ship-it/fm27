@@ -37,9 +37,9 @@ export const NAV_GROUPS = [
 ];
 // v6.0: every sidebar entry bundles related screens – they switch via a tab bar on top of the page
 export const SUBNAV = {
-  matchday: [['matchday', '⚽ Spieltag'], ['calendar', '📅 Kalender'], ['prep', '☀️ Vorbereitung']],
-  squad: [['squad', '👥 Kader'], ['kabine', '🛋️ Kabine'], ['analysis', '📊 Analyse']],
-  finance: [['finance', '💶 Finanzen'], ['stadium', '🏟️ Stadion'], ['campus', '🏗️ Trainingszentrum'], ['design', '🎨 Trikot & Wappen'], ['boerse', '📈 Börse']],
+  matchday: [['matchday', '⚽ Spieltag'], ['calendar', '📅 Kalender'], ['prep', '☀️ Vorbereitung'], ['konferenz', '📻 Konferenz']],
+  squad: [['squad', '👥 Kader'], ['youth', '🌱 Jugend'], ['kabine', '🛋️ Kabine'], ['analysis', '📊 Analyse']],
+  finance: [['finance', '💶 Finanzen'], ['stadium', '🏟️ Stadion'], ['pitch', '🌱 Rasen & Schiris'], ['fans', '📣 Fans'], ['politics', '🏛️ Politik'], ['museum', '🏆 Museum'], ['campus', '🏗️ Campus'], ['design', '🎨 Design'], ['boerse', '📈 Börse']],
   league: [['league', '🏆 Liga'], ['cups', '🏅 Pokale & Europa'], ['tourney', '🌍 EM / WM'], ['world', '🌐 Fußballwelt']],
   profile: [['profile', '🎖️ Profil'], ['career', '👔 Karriere'], ['achievements', '🏅 Erfolge'], ['media', '📰 Medien'], ['editor', '✍️ Editor']],
 };
@@ -48,7 +48,7 @@ export const parentNav = (screen) => PARENT[screen] || screen;
 export function subnavHtml(screen, world) {
   const g = SUBNAV[PARENT[screen]];
   if (!g) return '';
-  const vis = g.filter(([id]) => id === screen || (id !== 'tourney' || world?.tourney) && (id !== 'prep' || (world && world.week === 0)));
+  const vis = g.filter(([id]) => id === screen || (id !== 'tourney' || world?.tourney) && (id !== 'prep' || (world && world.week === 0)) && id !== 'konferenz');
   return `<div class="tabs subnav">${vis.map(([id, l]) => `<button data-nav="${id}" class="${id === screen ? 'active' : ''}">${l}</button>`).join('')}</div>`;
 }
 export const NAV_FLAT = NAV_GROUPS.flatMap(([, items]) => items).concat(Object.values(SUBNAV).flat().filter(([id]) => !NAV_GROUPS.some(([, it]) => it.some(([x]) => x === id))).map(([id, l]) => [id, l.replace(/^\S+\s/, ''), l]), [['saves', 'Spielstände', 'Speichern'], ['settings', 'Einstellungen', 'Optionen']]);

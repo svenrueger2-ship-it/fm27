@@ -38,6 +38,8 @@ import { animateNumbers, runCeremonies } from './fx.js';
 import { mobileFit } from './mobileFit.js';
 import { hotTurnScreen } from './screens/hotseat.js';
 import { tourneyScreen } from './screens/tourney.js';
+import { museumScreen, fansScreen, politicsScreen, pitchScreen, youthScreen } from './screens/club70.js';
+import { konferenzScreen } from './screens/konferenz.js';
 import { wmScreen, wmGroupsScreen, wmKoScreen, wmSquadScreen, confirmQuit } from './screens/wm.js';
 import { WM_NATIONS } from '../manager/wm.js';
 import { isHot, humanName } from '../manager/hotseat.js';
@@ -48,7 +50,7 @@ const NAV = [
   ['training', 'Training', '🏋️', 'Training'], ['transfers', 'Transfers & Scouting', '🔄', 'Transfer'], ['finance', 'Finanzen & Ausbau', '💶', 'Finanzen'], ['stadium', 'Stadion', '🏟️', 'Stadion'], ['campus', 'Trainingszentrum', '🏗️', 'Campus'], ['design', 'Trikot & Wappen', '🎨', 'Design'], ['boerse', 'Börse', '📈', 'Börse'],
   ['league', 'Liga', '🏆', 'Liga'], ['analysis', 'Analyse-Hub', '📊', 'Analyse'], ['cups', 'Pokale & Europa', '🏅', 'Pokale'], ['world', 'Fußballwelt', '🌍', 'Welt'], ['career', 'Karriere', '👔', 'Karriere'], ['media', 'Medien', '📰', 'Medien'], ['editor', 'Editor', '✍️', 'Editor'], ['achievements', 'Erfolge', '🏅', 'Erfolge'], ['profile', 'Manager-Profil', '🎖️', 'Profil'], '-', ['saves', 'Spielstände', '💾', 'Speichern'], ['settings', 'Einstellungen', '⚙️', 'Optionen'],
 ];
-const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen, wm: wmScreen, wmGroups: wmGroupsScreen, wmKo: wmKoScreen, wmSquad: wmSquadScreen, design: clubDesignScreen, editor: editorScreen, boerse: boerseScreen, prep: prepScreen, campus: campusScreen, tourney: tourneyScreen };
+const SCREENS = { home: dashboardScreen, squad: squadScreen, tactics: tacticsScreen, matchday: matchdayScreen, league: leagueScreen, saves: savesScreen, settings: settingsScreen, seasonEnd: seasonEndScreen, transfers: transfersScreen, finance: financeScreen, training: trainingScreen, stadium: stadiumScreen, cups: cupsScreen, staff: staffScreen, world: worldScreen, career: careerScreen, media: mediaScreen, founder: founderScreen, kabine: kabineScreen, achievements: achievementsScreen, analysis: analysisScreen, profile: profileScreen, calendar: calendarScreen, mgrCreate: managerCreateScreen, hotTurn: hotTurnScreen, wm: wmScreen, wmGroups: wmGroupsScreen, wmKo: wmKoScreen, wmSquad: wmSquadScreen, design: clubDesignScreen, editor: editorScreen, boerse: boerseScreen, prep: prepScreen, campus: campusScreen, tourney: tourneyScreen, museum: museumScreen, fans: fansScreen, politics: politicsScreen, pitch: pitchScreen, youth: youthScreen, konferenz: konferenzScreen };
 
 export class App {
   constructor(root) {
@@ -131,7 +133,7 @@ export class App {
           <button class="top-search" id="top-search">${icon('search', 16)}<span>Suchen …</span><kbd>Strg K</kbd></button>
           <div class="top-stats"><span class="win ${win.open ? 'open' : ''}">${win.open ? `🔓 Transferfenster · noch ${win.closesIn} Wo.` : '🔒 Transferfenster zu'}</span><span>Kontostand <b>${money(club.budget)}</b></span><button class="btn primary sm" id="top-next">${isUserSeasonOver(w) && !isMatchToday(w) ? 'Saison abschließen' : isMatchToday(w) ? 'Zum Spieltag ▶' : 'Weiter ▶'}</button></div>
         </header>
-        ${navHtml(parentNav(this.screen), { transfers: offers, kabine: (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '!' : 0, profile: openTasks(w) + (w.mgr?.points || 0) + (w.career?.offers?.length || 0) + (w.career?.natOffer ? 1 : 0), staff: inbox, squad: (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '!' : 0, league: w.tourney && !w.tourney.done ? '!' : 0 }, this.settings.navPinned, w.mgr?.level || 1)}
+        ${navHtml(parentNav(this.screen), { transfers: offers, kabine: (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '!' : 0, profile: openTasks(w) + (w.mgr?.points || 0) + (w.career?.offers?.length || 0) + (w.career?.natOffer ? 1 : 0), staff: inbox, squad: (w.clubs[w.userClubId]?.kabine?.conflicts?.some((c) => !c.done) || w.clubs[w.userClubId]?.kabine?.council) ? '!' : 0, league: w.tourney && !w.tourney.done ? '!' : 0, finance: (w.fans?.demand ? 1 : 0) + (w.politics?.candidates && w.politics.endorse == null ? 1 : 0) || 0 }, this.settings.navPinned, w.mgr?.level || 1)}
         <main class="content" id="content"></main>
       </div>`;
     r.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => this.go(b.dataset.nav)));

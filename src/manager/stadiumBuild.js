@@ -152,7 +152,8 @@ export function globalOptions(club) {
 export function startProject(world, club, opt, stand = null) {
   if (club.budget < opt.cost) return { ok: false, msg: 'Nicht genug Geld auf dem Konto' };
   const st = club.stadium;
-  club.budget -= opt.cost; club.finance.season.construction -= opt.cost;
+  const disc = club.buildDiscount || 0; club.buildDiscount = 0; const cost = Math.round(opt.cost * (1 - disc)); // v7.0 board subsidy
+  club.budget -= cost; club.finance.season.construction -= cost;
   const proj = { key: opt.key, to: opt.to, stand, label: (stand != null ? standName(club, stand) + ': ' : '') + opt.label, weeks: opt.weeks, total: opt.weeks, cost: opt.cost };
   st.projects.push(proj);
   if (stand != null) st.layout.stands[stand].building = proj.label;

@@ -240,7 +240,7 @@ export function executeTransfer(world, p, from, to, fee, wage, years) {
   confirmRumour(world, p, to);
   p.clubId = to.id; p.wage = wage; p.contract = years; p.morale = clamp(p.morale + 10, 0, 99);
   p.loan = null; p.listed = false;
-  const used = new Set(to.squad.map((id) => world.players[id].number));
+  const used = new Set([...to.squad.map((id) => world.players[id].number), ...(to.retired || []).map((r) => r.num)]);
   if (used.has(p.number) || p.number === 0) { let n = 2; while (used.has(n)) n++; p.number = n; }
   if (to.id === world.userClubId) { world.scouting.knowledge[p.id] = 100; }
   const T = world.transfer;
@@ -276,7 +276,7 @@ export function requestLoan(world, playerId, wageShare, withOption) {
   bookTransfer(to, -t.fee, `Leihgebühr ${p.lastName}`, world);
   bookTransfer(from, t.fee, `Leihgebühr ${p.lastName}`, null);
   world.scouting.knowledge[p.id] = 100;
-  const used = new Set(to.squad.filter((id) => id !== p.id).map((id) => world.players[id].number));
+  const used = new Set([...to.squad.filter((id) => id !== p.id).map((id) => world.players[id].number), ...(to.retired || []).map((r) => r.num)]);
   if (used.has(p.number)) { let n = 2; while (used.has(n)) n++; p.number = n; }
   news(world, `Leihe: ${p.firstName} ${p.lastName} kommt bis Saisonende von ${from.name}${obligation ? ` (Kaufpflicht ab ${obligation.apps} Einsätzen: ${money(obligation.fee)})` : withOption ? ` (Kaufoption ${money(t.buyOption)})` : ''}.`);
   return { ok: true };

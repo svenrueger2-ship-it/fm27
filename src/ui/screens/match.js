@@ -27,18 +27,12 @@ import { isMatchToday, daysToMatch, nextUserMatchDay, dateOf, fmtDate } from '..
 import { aiEdge } from '../../manager/difficulty.js';
 import { recordFriendly } from '../../manager/preseason.js';
 import { derbyName, choreoActive, headToHead } from '../../manager/derby.js';
+import { refFor, REF_STYLE } from '../../manager/referees.js';
+import { canKonferenz } from './konferenz.js';
+import { conditions, WEATHER_NAME, TOD_NAME, renderWeather, matchFactors, ensurePitch, pitchLabel } from '../../manager/weather.js';
 import { crest, esc, shortName, ratingClass, toast, bar, flag, modal, portrait } from '../dom.js';
 
-const TOD_NAME = { tag: '☀️ Nachmittag', abend: '🌇 Abendspiel', nacht: '🌙 Flutlicht' };
-export const WEATHER_NAME = { klar: '🌤️ Trocken', regen: '🌧️ Regen', schnee: '❄️ Schnee', nebel: '🌫️ Nebel' };
-export function conditions(w, fx) {
-  if (globalThis.__forceWeather) return { tod: globalThis.__forceTod || 'nacht', weather: globalThis.__forceWeather }; // QA hook
-  const h = (fx.h * 31 + fx.a * 17 + (w?.week || 0) * 7 + (w?.season || 0)) % 20;
-  // the season starts in August: weeks ~15–27 are winter (snow and fog possible)
-  const wk = w?.week || 0, winter = wk >= 15 && wk <= 27, autumn = wk >= 9 && wk < 15;
-  const weather = winter && h % 5 === 1 ? 'schnee' : (winter || autumn) && h % 9 === 4 ? 'nebel' : h % 7 === 3 || (autumn && h % 6 === 2) ? 'regen' : 'klar';
-  return { tod: h < 9 ? 'nacht' : h < 15 ? 'abend' : 'tag', weather };
-}
+export { conditions, WEATHER_NAME } from '../../manager/weather.js';
 const isBigMatch = (w, fx) => !!fx.cup || (w.clubs[fx.h].rep + w.clubs[fx.a].rep > 164);
 
 function lineupList(w, club) {
@@ -84,14 +78,14 @@ export function matchdayScreen(app, el, params = {}) {
     <div class="vs-screen" style="--h1:${H.colors.primary};--a1:${A.colors.primary}">
       <div class="side">${crest(H, 110)}<h3>${esc(H.name)}</h3><div class="chips"><span class="chip">${H.tactic.formation}</span><span class="chip">${esc(H.tactic.preset || 'Individuell')}</span><span class="chip">Stärke ${Math.round(sH)}</span>${coachChip(H)}</div></div>
       <div class="mid"><small>${fx.cup ? `🏆 ${esc(cupLabel(w, fx))}` : `${esc(L.name)} · Spieltag ${w.week + 1}`}</small><b>VS</b><small>${esc(H.stadium.name)} · ${H.stadium.capacity.toLocaleString('de-DE')}</small>
-        <div class="chips"><span class="chip">${TOD_NAME[cond.tod]}</span><span class="chip">${WEATHER_NAME[cond.weather]}</span>${derbyName(w, fx.h, fx.a) ? `<span class="chip hot">🔥 ${esc(derbyName(w, fx.h, fx.a))}</span>` : isBigMatch(w, fx) ? '<span class="chip">🔥 Topspiel</span>' : ''}</div></div>
+        <div class="chips"><span class="chip">${TOD_NAME[cond.tod]}</span><span class="chip">${WEATHER_NAME[cond.weather]}${cond.temp != null ? ` · ${cond.temp} °C` : ''}</span><span class="chip" title="Rasenzustand im Heimstadion">🌱 Rasen: ${pitchLabel(ensurePitch(H).q)}</span>${matchFactors(w, fx).postpone ? '<span class="chip hot">⚠️ Platz gefroren – Absage droht</span>' : ''}<span class="chip" title="Schiedsrichter">🟨 ${esc(refFor(w, fx).name)} · ${esc(REF_STYLE(refFor(w, fx)))}</span>${derbyName(w, fx.h, fx.a) ? `<span class="chip hot">🔥 ${esc(derbyName(w, fx.h, fx.a))}</span>` : isBigMatch(w, fx) ? '<span class="chip">🔥 Topspiel</span>' : ''}</div></div>
       <div class="side">${crest(A, 110)}<h3>${esc(A.name)}</h3><div class="chips"><span class="chip">${A.tactic.formation}</span><span class="chip">${esc(A.tactic.preset || 'Individuell')}</span><span class="chip">Stärke ${Math.round(sA)}</span>${coachChip(A)}</div></div>
     </div>
     <div class="str-bars" style="grid-template-columns:${sH}fr ${sA}fr"><div style="background:${H.colors.primary}"></div><div style="background:${A.colors.primary}"></div></div>
     ${(() => { const dn = derbyName(w, fx.h, fx.a); if (!dn) return ''; const hh = headToHead(w, w.userClubId, w.userClubId === H.id ? A.id : H.id); const ch = choreoActive(w, H, A, { big: true }); return `<p class="derby-line">🔥 <b>${esc(dn)}</b> · Derby-Bilanz: ${hh.games ? `${hh.w} S · ${hh.d} U · ${hh.l} N (${hh.gf}:${hh.ga})` : 'noch kein Duell'}${H.id === w.userClubId ? (ch ? ' · 🎨 Deine Kurve zeigt eine Choreo' : ' · Tipp: Gestalte unter Stadion → Fankurve eine Choreo') : ''}</p>`; })()}
     <div class="row-actions center">
       <button class="btn primary lg" id="play3d">▶ Live im 3D-Stadion</button>
-      <button class="btn lg" id="instant">⏭ Sofortsimulation</button>
+      <button class="btn lg" id="instant">⏭ Sofortsimulation</button>${!fx.cup && canKonferenz(w) ? '<button class="btn lg" id="konf">📻 Konferenz</button>' : ''}
       <button class="btn lg ghost" id="tac">${isDirector(w) ? `👔 Aufstellung von ${esc(w.coach?.name || 'Trainer')}` : '📋 Taktik & Aufstellung'}</button>
       <button class="btn lg ghost" id="scoutopp">🔎 Gegneranalyse</button>
       <button class="btn lg ghost" id="talk" ${talkDone(w) || isDirector(w) ? 'disabled' : ''}>🗣️ Kabinenansprache${talkDone(w) ? ' ✓' : ''}</button>
@@ -103,6 +97,7 @@ export function matchdayScreen(app, el, params = {}) {
   bindSimAhead(app, el);
   el.querySelector('#play3d').onclick = () => app.go('match', { mode: IS_MOBILE ? '3d' : app.settings.engine3d === 'unity' ? 'unity' : app.settings.engine3d === 'unreal' && window.bakusa?.unrealPlay ? 'unreal' : '3d' });
   el.querySelector('#instant').onclick = () => app.go('match', { mode: 'instant' });
+  el.querySelector('#konf')?.addEventListener('click', () => app.go('konferenz'));
   el.querySelector('#tac').onclick = () => app.go('tactics');
   el.querySelector('#scoutopp').onclick = () => {
     const oppId = fx.h === w.userClubId ? fx.a : fx.h;
@@ -159,7 +154,8 @@ function liveMatch(app, el, params) {
   const T0 = engine.teams[0], T1 = engine.teams[1];
   const cond0 = friendly ? null : conditions(w, fx);
   engine.weather = cond0?.weather || 'klar';
-  engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06 }[engine.weather] || 1;
+  engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06, sturm: 1.15 }[engine.weather] || 1;
+  engine.refStrict = friendly ? 1 : refFor(w, fx).strict; // v7.0 referee character
   const derby = !friendly ? derbyName(w, H.id, A.id) : null;
   engine.bigMatch = !friendly && (isBigMatch(w, fx) || !!derby);
   engine.derby = derby;
@@ -264,8 +260,8 @@ function liveMatch(app, el, params) {
   };
   const startView = () => {
     const cond = friendly ? { tod: ['nacht', 'abend', 'tag'][Math.floor(Math.random() * 3)], weather: ['klar', 'klar', 'regen', 'schnee', 'nebel'][Math.floor(Math.random() * 5)] } : cond0;
-    engine.weather = cond.weather; engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06 }[cond.weather] || 1;
-    view = new MatchView($('#stage'), engine, { quality: S.quality, speed, camera: camSel.value, onFrame: update, tod: cond.tod, weather: S.weatherFx === false ? 'klar' : cond.weather, replays: S.replays !== false,
+    engine.weather = cond.weather; engine.weatherNoise = { regen: 1.12, schnee: 1.22, nebel: 1.06, sturm: 1.15 }[cond.weather] || 1;
+    view = new MatchView($('#stage'), engine, { quality: S.quality, speed, camera: camSel.value, onFrame: update, tod: cond.tod, weather: S.weatherFx === false ? 'klar' : renderWeather(cond.weather), replays: S.replays !== false,
       audio: { volume: S.volume ?? 0.6, announcer: S.announcer === true, commentary: !!S.commentary, crowd: S.crowd ?? 1, chants: S.chants !== false },
       onReplay: (on, label) => { $('#replay')?.classList.toggle('show', on); const sp = $('#replay span'); if (sp) sp.textContent = `⟲ WIEDERHOLUNG${label ? ` · ${label}` : ''}`; } });
     $('#intro').classList.add('show');

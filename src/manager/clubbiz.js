@@ -4,6 +4,7 @@
 import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { ensureMood, moodChange } from './events.js';
+import { styleOf } from './politics.js';
 
 const leagueOf = (w, c) => w.leagues.find((l) => l.id === c.leagueId);
 const country = (w, c) => leagueOf(w, c).country;
@@ -50,7 +51,7 @@ export function weeklyBiz(world, rng) {
     if (B.warnings === 4) moodChange(world, -6, -3);
   } else B.warnings = 0;
   // investors knock on the door once in a while
-  if (!B.investorOffer && world.week >= 4 && world.week % 7 === 0 && rng.chance(0.18 + (club.budget < 0 ? 0.3 : 0))) makeInvestorOffer(world, rng);
+  if (!B.investorOffer && world.week >= 4 && world.week % 7 === 0 && rng.chance((0.18 + (club.budget < 0 ? 0.3 : 0)) * styleOf(world).investor * (club.biz?.no50 ? 0.3 : 1))) makeInvestorOffer(world, rng);
 }
 
 function makeInvestorOffer(world, rng) {

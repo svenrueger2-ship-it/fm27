@@ -3,7 +3,7 @@
 // that human's turn, so the rest of the game keeps working with world.userClubId as before.
 // A round = one week: every human prepares and plays his match, then the week is simulated.
 
-export const HOT_KEYS = ['userClubId', 'coach', 'career', 'manager', 'scouting', 'youth', 'youthLeague', 'staff', 'mood', 'pendingEvent',
+export const HOT_KEYS = ['userClubId', 'coach', 'career', 'manager', 'scouting', 'youth', 'youthLeague', 'u19', 'fans', 'politics', 'staff', 'mood', 'pendingEvent',
   'challenge', 'inbox', 'inboxId', 'mgr', 'mode', 'talk', 'swipeSkip', 'pressWeek', 'pressPromise', 'achievements', 'achToast', 'achFlags',
   'userStats', 'scoutNet', 'trainingReport', 'hub', 'lastEventId', 'lastEventAt', 'ceremonies', 'rumours', 'media'];
 const TRANSFER_KEYS = ['offers', 'listed', 'pending'];
