@@ -148,7 +148,7 @@ export function applyMatchResult(world, m, result, rng) {
     uc.formRun = d > 0 ? Math.max(1, (uc.formRun || 0) + 1) : d < 0 ? Math.min(-1, (uc.formRun || 0) - 1) : 0;
     const opp = uc.id === H.id ? A : H;
     moodAfterMatch(world, d, teamStrength(uc, world.players) - teamStrength(opp, world.players));
-    mediaAfterMatch(world, { ...m, events: result.events }, rng);
+    mediaAfterMatch(world, { ...m, events: result.events, ratings: result.ratings, stats: result.stats, played: result.played }, rng);
     if (!m.cup) coachAfterMatch(world, d > 0 ? 3 : d === 0 ? 1 : 0);
   }
   for (const [club, d] of [[H, diff], [A, -diff]]) {

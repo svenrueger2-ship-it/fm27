@@ -1,6 +1,7 @@
 // Media & social (v1.0): newspaper headlines after every match of the user's club, a social-media feed
 // with fan, journalist and rival posts, quotes from press conferences, plus records & hall of fame.
 import { clamp } from '../core/rng.js';
+import { writeMatchReport, socialAfterMatch, weeklyNewsroom, writeSeasonReview } from './newsroom.js';
 
 export const PAPERS = ['Sport-Kurier', 'Der Ballblick', 'Kicker-Express', 'Abendpost Sport', 'Fußball Heute'];
 const JOURNOS = [['Mia Lorenz', 'mialorenz_fussball'], ['Tobias Kern', 'kern_reports'], ['Laura Vidal', 'lvidal_insider'], ['Jan Wolters', 'wolters_live']];
@@ -32,16 +33,11 @@ export function mediaAfterMatch(world, m, rng) {
   const mood = world.mood || { board: 60, fans: 60 };
   sub = tone === 'crisis' ? (mood.board < 30 ? 'Wackelt jetzt der Trainerstuhl?' : 'Die Fans fordern eine Reaktion.') : tone === 'top' ? 'Die Fans feiern ihre Mannschaft.' : tone === 'bad' ? 'Die Stimmung wird unruhiger.' : 'Solide Leistung, viel Luft nach oben.';
   push(M.headlines, { season: world.season, week: world.week, paper, title, sub, tone, score: `${world.clubs[m.h].short} ${m.hg}:${m.ag} ${world.clubs[m.a].short}`, cup: !!m.cup }, 40);
-  // social posts
-  const fans = tone === 'top' ? ['WAS FÜR EIN SPIEL!!! 🔥🔥', 'Gänsehaut. Einfach nur Gänsehaut. 💪', 'So muss das! Weiter so Jungs!', 'Bester Verein der Welt ❤️'] : tone === 'ok' ? ['Drei Punkte sind drei Punkte 👍', 'Geht noch besser, aber passt.', 'Nicht schön, aber egal!', 'Weiter geht\'s 💪'] : tone === 'bad' ? ['Unnötig…', 'Da war heute mehr drin 😤', 'Die Einstellung stimmt nicht.', 'Nächste Woche bitte mehr!'] : ['Ich kann nicht mehr. 😡', 'So steigen wir ab!', 'Trainer raus? Ich sag nur…', 'Peinlich. Einfach nur peinlich.'];
-  for (let i = 0; i < 2; i++) push(M.feed, { season: world.season, week: world.week, user: `@${handleFor(rng, me)}`, name: pick(rng, FIRST), text: pick(rng, fans), likes: rng.int(20, 2400), kind: 'fan', club: me.id }, 80);
-  const rival = d > 0 ? ['Glückstreffer. Mehr nicht.', 'Schiri hat euch geholfen 🙄', 'Nächstes Mal wieder.'] : d === 0 ? ['Gerechtes Remis.', 'Mehr habt ihr nicht drauf? 😏', 'Punkt ist okay.'] : ['Hahaha 😂', 'Danke für die Punkte!', 'Wie immer 🤷'];
-  push(M.feed, { season: world.season, week: world.week, user: `@${handleFor(rng, opp)}`, name: pick(rng, FIRST), text: pick(rng, rival), likes: rng.int(5, 900), kind: 'rival', club: opp.id }, 80);
-  const [jn, jh] = pick(rng, JOURNOS);
-  const best = (m.events || []).filter((e) => e.type === 'goal' && !e.own && world.players[e.player]?.clubId === me.id).map((e) => world.players[e.player]);
-  const scorer = best[0];
-  const jt = scorer ? `${scorer.firstName} ${scorer.lastName} trifft für ${me.short}${best.filter((p) => p === scorer).length >= 2 ? ' doppelt' : ''}. ${tone === 'top' ? 'Starke Vorstellung.' : ''}` : `${me.short} ${gf}:${ga} ${opp.short}. ${tone === 'crisis' ? 'Die Kritik am Trainer wird lauter.' : 'Analyse folgt.'}`;
-  push(M.feed, { season: world.season, week: world.week, user: `@${jh}`, name: jn, text: jt, likes: rng.int(80, 5000), kind: 'press', verified: true }, 80);
+  // v5.5 Medienhaus: full article + Social Media 2.0
+  let art = null;
+  try { art = writeMatchReport(world, m, rng); } catch (e) { console.warn('newsroom', e); }
+  socialAfterMatch(world, m, rng, art);
+  if (art) Object.assign(M.headlines[0], { article: art.id });
   // records
   updateRecords(world, m);
 }
@@ -49,6 +45,7 @@ export function mediaAfterMatch(world, m, rng) {
 // weekly league round-up and rumours become posts too
 export function weeklyMedia(world, rng) {
   const M = ensureMedia(world);
+  weeklyNewsroom(world, rng);
   if (rng.chance(0.4) && world.rumours?.length) { const r = world.rumours[0]; const [jn, jh] = pick(rng, JOURNOS); push(M.feed, { season: world.season, week: world.week, user: `@${jh}`, name: jn, text: `🔎 Exklusiv: ${r.text || ''}`.slice(0, 220), likes: rng.int(300, 9000), kind: 'press', verified: true }, 80); }
 }
 
@@ -72,6 +69,7 @@ export function seasonRecords(world, rank, pts) {
   const R = ensureRecords(world);
   const me = world.clubs[world.userClubId];
   if (!R.bestSeason || pts > R.bestSeason.pts) R.bestSeason = { season: world.season, pts, rank, club: me.short };
+  try { writeSeasonReview(world, rank, pts); } catch (e) { console.warn('newsroom', e); }
   world.legends ||= {};
   for (const id of me.squad) {
     const p = world.players[id]; if (!p || !p.stats.apps) continue;

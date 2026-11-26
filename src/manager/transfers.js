@@ -143,8 +143,9 @@ export function extendContract(world, playerId, wage, years) {
   if (years < d.minY || years > d.maxY) return { ok: false, msg: `Laufzeit muss zwischen ${d.minY} und ${d.maxY} Jahren liegen.` };
   if (wage < d.wage * 0.97) return { ok: false, msg: `${p.lastName} fordert mindestens ${eur(d.wage)} pro Jahr.` };
   if (!wageRoom(world, club, wage, p.wage)) return { ok: false, msg: 'Das Gehaltsbudget reicht dafür nicht aus.' };
-  p.wage = wage; p.contract = years; p.morale = clamp(p.morale + 8, 0, 99);
-  news(world, `${p.firstName} ${p.lastName} verlängert bis ${world.season + years}.`);
+  // the new deal starts after the running season, so 'years' are added on top of it
+  p.wage = wage; p.contract = Math.max(p.contract, years + 1); p.morale = clamp(p.morale + 8, 0, 99);
+  news(world, `${p.firstName} ${p.lastName} verlängert bis ${world.season + p.contract}.`);
   return { ok: true };
 }
 

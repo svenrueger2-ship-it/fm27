@@ -243,7 +243,7 @@ function negotiate(app, p, mode, onChange) {
     if (r.status === 'broken') { msg(r.msg, true); if (mode === 'buy') w.transfer.pending = null; m.el.querySelector('#ok').disabled = true; setTimeout(() => m.close(), 1800); return; }
     // accepted
     if (mode === 'pre') signPreContract(w, p, offer);
-    else if (mode === 'extend') { p.wage = offer.wage; p.contract = offer.years; p.morale = Math.min(99, p.morale + 8); p.preContract = null; applyPackage(w, p, club, offer); }
+    else if (mode === 'extend') { p.wage = offer.wage; p.contract = Math.max(p.contract, offer.years + 1); p.morale = Math.min(99, p.morale + 8); p.preContract = null; applyPackage(w, p, club, offer); }
     else { const pend = w.transfer.pending; if (!pend) { msg('Keine Verhandlung offen.', true); return; } executeTransfer(w, p, p.clubId ? w.clubs[p.clubId] : null, club, pend.fee, offer.wage, offer.years); w.transfer.pending = null; applyPackage(w, p, club, offer); }
     m.close(); toast(mode === 'extend' ? `Vertrag mit ${p.lastName} verlängert` : mode === 'pre' ? `📝 Vorvertrag mit ${p.lastName}!` : `✍️ ${p.lastName} unterschreibt bei ${club.short}!`); onChange?.();
   };

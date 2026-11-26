@@ -10,6 +10,7 @@ import { computeTable, userLeague, userFixture, isUserSeasonOver } from '../../m
 import { teamStrength, ensureLineup } from '../../match/tactics.js';
 import { OUTFIELD_ATTRS, GK_ATTRS, POSITIONS, POS_ORDER } from '../../data/attributes.js';
 import { estimate, knowledge, windowInfo } from '../../manager/transfers.js';
+import { openArticle } from './media.js';
 import { crest, esc, money, flag, nationName, pname, shortName, ratingClass, portrait, bar, modal, toast, confirmDialog } from '../dom.js';
 import { transferActions } from './transfers.js';
 
@@ -114,6 +115,7 @@ export function dashboardScreen(app, el) {
         <div class="kv"><span>Gehalt</span><b>${money(w.coach.wage)}/Saison · ${w.coach.years} J.</b></div>
         <button class="btn sm" id="coach">Trainer wechseln …</button></div>` : ''}
       <div class="card"><h3>📨 Posteingang vom Stab</h3>${(() => { const ib = openInbox(w); return ib.length ? ib.slice(0, 3).map((x) => `<p class="small">• ${esc(x.title)}</p>`).join('') + `<button class="btn sm primary" data-nav2="staff">${ib.length} Vorschlag${ib.length > 1 ? 'e' : ''} ansehen →</button>` : `<p class="muted">Nichts zu entscheiden. Dein Stab kümmert sich${w.staff ? ` um ${Object.values(w.staff.delegate).filter((m) => m === 'auto').length} Bereiche automatisch` : ''}.</p><button class="btn sm ghost" data-nav2="staff">Stab & Delegation →</button>`; })()}</div>
+      ${(() => { const a = w.media?.articles?.[0]; return a ? `<div class="card home-press" data-art="${a.id}"><h3>📰 Aus der Presse</h3><small class="muted">${esc(a.paper)} · ${esc(a.kicker || '')}</small><h3 class="np-h">${esc(a.title)}</h3><p class="small">${esc((a.lead || '').slice(0, 160))}</p><button class="btn sm ghost">Artikel lesen →</button> <button class="btn sm ghost" data-nav2="media">Medienhaus →</button></div>` : ''; })()}
       <div class="card"><h3>🗞️ Gerüchteküche</h3>${rum.length ? `<div class="rumours">${rum.map((r) => `<div class="rum"><span><b>${esc(r.name)}</b> ${w.clubs[r.from] ? `(${esc(w.clubs[r.from].short)})` : ''} → ${esc(w.clubs[r.to]?.short || '?')}</span><small>${esc(r.source)} · Glaubwürdigkeit ${'●'.repeat(Math.round(r.reliability * 5))}${'○'.repeat(5 - Math.round(r.reliability * 5))} · ${esc(r.status)}</small></div>`).join('')}</div>` : '<p class="muted">Gerüchte gibt es, sobald ein Transferfenster geöffnet ist.</p>'}</div>
     </div>
     <div class="grid-2">
@@ -144,7 +146,8 @@ export function dashboardScreen(app, el) {
   el.querySelector('#club-hist')?.addEventListener('click', () => clubModal(app, club, { onPlayer: (p) => playerModal(app, p) }));
   el.querySelector('#go-end')?.addEventListener('click', () => app.go('seasonEnd'));
   el.querySelector('#dl-ticker')?.addEventListener('click', () => deadlineTicker(app));
-  el.querySelectorAll('[data-nav2]').forEach((b) => b.addEventListener('click', () => app.go(b.dataset.nav2)));
+  el.querySelectorAll('[data-nav2]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); app.go(b.dataset.nav2); }));
+  el.querySelectorAll('.home-press[data-art]').forEach((b) => b.addEventListener('click', () => openArticle(w, +b.dataset.art)));
   el.querySelectorAll('[data-p]').forEach((d) => d.addEventListener('click', () => playerModal(app, w.players[d.dataset.p])));
 }
 

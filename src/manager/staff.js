@@ -122,9 +122,9 @@ function planContracts(world) {
     const important = i < 15 || (p.age <= 23 && p.pot >= 75);
     if (!important) return;
     const d = contractDemand(world, p, club);
-    if (!d.willing) return;
+    if (!d.willing) { if (['me', 'off'].includes(world.staff?.delegate?.contracts)) return; p.staffAsked = world.season; note(world, 'contracts', `${ROLES.assistant}: ${p.firstName} ${p.lastName} will nicht verlängern – ${d.reason} Verkaufen oder ablösefrei ziehen lassen?`); return; }
     const years = clamp(p.age >= 30 ? d.minY : 3, d.minY, d.maxY);
-    out.push({ p, text: `${p.firstName} ${p.lastName} (${p.ovr}, ${p.age}) läuft aus – Verlängerung um ${years} Jahre für ${d.wage >= 1e6 ? (d.wage / 1e6).toFixed(1).replace('.', ',') + ' Mio.' : Math.round(d.wage / 1000) + ' Tsd.'} €/Jahr?`, key: `ct-${p.id}-${world.season}`, run: () => { p.staffAsked = world.season; return extendContract(world, p.id, d.wage, years); } });
+    out.push({ p, fail: (r) => `${ROLES.assistant}: Verlängerung mit ${p.firstName} ${p.lastName} gescheitert – ${r.msg}`, text: `${p.firstName} ${p.lastName} (${p.ovr}, ${p.age}) läuft aus – Verlängerung um ${years} ${years === 1 ? 'Jahr' : 'Jahre'} für ${d.wage >= 1e6 ? (d.wage / 1e6).toFixed(1).replace('.', ',') + ' Mio.' : Math.round(d.wage / 1000) + ' Tsd.'} €/Jahr?`, key: `ct-${p.id}-${world.season}`, run: () => { p.staffAsked = world.season; return extendContract(world, p.id, d.wage, years); } });
   });
   return out.slice(0, 3);
 }
@@ -179,7 +179,7 @@ export function weeklyStaff(world, rng) {
     if (!prop) return;
     const mode = area === 'lineup' && isDirector(world) ? 'off' : D[area];
     if (mode === 'me' || mode === 'off') return;
-    if (mode === 'auto') { const r = prop.run(rng); if (r?.ok === false) return; note(world, area, `${ROLES[whoFor(area)]}: ${prop.text.replace(/ – ich würde umstellen\.|\?$/, '')} ✓ erledigt`); }
+    if (mode === 'auto') { const r = prop.run(rng); if (r?.ok === false) { if (prop.fail) note(world, area, prop.fail(r)); return; } note(world, area, `${ROLES[whoFor(area)]}: ${prop.text.replace(/ – ich würde umstellen\.|\?$/, '')} ✓ erledigt`); }
     else push(world, { area, from: whoFor(area), key: prop.key || `${area}-${world.season}-${world.week}`, title: prop.text, actions: [{ k: 'yes', label: prop.label || 'Umsetzen' }, { k: 'no', label: 'Ignorieren' }], run: prop.run });
   };
   handle('lineup', planLineup(world));

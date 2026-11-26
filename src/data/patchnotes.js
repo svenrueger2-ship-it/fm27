@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '5.5.0', date: '26.11.2026', title: 'Medienhaus: Zeitung, Social Media & TV',
+    neu: ['Ausführliche Spielberichte nach jedem Spiel: Spielverlauf mit Torminuten, Analyse, Noten (1–6) für jeden Spieler, Spieldaten und Stimmen von Trainern und Spielern', 'Fünf Zeitungen mit eigenem Stil: Ballblick (Boulevard), Sport-Kurier (seriös), Kicker-Express (Zahlen & Noten), Abendpost (lokal) und Fußball Heute', 'Wöchentliche Liga-Rundschau mit allen Ergebnissen, Überraschung des Spieltags und Torjägerliste', 'Kolumne „Der Ballflüsterer“, Exklusiv-Interviews, Talent-Porträts, Boulevard-Geschichten, Fan-Umfragen, Elf des Spieltags, Gerüchteküche und große Saisonbilanz', 'Social Media 2.0: offizieller Vereinsaccount mit Followern, Posts deiner Spieler, Antworten von Fans und Rivalen, Trend-Hashtags', 'Als Trainer posten: einmal pro Woche Motivation, Dank, Selbstkritik oder Kampfansage – mit Folgen für Fans, Team und Presse', 'FM-TV-Liveticker mit Eilmeldungen, Artikel-Archiv mit Filtern, Presse-Karte in der Vereinszentrale'],
+    verbessert: ['Stab: Scheitert eine Vertragsverlängerung (Budget, Forderung) oder will ein Spieler nicht verlängern, meldet sich der Co-Trainer im Posteingang'],
+    behoben: ['Vertragsverlängerung um 1 Jahr hat den Vertrag nicht verlängert – der Spieler wäre trotzdem im Sommer gegangen (betraf Stab und eigene Verhandlungen)'],
+    geplant: ['6.0: Derbys & Choreos, Standards selbst schießen, Saisonvorbereitung, Trainingszentrum, Transfer-KI 2.0, Frauen-Fußball'],
+  },
+  {
     version: '5.4.1', date: '26.11.2026', title: 'Echte Spielerfotos im Spiel',
     neu: ['Echte Spielerfotos direkt in den Spieldaten – den Anfang machen die Schalker Torhüter Karius, Müller und Siebeking'],
     verbessert: ['Eigene Fotos aus dem Spielstand haben weiter Vorrang vor den eingebauten'],
