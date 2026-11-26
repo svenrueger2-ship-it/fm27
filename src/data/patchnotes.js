@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.3', date: '27.11.2026', title: 'Patchnotes im Hauptmenü repariert',
+    neu: [],
+    verbessert: [],
+    behoben: ['Die Patchnotes-Spalte im Hauptmenü zeigte nur leere, zusammengedrückte Zeilen – jetzt wieder lesbar und scrollbar'],
+    geplant: [],
+  },
+  {
     version: '7.0.2', date: '27.11.2026', title: 'Patchnotes überall sichtbar',
     neu: ['Nach jedem Update erscheint einmal „Neu in Version …“ mit den wichtigsten Änderungen', 'Eigener Menüpunkt „Patchnotes“ im Hauptmenü – auch auf dem Handy und in der Android-App'],
     verbessert: [],

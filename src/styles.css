@@ -1500,3 +1500,4 @@ html.mobile .cer-glow { animation: none; }
 .pn-badge{margin-left:auto;font-size:.7rem;padding:1px 7px;border-radius:999px;background:var(--accent,#a78bfa);color:#000;font-weight:800}
 .pn-center .pn-list{max-height:70vh;overflow:auto}
 .pn-new small{opacity:.7;text-transform:uppercase;letter-spacing:.1em}.pn-new h2{margin:.3rem 0 .6rem}.pn-new ul{margin:0 0 1rem;padding-left:1.2rem;line-height:1.5}
+.pn-list{grid-auto-rows:max-content;min-height:0}.pn{min-height:max-content}
