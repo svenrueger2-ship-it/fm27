@@ -1,5 +1,5 @@
 // Off-pitch life of the user's club: sponsor deals, board & fan mood, press conferences,
-import { genderOk, feminize, wScale } from './gender.js';
+import { genderOk, feminize, wScale , commercial } from './gender.js';
 import { diff } from './difficulty.js';
 // random events with decisions, transfer rumours and Deadline Day.
 import { money } from '../core/fmt.js';
@@ -28,7 +28,7 @@ export function moodAfterMatch(world, diff, strengthGap) {
 export const SPONSOR_SLOTS = { shirt: { name: 'Trikotsponsor', share: 0.4 }, kit: { name: 'Ausrüster', share: 0.18 }, sleeve: { name: 'Ärmelsponsor', share: 0.12 } };
 const BRANDS = { shirt: ['Volta Energie', 'Nordbank', 'Turbo Telecom', 'Lumen Air', 'Orbita Versicherung', 'Hansa Logistik', 'Krone Mobil', 'Solaris'], kit: ['Strider', 'Velox Sport', 'Apex', 'Kinetic', 'Puma-Line', 'Fennek'], sleeve: ['PixelWerk', 'Bergquell', 'Alpenbank', 'Nova Bet', 'Zephyr', 'Kaiser Brau'] };
 
-export function genericSponsorValue(club, league) { return Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf(league)) * wScale(club); }
+export function genericSponsorValue(club, league) { return Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf(league)) * wScale(club) * commercial(club); }
 
 export function ensureSponsors(world, club) {
   if (club.sponsorDeals) return club.sponsorDeals;

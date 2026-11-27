@@ -67,7 +67,8 @@ export function trainPlayer(p, club, rng, youthBoost = 0) {
   const tr = club.training;
   if (p.injury > 0) return [];
   const room = Math.max(0, p.pot - p.ovr);
-  let pts = (0.2 + room * 0.072) * ageFactor(p.age);
+  let pts = (0.16 + room * 0.05) * ageFactor(p.age);
+  pts *= p.ovr >= 86 ? 0.45 : p.ovr >= 82 ? 0.7 : 1; // v7.0.6: world-class level is reached slowly
   pts *= 0.55 + club.facilities.training * 0.11;
   pts *= 0.6 + tr.intensity * 0.6;
   pts *= 0.6 + p.professionalism / 250;
@@ -101,10 +102,10 @@ export function trainPlayer(p, club, rng, youthBoost = 0) {
     }
   }
   // physical decline of veterans
-  if (p.age > 29 && rng.chance((p.age - 29) * 0.06)) {
+  if (p.age > 29 && rng.chance(Math.min(0.9, (p.age - 29) * 0.09))) { // v7.0.6: veterans decline noticeably
     const k = rng.pick(['tempo', 'beschleunigung', 'ausdauer', 'sprungkraft']);
     p.attrs[k] = clamp(p.attrs[k] - 1, 5, 99);
-    if (p.age > 32 && rng.chance(0.4)) { const k2 = rng.pick(Object.keys(POS_WEIGHTS[p.pos])); p.attrs[k2] = clamp(p.attrs[k2] - 1, 5, 99); }
+    if (p.age > 31 && rng.chance(p.age > 33 ? 0.8 : 0.5)) { const k2 = rng.pick(Object.keys(POS_WEIGHTS[p.pos])); p.attrs[k2] = clamp(p.attrs[k2] - 1, 5, 99); }
   }
   p.ovr = computeOverall(p.attrs, p.pos);
   p.pot = Math.max(p.pot, p.ovr);

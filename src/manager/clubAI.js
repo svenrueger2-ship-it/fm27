@@ -8,7 +8,7 @@ import { money } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
 import { PRESETS, FORMATIONS, autoLineup, teamStrength } from '../match/tactics.js';
 import { makeCoach } from './director.js';
-import { askingPrice, contractDemand, executeTransfer, windowInfo, news } from './transfers.js';
+import { askingPrice, contractDemand, executeTransfer, windowInfo, news, transferAvail, wageRoom } from './transfers.js';
 import { computeTable } from './season.js';
 
 export const PHILOSOPHIES = {
@@ -110,7 +110,7 @@ function scoreTarget(world, buyer, p, need, fee) {
 
 function findTargets(world, rng, buyer, need) {
   const P = PHILOSOPHIES[buyer.ai.philosophy];
-  const budget = buyer.budget * P.spend;
+  const budget = buyer.budget > 0 ? transferAvail(buyer) * P.spend : 0; // v7.0.6: AI clubs only spend their real transfer budget
   const cap = ovrCap(buyer);
   const ids = Object.keys(world.players);
   const out = [];
@@ -146,17 +146,18 @@ function aiDeal(world, rng, buyer, need, hot) {
     if (seller) {
       fee = Math.round((t.fee * rng.range(0.8, 0.98)) / 1e4) * 1e4;
       let v = sellerVerdict(world, seller, p, fee, rng);
-      if (v.v === 'counter' && v.fee <= buyer.budget * PHILOSOPHIES[buyer.ai.philosophy].spend * 1.1) { fee = v.fee; v = { v: 'yes' }; }
+      if (v.v === 'counter' && v.fee <= transferAvail(buyer) * PHILOSOPHIES[buyer.ai.philosophy].spend * 1.1 && v.fee <= transferAvail(buyer)) { fee = v.fee; v = { v: 'yes' }; }
       if (v.v !== 'yes') { buyer.ai.log.unshift(`${world.season}/${world.week + 1}: Angebot für ${p.lastName} abgelehnt`); continue; }
       // bidding war: a bigger club may hijack the deal
       if (hot || rng.chance(0.12)) {
-        const rival = Object.values(world.clubs).filter((c) => c !== buyer && c !== seller && !isUser(world, c) && c.rep > buyer.rep && ovrCap(c) >= p.ovr && c.budget * PHILOSOPHIES[c.ai.philosophy].spend > fee * 1.15 && squadNeeds(world, c).some((n) => require_compat(n.pos, p.pos))).sort((a, b) => b.rep - a.rep)[0];
+        const rival = Object.values(world.clubs).filter((c) => c !== buyer && c !== seller && !isUser(world, c) && c.rep > buyer.rep && ovrCap(c) >= p.ovr && c.budget > 0 && transferAvail(c) * PHILOSOPHIES[c.ai.philosophy].spend > fee * 1.15 && squadNeeds(world, c).some((n) => require_compat(n.pos, p.pos))).sort((a, b) => b.rep - a.rep)[0];
         if (rival) {
           const rivalFee = Math.round((fee * rng.range(1.1, 1.3)) / 1e5) * 1e5;
-          const canMatch = buyer.budget * PHILOSOPHIES[buyer.ai.philosophy].spend > rivalFee * 1.05 && rng.chance(0.4);
+          const canMatch = transferAvail(buyer) * PHILOSOPHIES[buyer.ai.philosophy].spend > rivalFee * 1.05 && rng.chance(0.4);
           const winner = canMatch && rng.chance(0.5 + (buyer.rep - rival.rep) * 0.02) ? buyer : rival;
           const finalFee = winner === buyer ? Math.round((rivalFee * 1.05) / 1e5) * 1e5 : rivalFee;
           const d = contractDemand(world, p, winner);
+          if (finalFee > transferAvail(winner) || !wageRoom(world, winner, d.wage)) continue; // v7.0.6: no deals beyond the budget
           executeTransfer(world, p, seller, winner, finalFee, d.wage, rng.int(d.minY, d.maxY));
           reportDeal(world, `🔥 Bieterwettkampf um ${p.firstName} ${p.lastName}: ${winner.name} setzt sich gegen ${(winner === buyer ? rival : buyer).name} durch – ${money(finalFee)} an ${seller.short}.`, [winner, seller, buyer, rival]);
           return true;
@@ -165,6 +166,7 @@ function aiDeal(world, rng, buyer, need, hot) {
     }
     const d = contractDemand(world, p, buyer);
     if (!d.willing && rng.chance(0.7)) continue;
+    if (fee > transferAvail(buyer) || !wageRoom(world, buyer, d.wage)) continue; // v7.0.6: fee and wage must fit the budgets
     executeTransfer(world, p, seller, buyer, fee, d.wage, rng.int(d.minY, d.maxY));
     reportDeal(world, `KI-Transfer: ${p.firstName} ${p.lastName} (${p.pos}, ${p.ovr}) wechselt ${seller ? `von ${seller.short} ` : 'ablösefrei '}zu ${buyer.name}${fee ? ` für ${money(fee)}` : ''} – Grund: ${need.reason}.`, [buyer, seller], fee);
     buyer.ai.log.unshift(`${world.season}/${world.week + 1}: ${p.lastName} geholt (${need.reason})`);

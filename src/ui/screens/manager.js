@@ -11,6 +11,8 @@ import { teamStrength, ensureLineup } from '../../match/tactics.js';
 import { OUTFIELD_ATTRS, GK_ATTRS, POSITIONS, POS_ORDER } from '../../data/attributes.js';
 import { estimate, knowledge, windowInfo } from '../../manager/transfers.js';
 import { openArticle } from './media.js';
+import { fmtBorn } from '../../data/births.js';
+import { cardTier, tierLegend } from '../cardTier.js';
 import { crest, esc, money, flag, nationName, pname, shortName, ratingClass, portrait, bar, modal, toast, confirmDialog } from '../dom.js';
 import { transferActions } from './transfers.js';
 
@@ -165,8 +167,8 @@ function six(p) {
     ['DRI', Math.round((a.dribbling + a.ballkontrolle + a.technik) / 3)], ['DEF', Math.round((a.tackling + a.stellungsspiel) / 2)], ['PHY', Math.round((a.kraft + a.ausdauer + a.sprungkraft) / 3)]];
 }
 export function playerCard(p, club, extra = '') {
-  const tier = p.age <= 21 && p.pot >= 84 ? 'special' : p.ovr >= 80 ? 'gold' : p.ovr >= 68 ? 'silver' : 'bronze';
-  return `<div class="pcard ${tier}" data-p="${p.id}"><div class="ovr"><b>${p.ovr}</b><span>${p.pos}</span></div><div class="flag">${flag(p.nation)}</div>
+  const T = cardTier(p.ovr, p);
+  return `<div class="pcard ${T.cls}" data-p="${p.id}"><div class="tier">${T.label}</div><div class="ovr"><b>${p.ovr}</b><span>${p.pos}</span></div><div class="flag">${flag(p.nation)}</div>
     ${portrait(p, club, 78)}<div class="nm">${esc(p.lastName)}</div>
     <div class="six">${six(p).map(([k, v]) => `<span><b>${v}</b>${k}</span>`).join('')}</div>
     <div class="st">${p.injury > 0 ? '🩹' : ''}${p.suspension > 0 ? '🟥' : ''}${extra}</div></div>`;
@@ -208,7 +210,7 @@ export function squadScreen(app, el) {
     el.innerHTML = `<div class="page"><div class="page-head"><h2>${view === 'u19' ? `U19 · ${(w.youth || []).length} Talente` : `Kader · ${club.squad.length} Spieler`}</h2>
       <div class="row-actions"><div class="tabs small" style="margin:0">${['ALLE', 'TW', 'ABW', 'MF', 'ANG'].map((g) => `<button data-f="${g}" class="${g === filter ? 'active' : ''}">${g === 'ALLE' ? 'Alle' : g}</button>`).join('')}</div>
       <div class="tabs small" style="margin:0">${[['karten', '🃏 Karten'], ['tabelle', '☰ Tabelle'], ['u19', '🌱 U19']].map(([v, l]) => `<button data-v="${v}" class="${v === view ? 'active' : ''}">${l}</button>`).join('')}</div></div></div>
-      ${view === 'u19' ? youthView(app) : view === 'karten' ? `<div class="pcard-grid">${ps.map((p) => playerCard(p, club, (xi.has(p.id) ? ' <i class="tag">S11</i>' : bench.has(p.id) ? ' <i class="tag b">Bank</i>' : '') + capTag(p))).join('')}</div>` : `
+      ${view === 'u19' ? youthView(app) : view === 'karten' ? `${tierLegend()}<div class="pcard-grid">${ps.map((p) => playerCard(p, club, (xi.has(p.id) ? ' <i class="tag">S11</i>' : bench.has(p.id) ? ' <i class="tag b">Bank</i>' : '') + capTag(p))).join('')}</div>` : `
       <div class="card table-wrap"><table class="tbl squad"><thead><tr>${SQUAD_COLS.map(([k, l]) => `<th data-k="${k}" class="${sort.key === k ? 'sorted' : ''}">${l}${sort.key === k ? (sort.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead>
       <tbody>${ps.map((p) => `<tr data-p="${p.id}" class="${p.injury > 0 ? 'inj' : ''}">
         <td>${p.number}</td><td class="nm">${portrait(p, club, 26)}<span>${flag(p.nation)} ${esc(pname(p))}${capTag(p)}${xi.has(p.id) ? ' <i class="tag">S11</i>' : bench.has(p.id) ? ' <i class="tag b">Bank</i>' : ''}${p.injury > 0 ? ' <i class="tag r">verletzt</i>' : ''}${p.suspension > 0 ? ' <i class="tag r">gesperrt</i>' : ''}${p.loan ? ' <i class="tag b">Leihe</i>' : ''}</span></td>
@@ -266,7 +268,7 @@ export function playerModal(app, p, { onChange } = {}) {
     <div class="pp-hero"><div class="pp-wm">${club ? crest(club, 260) : ''}</div>
       <div class="pp-face">${portrait(p, club, 150)}</div>
       <div class="pp-id"><small class="pp-first">${esc(p.firstName)}</small><h3>${esc(p.lastName)}</h3>
-        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span>${(() => { const st = styleOf(p); return (st ? `<span class="pp-style" title="${esc(st.desc)}">${st.icon} ${esc(st.name)}</span>` : '') + (p.styleTrain && STYLES[p.styleTrain.id] ? `<span class="pp-style lrn">🎓 lernt ${STYLES[p.styleTrain.id].name} ${Math.round(p.styleTrain.progress * 100)} %</span>` : ''); })()}</div>
+        <div class="pp-chips"><span class="pp-pos g-${grp}">${p.pos}</span><span>#${p.number}</span><span>${p.age} Jahre${p.born ? ` · geb. ${fmtBorn(p.born)}` : ''}</span><span>${p.looks.height} cm</span><span>${flag(p.nation)} ${esc(nationName(p.nation))}</span>${(() => { const st = styleOf(p); return (st ? `<span class="pp-style" title="${esc(st.desc)}">${st.icon} ${esc(st.name)}</span>` : '') + (p.styleTrain && STYLES[p.styleTrain.id] ? `<span class="pp-style lrn">🎓 lernt ${STYLES[p.styleTrain.id].name} ${Math.round(p.styleTrain.progress * 100)} %</span>` : ''); })()}</div>
         <p class="pp-club">${club ? `<button class="linkish" id="pp-club">${crest(club, 22)} ${esc(club.name)}</button>` : 'Vereinslos'}${p.loan ? ` · Leihe von ${esc(w.clubs[p.loan.from].short)}` : ''}</p></div>
       <div class="pp-rings">${ring(known ? p.ovr : `${est.ovrLo}–${est.ovrHi}`, 'Stärke', est.ovrLo, est.ovrHi)}${ring(known ? p.pot : `${est.potLo}–${est.potHi}`, 'Potenzial', est.potLo, est.potHi)}</div>
     </div>

@@ -373,6 +373,7 @@ function settingsForm(app, tab = app.setTab || 'anzeige') {
       ${tog('s-com', 'TV-Kommentar vorlesen', 'Der Kommentar wird zusätzlich gesprochen', !!s.commentary)}`,
     ablauf: () => `
       ${sel('s-ev', 'Ereignisse & Entscheidungen', 'Wie oft Anfragen wie Spenden, Benefiz oder Sponsorendeals auftauchen', s.events || 'normal', [['oft', 'Oft'], ['normal', 'Normal'], ['selten', 'Selten'], ['aus', 'Aus']])}
+      ${tog('s-remind', 'Erinnerungen vor dem Anpfiff', 'Popup, wenn Aufstellung, Ansprache, Presse oder auslaufende Verträge vergessen wurden', s.reminders !== false)}
       ${tog('s-auto', 'Automatisch speichern', 'Nach jedem Spieltag in den Autosave-Platz', !!s.autosave)}
       ${tog('s-subs', 'Automatische Auswechslungen', 'Der Co-Trainer wechselt bei Verletzungen und Müdigkeit', s.autoSubs !== false)}
       ${tog('s-msp', 'Standards selbst ausführen', 'Elfmeter, direkte Freistöße und Ecken im 3D-Spiel selbst schießen – und als Torwart die Ecke raten', s.manualSP !== false)}`,
@@ -392,7 +393,7 @@ function bindSettings(app, root, redraw) {
     's-q': (v) => (s.quality = v), 's-sp': (v) => (s.speed = v === 'highlights' ? v : +v), 's-cam': (v) => (s.camera = v), 's-ui': (v) => (s.uiScale = +v),
     's-theme': (v) => (s.theme = v), 's-ev': (v) => { s.events = v; if (window.ufm?.world) window.ufm.world.eventRate = v; }, 's-mode': (v) => (s.mode = v), 's-vol': (v) => (s.volume = +v), 's-crowd': (v) => (s.crowd = +v), 's-eng': (v) => (s.engine3d = v),
   };
-  const bools = { 's-msp': 'manualSP', 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-hl': 'highlights', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
+  const bools = { 's-remind': 'reminders', 's-msp': 'manualSP', 's-anim': 'animations', 's-story': 'story', 's-acht': 'achToasts', 's-rep': 'replays', 's-hl': 'highlights', 's-wfx': 'weatherFx', 's-var': 'var', 's-commbar': 'commBar', 's-l3': 'lowerThirds', 's-conf': 'confToasts', 's-fps': 'fps', 's-chants': 'chants', 's-ann': 'announcer', 's-com': 'commentary', 's-auto': 'autosave', 's-subs': 'autoSubs' };
   const commit = () => { saveSettings(s); applyTheme(s, window.ufm?.world ? window.ufm.club : null); toast('Einstellungen gespeichert', 1200); };
   for (const [id, fn] of Object.entries(map)) { const el = $(`#${id}`); if (!el) continue; el.addEventListener(el.type === 'range' ? 'input' : 'change', () => { fn(el.value); if (el.nextElementSibling?.tagName === 'OUTPUT') el.nextElementSibling.textContent = `${Math.round(el.value * 100)} %`; }); el.addEventListener('change', commit); }
   for (const [id, key] of Object.entries(bools)) { const el = $(`#${id}`); if (el) el.addEventListener('change', () => { s[key] = el.checked; commit(); }); }

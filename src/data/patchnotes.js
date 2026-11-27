@@ -2,6 +2,30 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.6', date: '27.11.2026', title: 'Wirtschafts-Patch, TV-Gelder, Ultimate-Team-Karten & echte Geburtsdaten',
+    neu: [
+      '📺 Fernsehgelder nach Verteilerschlüssel: Sockel 45 %, Leistung (5-Jahres-Wertung) 35 %, Reichweite 15 %, Nachwuchs 5 % – dazu internationale Vermarktung im Europapokal und eine Topspiel-Prämie für das Live-Spiel des Spieltags. Übersicht mit TV-Tabelle unter Finanzen',
+      '🃏 Kartensystem wie bei Ultimate Team: Bronze, Silber und Gold – jeweils normal und selten (ab 60 / 71 / 83), dazu Ikone (90+), In-Form (Formstärke 85+) und Future Star. Seltene Karten glänzen, Legende in der Kartenansicht',
+      '🔔 Vergessen-Check vor dem Anpfiff: Popup bei verletzten, gesperrten oder müden Spielern in der Startelf, fehlender Kabinenansprache, offener Pressekonferenz, auslaufenden Verträgen von Leistungsträgern, schließendem Transferfenster, dünnem Kader oder Kontominus – jeweils mit Direkt-Knopf. Abschaltbar unter Einstellungen → Ablauf',
+      '🎂 Echte Geburtsdaten für Bundesliga, 2. Bundesliga und 3. Liga (DFB-Datencenter, rund 1.850 Spieler): echtes Alter und „geb. …“ im Spielerprofil – auch in bestehenden Spielständen',
+      '🆓 Transfermarkt-Filter „Ablösefrei“ (vertragslose Spieler und Verträge, die im Sommer auslaufen). Vorverträge sind schon ab der Winterpause möglich, vorher zeigt die Spielerkarte, ab wann',
+    ],
+    verbessert: [
+      'Wirtschafts-Patch: Marktwerte realistisch gedeckelt (Spitze ca. 150–200 Mio. €), Ablöseforderungen höchstens 1,6× Marktwert und nie über 220 Mio. €',
+      'Weniger Wunderkinder: kleinere Potenziale, Weltklasse-Niveau (82+ / 86+) wird langsamer erreicht, Routiniers bauen ab 30 spürbar ab – die Zahl der 85er bleibt über die Jahre stabil statt sich zu vervielfachen',
+      'KI-Vereine kaufen nur noch im Rahmen ihres Transfer- und Gehaltsbudgets – auch im Bieterwettkampf',
+      'Topklubs verdienen mit Sponsoren und Merchandising deutlich mehr (Weltmarken-Faktor) – große Vereine schreiben nicht mehr jede Saison riesige Verluste',
+      'KI-Vereine passen ihre Gehälter den Einnahmen an, Verluste von Zweitvertretungen (z. B. Hoffenheim II) trägt der Mutterverein',
+      'Budget-Meldungen zeigen genau, wie viel fehlt (Ablöse, Handgeld, Gehaltsbudget, Leihgebühr) – auch direkt auf der Transferkarte',
+    ],
+    behoben: [
+      'Vereine der 3. Liga rutschten Saison für Saison tief ins Minus (bis −228 Mio. €): vereinslose Ex-Stars verlangten ihr altes Spitzengehalt und wurden ohne Budgetprüfung verpflichtet. Betroffene KI-Vereine werden in bestehenden Spielständen einmalig saniert',
+      'Marktwerte von über 500 Mio. € zum Saisonende (die Neuberechnung war nicht gedeckelt)',
+      'Echte Spieler hatten ein zufälliges Alter',
+    ],
+    geplant: ['Echte Geburtsdaten auch für England, Spanien, Italien, Frankreich und die weiteren Ligen'],
+  },
+  {
     version: '7.0.5', date: '27.11.2026', title: 'Update-Popup & Spielerfotos im Profil',
     neu: ['Update-Hinweis als Popup im Spiel: „🔄 Jetzt neu starten“ oder „Später“ – der Spielstand wird vorher automatisch gesichert, während eines 3D-Spiels kommt die Frage erst danach', 'Nach dem Neustart zeigt ein Popup im Spiel, was neu ist – auch wenn das Spiel direkt in den Spielstand startet'],
     verbessert: ['Eigene Fotos hochladen entfernt (📷 im Profil, „📷 Fotos“ im Kader, Fotopakete) – es werden nur noch die echten Spielerfotos aus dem Spiel gezeigt'],

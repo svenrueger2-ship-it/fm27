@@ -41,3 +41,6 @@ export function feminize(rng, p) {
   return p;
 }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+/** v7.0.6 economy patch: global brands earn far more commercially – steep curve above reputation 70 */
+export const commercial = (club) => 1 + Math.pow(Math.max(0, (club?.rep || 0) - 70), 2) * 0.012;

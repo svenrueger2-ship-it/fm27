@@ -1,9 +1,10 @@
+import { cardTier } from '../cardTier.js';
 import { IS_MOBILE } from '../../core/device.js';
 // Transfers & scouting: market search, watchlist, scout assignments, bids, contract talks,
 // loans with buy option, incoming offers, transfer list, contract extensions, history.
 import {
   searchMarket, askingPrice, estimate, assignScout, makeBid, signPending, contractDemand, extendContract,
-  loanTerms, requestLoan, exerciseOption, toggleListed, respondOffer, swapValue, windowInfo, maxScouts, knowledge, wageRoom, executeTransfer, transferAvail } from '../../manager/transfers.js';
+  loanTerms, requestLoan, exerciseOption, toggleListed, respondOffer, swapValue, windowInfo, maxScouts, knowledge, wageRoom, wageOver, preContractWeek, executeTransfer, transferAvail } from '../../manager/transfers.js';
 import { squadNeeds } from '../../manager/clubAI.js';
 import { taskEvent } from '../../manager/progress.js';
 import { projectPlayer, projectionSvg } from '../../manager/projection.js';
@@ -99,7 +100,7 @@ function swipe(app, el, redraw) {
 // ------------------------------------------------------------------ market
 function markt(app, el, redraw) {
   const w = app.world, f = app.tf.f;
-  const leagues = [['ALLE', 'Alle Ligen'], ['FREI', 'Vereinslos'], ...w.leagues.map((l) => [l.id, l.name])];
+  const leagues = [['ALLE', 'Alle Ligen'], ['FREI', 'Vereinslos'], ['AUSL', '🆓 Ablösefrei (vertragslos + läuft aus)'], ...w.leagues.map((l) => [l.id, l.name])];
   const res = searchMarket(w, { ...f, maxAge: +f.maxAge || 0, minOvr: +f.minOvr || 0, maxPrice: (+f.maxPrice || 0) * 1e6 });
   el.innerHTML = `<div class="card"><div class="grid-4">
       <label class="field">Name<input class="input" id="f-name" value="${esc(f.name)}" placeholder="Spieler suchen…"></label>
@@ -171,6 +172,7 @@ export function transferActions(app, p, onChange) {
   const scouting = w.scouting.assignments.some((a) => a.playerId === p.id);
   return {
     html: `<div class="kv"><span>Geforderte Ablöse</span><b>${p.clubId ? money(price) : 'ablösefrei'}</b></div>
+      ${p.clubId && p.clubId !== w.userClubId && price > transferAvail(w.clubs[w.userClubId]) ? `<div class="kv"><span>Dein Transferbudget</span><b class="bad">${money(transferAvail(w.clubs[w.userClubId]))} · es fehlen ${money(price - transferAvail(w.clubs[w.userClubId]))}</b></div>` : ''}
       ${p.releaseClause ? `<div class="kv"><span>Ausstiegsklausel</span><b>${money(p.releaseClause)}</b></div>` : ''}
       <div class="kv"><span>Berater</span><b>${esc(agentOf(p).name)}</b></div>
       ${p.clubId ? `<div class="kv"><span>Vertrag</span><b>${p.contract <= 1 ? '<span class="bad">läuft im Sommer aus</span>' : `noch ${p.contract} Jahre`}${p.preContract ? ` · Vorvertrag bei ${esc(w.clubs[p.preContract.club]?.short || '')}` : ''}</b></div>` : ''}
@@ -179,7 +181,8 @@ export function transferActions(app, p, onChange) {
         ${canPreContract(w, p) ? '<button class="btn sm" data-a="pre">📝 Vorvertrag (ablösefrei im Sommer)</button>' : ''}
         ${lt?.possible ? '<button class="btn sm" data-a="loan">Leihe anfragen</button>' : ''}
         ${knowledge(w, p) < 100 ? `<button class="btn sm" data-a="scout" ${scouting ? 'disabled' : ''}>${scouting ? 'Scout ist unterwegs' : '🕵️ Scout schicken'}</button>` : ''}
-      </div>`,
+      </div>
+      ${p.clubId && p.clubId !== w.userClubId && p.contract === 1 && !p.preContract && !p.loan && !canPreContract(w, p) ? `<p class="tag b" style="display:block;padding:.45rem .6rem;margin-top:.5rem">🆓 Vertrag läuft im Sommer aus: ab Spieltag ${preContractWeek(w) + 1} (Winterpause) kannst du einen Vorvertrag unterschreiben – dann kommt er ablösefrei.</p>` : ''}`,
     bind(root, close) {
       root.querySelector('[data-a=bid]').onclick = () => { close(); bidDialog(app, p, onChange); };
       const pc = root.querySelector('[data-a=pre]'); if (pc) pc.onclick = () => { close(); negotiate(app, p, 'pre', onChange); };
@@ -238,8 +241,8 @@ function negotiate(app, p, mode, onChange) {
   m.el.querySelector('#ok').onclick = () => {
     const offer = { wage: val('#wage'), years: +m.el.querySelector('#yrs').value, signing: val('#sign'), agentFee: val('#afee'), goalBonus: val('#gb'), appBonus: val('#ab'), clause: val('#cl') || null };
     const msg = (t, bad) => (m.el.querySelector('#msg').innerHTML = `<p class="tag ${bad ? 'r' : ''}" style="display:block;padding:.5rem">${esc(t)}</p>`);
-    if (offer.signing + offer.agentFee > club.budget) { msg('Handgeld und Honorar übersteigen dein Budget.', true); return; }
-    if (!wageRoom(w, club, offer.wage, mode === 'extend' ? p.wage : 0)) { msg('Das Gehaltsbudget reicht dafür nicht aus.', true); return; }
+    if (offer.signing + offer.agentFee > club.budget) { msg(`Handgeld und Honorar übersteigen dein Budget um ${money(offer.signing + offer.agentFee - club.budget)} (verfügbar ${money(Math.max(0, club.budget))}).`, true); return; }
+    if (!wageRoom(w, club, offer.wage, mode === 'extend' ? p.wage : 0)) { msg(`Das Gehaltsbudget reicht nicht: ${money(wageOver(w, club, offer.wage, mode === 'extend' ? p.wage : 0))} pro Saison zu viel.`, true); return; }
     const r = pokerRound(w, p, club, offer, state);
     if (r.status === 'counter') { msg(r.msg); return; }
     if (r.status === 'broken') { msg(r.msg, true); if (mode === 'buy') w.transfer.pending = null; m.el.querySelector('#ok').disabled = true; setTimeout(() => m.close(), 1800); return; }
@@ -343,8 +346,8 @@ function bindNet(app, el, redraw) {
 
 function miniCard(w, p) {
   const e = estimate(w, p), c = p.clubId ? w.clubs[p.clubId] : null;
-  const tier = e.ovr >= 80 ? 'gold' : e.ovr >= 68 ? 'silver' : 'bronze';
-  return `<div class="pcard ${p.age <= 21 && e.potHi >= 82 ? 'special' : tier}" data-p="${p.id}"><div class="ovr"><b>${e.exact ? p.ovr : e.ovr}</b><span>${p.pos}</span></div><div class="flag">${flag(p.nation)}</div>
+  const T = cardTier(e.exact ? p.ovr : e.ovr, { age: p.age, pot: e.exact ? p.pot : e.potHi, form: e.exact ? p.form : 50 });
+  return `<div class="pcard ${T.cls}" data-p="${p.id}"><div class="tier">${T.label}</div><div class="ovr"><b>${e.exact ? p.ovr : e.ovr}</b><span>${p.pos}</span></div><div class="flag">${flag(p.nation)}</div>
     ${portrait(p, c, 72)}<div class="nm">${esc(p.lastName)}</div><small style="color:inherit;opacity:.75">${c ? esc(c.short) : 'vereinslos'} · ${p.age} J. · ${e.exact ? `Pot. ${p.pot}` : `~${e.ovrLo}-${e.ovrHi}`}</small>
     <div class="six"><span><b>${money(askingPrice(w, p)).replace(' €', '')}</b></span></div></div>`;
 }

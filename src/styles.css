@@ -1502,3 +1502,38 @@ html.mobile .cer-glow { animation: none; }
 .pn-new small{opacity:.7;text-transform:uppercase;letter-spacing:.1em}.pn-new h2{margin:.3rem 0 .6rem}.pn-new ul{margin:0 0 1rem;padding-left:1.2rem;line-height:1.5}
 .pn-list{grid-auto-rows:max-content;min-height:0}.pn{min-height:max-content}
 .portrait.pphoto{display:inline-block;flex-shrink:0;border-radius:16px;vertical-align:middle}.pp-face .pphoto{border-radius:22px;box-shadow:0 0 0 3px var(--c2,#fff),0 0 0 6px color-mix(in srgb,var(--c1,#3a3358) 60%,transparent),0 20px 40px rgba(0,0,0,.5)}html.mobile .pp-face .pphoto{width:72px!important;height:72px!important;border-radius:14px}
+/* v7.0.6 reminder popup */
+.remind-list{display:grid;gap:.45rem;margin:.6rem 0}
+.remind{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center;padding:.55rem .7rem;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.remind>i{font-style:normal;font-size:1.25rem}
+.remind-skip{display:flex;gap:.45rem;align-items:center;font-size:.9rem;opacity:.85;margin:.3rem 0 .6rem}
+/* v7.0.6 Ultimate-Team card tiers */
+.pcard .tier { position: absolute; left: 0; right: 0; bottom: .28rem; font-size: .56rem; font-weight: 900; letter-spacing: .14em; opacity: .7; }
+.pcard { padding-bottom: 1.15rem; }
+.pcard.bronze { --t1: #c98f62; --t2: #6b3f22; --tt: #1f1006; --glow: rgba(226,165,117,.3); }
+.pcard.bronze.rare { --t1: #f0b483; --t2: #8a4b1f; --tt: #1f0f04; --glow: rgba(255,170,100,.55); }
+.pcard.silver { --t1: #d9dee6; --t2: #7d8899; --tt: #161d28; --glow: rgba(220,230,255,.3); }
+.pcard.silver.rare { --t1: #ffffff; --t2: #93a3ba; --tt: #121a26; --glow: rgba(200,225,255,.6); }
+.pcard.gold { --t1: #ecd27a; --t2: #a87b22; --tt: #2b1d03; --glow: rgba(255,210,74,.4); }
+.pcard.gold.rare { --t1: #fff1a8; --t2: #c8901c; --tt: #2a1a00; --glow: rgba(255,214,60,.75); border-color: rgba(255,240,170,.85); }
+.pcard.rare { box-shadow: 0 10px 30px rgba(0,0,0,.45), 0 0 18px var(--glow); }
+.pcard.rare::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.0) 0 10px, rgba(255,255,255,.13) 10px 12px), radial-gradient(circle at 50% 0%, rgba(255,255,255,.45), transparent 55%); mix-blend-mode: soft-light; }
+.pcard.rare .tier { opacity: .95; }
+.pcard.gold.rare::before, .pcard.icon::before, .pcard.inform::before { transform: translateX(-120%); animation: cardShine 3.6s ease-in-out infinite; }
+@keyframes cardShine { 0%, 60% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+.pcard.icon { --t1: #fbf6e8; --t2: #cdb27a; --tt: #2a2008; --glow: rgba(255,236,180,.85); border: 2px solid #e9cf86; }
+.pcard.inform { --t1: #1c1c1c; --t2: #050505; --tt: #f3d27a; --glow: rgba(243,210,122,.6); border: 1px solid #c9a44a; }
+.pcard.special { --t1: #2c1d6b; --t2: #0b0a26; --tt: #fff; --glow: rgba(124,92,255,.6); }
+.tier-legend { display: flex; flex-wrap: wrap; gap: .35rem .8rem; margin: 0 0 .8rem; font-size: .78rem; opacity: .9; }
+.tier-legend .tl { display: inline-flex; align-items: center; gap: .35rem; }
+.tier-legend .tl i { width: .95rem; height: 1.25rem; border-radius: 4px; background: linear-gradient(160deg, var(--t1), var(--t2)); border: 1px solid rgba(255,255,255,.25); }
+.tier-legend .tl.bronze { --t1: #c98f62; --t2: #6b3f22; } .tier-legend .tl.bronze.rare { --t1: #f0b483; --t2: #8a4b1f; }
+.tier-legend .tl.silver { --t1: #d9dee6; --t2: #7d8899; } .tier-legend .tl.silver.rare { --t1: #fff; --t2: #93a3ba; }
+.tier-legend .tl.gold { --t1: #ecd27a; --t2: #a87b22; } .tier-legend .tl.gold.rare { --t1: #fff1a8; --t2: #c8901c; }
+.tier-legend .tl.icon { --t1: #fbf6e8; --t2: #cdb27a; } .tier-legend .tl.inform { --t1: #1c1c1c; --t2: #050505; } .tier-legend .tl.special { --t1: #2c1d6b; --t2: #0b0a26; }
+/* v7.0.6 TV money */
+.tv-row, .tv-table > div { display: grid; grid-template-columns: minmax(0, 1.4fr) 1fr auto; gap: .5rem; align-items: center; font-size: .85rem; margin: .25rem 0; }
+.tv-table > div { grid-template-columns: 2rem 3.4rem 1fr auto; }
+.tv-row i, .tv-table i { display: block; height: .45rem; border-radius: 4px; background: linear-gradient(90deg, var(--accent, #7c5cff), #4fd1c5); }
+.tv-table > div.me { font-weight: 800; color: var(--accent, #ffd34a); }

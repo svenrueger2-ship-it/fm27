@@ -4,7 +4,8 @@ import { isHumanClub } from './hotseat.js';
 import { clamp } from '../core/rng.js';
 import { skillRank } from './progress.js';
 import { ensureStadium, weeklyConstruction, hospitalityIncome, interiorIncome, interiorWeekly, standingShare, screensBonus, lightsBonus, awayIncome, familyBonus } from './stadiumBuild.js';
-import { wScale } from './gender.js';
+import { wScale, commercial } from './gender.js';
+import { tvShare, topGameOf, topGameBonus, recordTvRank } from './tvmoney.js';
 
 export const FACILITIES = {
   training: { name: 'Trainingsgelände', desc: 'Schnellere Spielerentwicklung im Training.', max: 5 },
@@ -59,9 +60,13 @@ export function weeklyFinance(world, club, league, { homeGame, rank }) {
     add('hospitality', 'Catering, Fanshop & Fan-Zone', interiorIncome(club));
     F.lastAttendance = att;
   }
-  add('tv', 'TV-Gelder', (league.tv * 1e6 * (0.3 + 0.55 * (club.rep / 100)) * lightsBonus(club)) / W);
-  add('sponsors', club.sponsorDeals ? 'Kleinere Partner' : 'Sponsoren', (Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf) * (club.sponsorDeals ? 0.35 : 1) * wScale(club)) / W);
-  add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * wScale(club) * (club.merchMult || 1) * (club.retroBoost ? 1.08 : 1) * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
+  // v7.0.6: TV money by distribution key (see tvmoney.js) + Topspiel bonus
+  const tvs = tvShare(world, club, league);
+  add('tv', `TV-Gelder (Platz ${tvs.rank} der TV-Tabelle)`, (tvs.total * lightsBonus(club)) / W);
+  const top = topGameOf(world, league);
+  if (top && (top.h === club.id || top.a === club.id) ) add('tv', '📺 Topspiel-Prämie (Live-Übertragung)', topGameBonus(league) * wScale(club));
+  add('sponsors', club.sponsorDeals ? 'Kleinere Partner' : 'Sponsoren', (Math.pow(club.rep, 2) * 2600 * (0.25 + 0.75 * tf) * (club.sponsorDeals ? 0.35 : 1) * wScale(club) * commercial(club)) / W);
+  add('merch', 'Merchandising', (Math.pow(club.rep, 2) * 900 * wScale(club) * commercial(club) * (club.merchMult || 1) * (club.retroBoost ? 1.08 : 1) * (0.35 + 0.65 * tf) * (club.form ?? 1) * screensBonus(club) * familyBonus(club) * (club.biz ? 1 + ((club.biz.shop ?? 1) - 1) * 0.12 : 1)) / W);
   add('sponsors', 'Museum & Medienzentrum', interiorWeekly(club));
   if (club.biz) add('sponsors', 'Mitgliedsbeiträge', (club.biz.members * (club.biz.fee || 72)) / W);
   if (club.stadium.naming) add('sponsors', `Namensrechte ${club.stadium.naming.brand}`, club.stadium.naming.perSeason / W);
@@ -128,6 +133,7 @@ export function seasonFinanceClose(world, club, league, rank) {
   ensureEconomy(club, league);
   const n = league.clubIds.length;
   const prize = Math.round(league.tv * 1e6 * 0.25 * ((n - rank + 1) / n));
+  recordTvRank(club, league, rank);
   club.budget += prize; club.finance.season.prize += prize;
   const s = club.finance.season;
   const income = s.tickets + (s.hospitality || 0) + s.tv + s.sponsors + s.merch + s.prize;
@@ -135,7 +141,21 @@ export function seasonFinanceClose(world, club, league, rank) {
   const nm = club.stadium.naming;
   if (nm && --nm.yearsLeft <= 0) { club.stadium.naming = null; club.stadium.name = club.stadium.baseName || club.stadium.name; if (isHumanClub(world, club.id)) world.news.unshift({ season: world.season + 1, week: 0, text: `Der Namensrechte-Vertrag mit ${nm.brand} ist ausgelaufen.` }); }
   club.wageBudget = Math.round(Math.max(club.wageBudget * 0.9, income * 0.72) / 1e5) * 1e5;
+  if (!isHumanClub(world, club.id)) aiFinanceDiscipline(world, club, income);
   club.finance.lastSeason = { ...s, season: world.season };
   club.finance.season = emptySeason();
   return prize;
+}
+
+// v7.0.6 economy patch: AI clubs keep their books in order – wage bill follows income,
+// wages are renegotiated when the bill runs away, reserve teams are covered by their parent club.
+export function aiFinanceDiscipline(world, club, income) {
+  if (income > 0) club.wageBudget = Math.max(1e5, Math.round(Math.min(club.wageBudget, income * 0.78) / 1e5) * 1e5);
+  const ww = weeklyWages(world, club);
+  if (ww > club.wageBudget * 1.08) {
+    const k = Math.max(0.85, (club.wageBudget * 1.05) / ww);
+    for (const id of club.squad) { const p = world.players[id]; if (p && !p.loan) p.wage = Math.max(p.women ? 3000 : 10000, Math.round((p.wage * k) / 1000) * 1000); }
+  }
+  if (/ II$| B$|-B$/.test(club.name) && club.budget < 0) club.budget = 0;
+  if (club.budget < -Math.max(income, 1e6) * 0.6) club.budget = Math.round(-Math.max(income, 1e6) * 0.6); // creditors / investor step in
 }

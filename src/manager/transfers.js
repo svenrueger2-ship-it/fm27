@@ -55,7 +55,7 @@ export function askingPrice(world, p, ai = false) {
   if (world.transfer?.listed?.includes(p.id)) f *= 0.85;
   if (!ai && p.clubId !== world.userClubId) f *= 1 - 0.04 * skillRank(world, 'verhandlung');
   if (!ai && p.clubId !== world.userClubId && world.difficulty) f *= diff(world).price; // v5.2
-  const v = p.value * f;
+  const v = Math.min(p.value * f, p.value * 1.6, 2.2e8); // v7.0.6: no fantasy fees – at most 1.6× value, never above €220m
   return v > 1e6 ? Math.round(v / 1e5) * 1e5 : Math.round(v / 1e4) * 1e4;
 }
 
@@ -126,9 +126,13 @@ export function contractDemand(world, p, club) {
   const own = p.clubId === club.id && !(p.loan && p.loan.to === club.id);
   const ceiling = club.rep * 0.45 + 58 + (own ? 4 : 0);
   const willing = p.ovr <= ceiling || (own && p.morale > 60);
-  let wage = Math.max(p.wage * (own ? 1.08 : 1.15), Math.min(p.value * 0.1, 8e6 + p.value * 0.06), p.women ? 6000 : 20000);
+  // v7.0.6 economy patch: a new club pays what it can afford – the old salary of a released star does not count
+  const clubMax = Math.max(club.wageBudget * (own ? 0.16 : 0.13), p.women ? 8000 : 30000);
+  const market = Math.min(p.value * 0.1, 8e6 + p.value * 0.06);
+  let wage = Math.max(own ? p.wage * 1.08 : !p.clubId ? market : Math.min(p.wage * 1.15, Math.max(market, clubMax)), market, p.women ? 6000 : 20000);
   wage *= 1 + clamp((p.ovr - (club.rep * 0.4 + 45)) / 60, -0.2, 0.5);
   if (own) wage *= p.morale > 75 ? 0.95 : p.morale < 45 ? 1.15 : 1;
+  if (!own) wage = Math.min(wage, clubMax * 1.25);
   const minY = p.age >= 31 ? 1 : 2, maxY = p.age >= 32 ? 2 : 5;
   return { wage: Math.round(wage / 1000) * 1000, minY, maxY, willing, reason: willing ? '' : `${p.lastName} sieht ${club.name} sportlich nicht auf seinem Niveau.` };
 }
@@ -136,6 +140,14 @@ export function contractDemand(world, p, club) {
 export function wageRoom(world, club, newWage, oldWage = 0) {
   return weeklyWages(world, club) - oldWage + newWage <= club.wageBudget * 1.05;
 }
+/** v7.0.6: by how much a new wage would exceed the wage budget (0 = fits) */
+export function wageOver(world, club, newWage, oldWage = 0) {
+  return Math.max(0, Math.round((weeklyWages(world, club) - oldWage + newWage - club.wageBudget * 1.05) / 1000) * 1000);
+}
+const wageMsg = (world, club, newWage, oldWage = 0) => `Das Gehaltsbudget reicht nicht: ${money(wageOver(world, club, newWage, oldWage))} pro Saison zu viel. Verkaufe Spieler oder biete weniger Gehalt.`;
+const shortMsg = (need, have, what = 'Budget') => `Dir fehlen ${money(Math.max(0, need - have))} – nötig ${money(need)}, verfügbares ${what} ${money(Math.max(0, have))}.`;
+/** v7.0.6: pre-contracts (free transfer in summer) are possible from the winter break on */
+export function preContractWeek(world) { return Math.max(0, Math.floor(userLeagueLen(world) / 2) - 1); }
 
 export function extendContract(world, playerId, wage, years) {
   const p = world.players[playerId], club = world.clubs[world.userClubId];
@@ -143,7 +155,7 @@ export function extendContract(world, playerId, wage, years) {
   if (!d.willing) return { ok: false, msg: d.reason };
   if (years < d.minY || years > d.maxY) return { ok: false, msg: `Laufzeit muss zwischen ${d.minY} und ${d.maxY} Jahren liegen.` };
   if (wage < d.wage * 0.97) return { ok: false, msg: `${p.lastName} fordert mindestens ${eur(d.wage)} pro Jahr.` };
-  if (!wageRoom(world, club, wage, p.wage)) return { ok: false, msg: 'Das Gehaltsbudget reicht dafür nicht aus.' };
+  if (!wageRoom(world, club, wage, p.wage)) return { ok: false, msg: wageMsg(world, club, wage, p.wage) };
   // the new deal starts after the running season, so 'years' are added on top of it
   p.wage = wage; p.contract = Math.max(p.contract, years + 1); p.morale = clamp(p.morale + 8, 0, 99);
   news(world, `${p.firstName} ${p.lastName} verlängert bis ${world.season + p.contract}.`);
@@ -165,7 +177,7 @@ export function makeBid(world, playerId, fee, swaps = []) {
   if (!free && !windowInfo(world).open) return { result: 'rejected', reason: 'Das Transferfenster ist geschlossen.' };
   if (buyer.squad.length >= 32) return { result: 'rejected', reason: 'Dein Kader ist voll (max. 32 Spieler).' };
   if (free) { T.pending = { playerId, fee: 0, type: 'buy' }; return { result: 'accepted', fee: 0 }; }
-  if (fee > transferAvail(buyer)) return { result: 'rejected', reason: buyer.transferBudget != null && fee <= buyer.budget ? 'Der Vorstand gibt dafür kein Transferbudget frei.' : 'Dafür reicht dein Budget nicht.' };
+  if (fee > transferAvail(buyer)) return { result: 'rejected', reason: buyer.transferBudget != null && fee <= buyer.budget ? `Der Vorstand gibt dafür kein Transferbudget frei. ${shortMsg(fee, transferAvail(buyer), 'Transferbudget')}` : `Dafür reicht dein Budget nicht. ${shortMsg(fee, transferAvail(buyer), 'Transferbudget')}` };
   const seller = world.clubs[p.clubId];
   if (p.loan) return { result: 'rejected', reason: 'Der Spieler ist derzeit verliehen.' };
   if (p.releaseClause && fee >= p.releaseClause) { T.pending = { playerId, fee, type: 'buy' }; return { result: 'accepted', fee, clause: true }; }
@@ -209,7 +221,7 @@ export function signPending(world, wage, years) {
     if (pend.tries >= 3) { T.pending = null; return { ok: false, end: true, msg: `${p.lastName} bricht die Verhandlungen ab.` }; }
     return { ok: false, msg: `${p.lastName} fordert ${eur(d.wage)} pro Jahr (Versuch ${pend.tries}/3).` };
   }
-  if (!wageRoom(world, club, wage)) return { ok: false, msg: 'Das Gehaltsbudget reicht dafür nicht aus. Verkaufe Spieler oder biete weniger.' };
+  if (!wageRoom(world, club, wage)) return { ok: false, msg: wageMsg(world, club, wage) };
   if (pend.type === 'buy') {
     const seller = p.clubId ? world.clubs[p.clubId] : null;
     executeTransfer(world, p, seller, club, pend.fee, wage, years);
@@ -270,8 +282,8 @@ export function requestLoan(world, playerId, wageShare, withOption) {
   const t = loanTerms(world, p);
   if (!t.possible) return { ok: false, msg: `${from.name} verleiht nur Ergänzungsspieler bis 30 Jahre.` };
   if (wageShare < 0.5) return { ok: false, msg: `${from.name} verlangt, dass du mindestens 50 % des Gehalts übernimmst.` };
-  if (to.budget < t.fee) return { ok: false, msg: 'Nicht genug Budget für die Leihgebühr.' };
-  if (!wageRoom(world, to, p.wage * wageShare)) return { ok: false, msg: 'Das Gehaltsbudget reicht nicht aus.' };
+  if (to.budget < t.fee) return { ok: false, msg: `Nicht genug Budget für die Leihgebühr. ${shortMsg(t.fee, to.budget)}` };
+  if (!wageRoom(world, to, p.wage * wageShare)) return { ok: false, msg: wageMsg(world, to, p.wage * wageShare) };
   if (to.squad.length >= 32) return { ok: false, msg: 'Dein Kader ist voll.' };
   from.squad = from.squad.filter((id) => id !== p.id); from.lineup = null;
   (from.loanedOut ||= []).push(p.id);
@@ -290,7 +302,7 @@ export function requestLoan(world, playerId, wageShare, withOption) {
 export function exerciseOption(world, playerId) {
   const p = world.players[playerId], to = world.clubs[world.userClubId];
   if (!p.loan || p.loan.to !== to.id || !p.loan.buyOption) return { ok: false, msg: 'Keine Kaufoption vorhanden.' };
-  if (to.budget < p.loan.buyOption) return { ok: false, msg: 'Nicht genug Budget.' };
+  if (to.budget < p.loan.buyOption) return { ok: false, msg: `Nicht genug Budget. ${shortMsg(p.loan.buyOption, to.budget)}` };
   const from = world.clubs[p.loan.from];
   from.loanedOut = (from.loanedOut || []).filter((id) => id !== p.id);
   bookTransfer(to, -p.loan.buyOption, `Kaufoption ${p.lastName}`, world);
@@ -424,8 +436,9 @@ export function seasonTransfers(world, rng) {
     while (club.squad.length < 23 && guard++ < 8) {
       const need = weakestSlot(world, club);
       const cap = club.rep * 0.45 + 58;
-      const fa = world.freeAgents.map((id) => world.players[id]).filter((p) => p && genderOk(club, p) && p.ovr <= cap && (!need || POS_COMPAT[need.pos]?.includes(p.pos))).sort((a, b) => b.ovr - a.ovr)[0]
-        || world.freeAgents.map((id) => world.players[id]).filter((p) => p && genderOk(club, p) && p.ovr <= cap).sort((a, b) => b.ovr - a.ovr)[0];
+      const fits = (p) => p && genderOk(club, p) && p.ovr <= cap && wageRoom(world, club, contractDemand(world, p, club).wage); // v7.0.6: only affordable free agents
+      const fa = world.freeAgents.map((id) => world.players[id]).filter((p) => fits(p) && (!need || POS_COMPAT[need.pos]?.includes(p.pos))).sort((a, b) => b.ovr - a.ovr)[0]
+        || world.freeAgents.map((id) => world.players[id]).filter(fits).sort((a, b) => b.ovr - a.ovr)[0];
       if (!fa) break;
       const d = contractDemand(world, fa, club);
       executeTransfer(world, fa, null, club, 0, d.wage, rng.int(d.minY, d.maxY));
@@ -468,7 +481,7 @@ export function searchMarket(world, f = {}) {
     if (!genderOk(world.clubs[uc], p)) continue;
     if (f.pos && f.pos !== 'ALLE' && p.pos !== f.pos) continue;
     if (f.maxAge && p.age > f.maxAge) continue;
-    if (f.league && f.league !== 'ALLE') { if (f.league === 'FREI') { if (p.clubId) continue; } else if (!p.clubId || world.clubs[p.clubId].leagueId !== f.league) continue; }
+    if (f.league && f.league !== 'ALLE') { if (f.league === 'FREI') { if (p.clubId) continue; } else if (f.league === 'AUSL') { if (p.clubId && (p.contract > 1 || p.preContract || p.loan || p.clubId === world.userClubId)) continue; } else if (!p.clubId || world.clubs[p.clubId].leagueId !== f.league) continue; }
     if (f.listed && !world.transfer.listed.includes(p.id)) continue;
     const est = estimate(world, p);
     if (f.minOvr && est.ovr < f.minOvr) continue;

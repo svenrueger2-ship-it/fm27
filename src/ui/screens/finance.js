@@ -5,6 +5,7 @@ import { userLeague, computeTable } from '../../manager/season.js';
 import { esc, money, toast, confirmDialog, modal } from '../dom.js';
 import { ensureSponsors, sponsorOffers, signSponsor, SPONSOR_SLOTS } from '../../manager/events.js';
 import { newRng } from '../../manager/season.js';
+import { tvShare, tvTable, TV_KEYS, topGameOf, topGameBonus } from '../../manager/tvmoney.js';
 import { ensureBiz, shopCost, memberIncome, upgradeShop, answerInvestor } from '../../manager/clubbiz.js';
 
 const LABELS = { stock: 'Börse', hospitality: 'VIP & Hospitality', tickets: 'Tickets', tv: 'TV-Gelder', sponsors: 'Sponsoren', merch: 'Merchandising', prize: 'Prämien', transfersIn: 'Transfererlöse', wages: 'Gehälter', facilities: 'Unterhalt', construction: 'Bau & Ausbau', transfersOut: 'Transferausgaben' };
@@ -87,6 +88,7 @@ export function financeScreen(app, el) {
         <div class="card"><h3>🤝 Sponsoren</h3>${Object.entries(SPONSOR_SLOTS).map(([k, sl]) => { const d = ensureSponsors(w, club)[k]; return `<div class="facility"><div><b>${sl.name}</b><br>${d ? `<small>${esc(d.brand)} · ${money(d.perSeason)}/Saison · noch ${d.years} Saison(s)${d.bonus ? ` · Bonus ${money(d.bonus.amount)} bei Platz ${d.bonus.rank} oder besser` : ''}${d.existing ? ' · Altvertrag' : ''}</small>` : '<small class="neg-amt">Kein Partner – hier entgeht dir Geld!</small>'}</div>
             <button class="btn sm ${d && !d.existing ? '' : 'primary'}" data-sp="${k}">${d && !d.existing ? 'Läuft' : 'Verhandeln'}</button></div>`; }).join('')}
           <p class="muted">Die Höhe der Angebote hängt von Ruf, Liga und Fanstimmung ab. Altverträge laufen zum Saisonende aus.</p></div>
+        ${tvCard(w, club)}
         <div class="card"><h3>🧾 Buchungen</h3><div class="ledger">${F.ledger.slice(0, 25).flatMap((e) => e.rows.map((r) => `<div><span><small>S${e.season} W${e.week}</small> ${esc(r.label)}</span><b class="${r.amount >= 0 ? 'pos-amt' : 'neg-amt'}">${r.amount >= 0 ? '+' : ''}${money(r.amount)}</b></div>`)).join('') || '<p class="muted">Noch keine Buchungen.</p>'}</div></div>
       </div></div>`;
     el.querySelector('#shop')?.addEventListener('click', () => { const r = upgradeShop(w); toast(r.msg); draw(); });
@@ -120,4 +122,21 @@ export function financeScreen(app, el) {
     };
   };
   draw();
+}
+
+// v7.0.6: TV money card – distribution key, TV table and Topspiel bonus
+function tvCard(w, club) {
+  const L = userLeague(w); if (!L) return '';
+  const me = tvShare(w, club, L), T = tvTable(w, L), mx = Math.max(...T.map((r) => r.total), 1);
+  const labels = Object.fromEntries(TV_KEYS.map(([k, l]) => [k, l])); labels.international = 'Internationale Vermarktung (Europapokal)';
+  const top = topGameOf(w, L), isTop = top && (top.h === club.id || top.a === club.id);
+  const around = T.filter((r) => r.rank <= 3 || Math.abs(r.rank - me.rank) <= 1 || r.rank === T.length);
+  return `<div class="card tv-card"><h3>📺 Fernsehgelder</h3>
+    <div class="kv"><span>Deine TV-Gelder diese Saison</span><b>${money(me.total)}</b></div>
+    <div class="kv"><span>Platz in der TV-Tabelle (${esc(L.name)})</span><b>${me.rank}. von ${T.length}</b></div>
+    ${Object.entries(me.parts).map(([k, v]) => `<div class="tv-row"><span>${esc(labels[k] || k)}</span><i style="width:${Math.round((v / me.total) * 100)}%"></i><b>${money(v)}</b></div>`).join('')}
+    <p class="muted small">Ausgezahlt in Wochenraten. Die Leistungssäule zählt die letzten 5 Saisons (neuere stärker) – gute Platzierungen bringen in den Folgejahren mehr Geld.</p>
+    <div class="kv"><span>📡 Topspiel-Prämie</span><b>${money(topGameBonus(L))} je Live-Topspiel${isTop ? ' · <span class="good">diese Woche dabei!</span>' : ''}</b></div>
+    <h4>TV-Tabelle</h4><div class="tv-table">${around.map((r) => `<div class="${r.id === club.id ? 'me' : ''}"><span>${r.rank}.</span><span>${esc(w.clubs[r.id].short)}</span><i style="width:${Math.round((r.total / mx) * 100)}%"></i><b>${money(r.total)}</b></div>`).join('')}</div>
+  </div>`;
 }

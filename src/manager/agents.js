@@ -4,7 +4,7 @@
 // release clauses that rich clubs can trigger; sell-on percentages on outgoing transfers.
 import { money, eur } from '../core/fmt.js';
 import { clamp } from '../core/rng.js';
-import { contractDemand, news, ensureTransferState, executeTransfer } from './transfers.js';
+import { contractDemand, news, ensureTransferState, executeTransfer, preContractWeek } from './transfers.js';
 import { ensureStats } from './achievements.js';
 
 const AGENTS = [
@@ -72,7 +72,7 @@ export function payBonuses(world, club, played, events) {
 }
 
 // ------------------------------------------------------------------ Bosman / pre-contracts
-export const preContractOpen = (world) => world.week >= 17;
+export const preContractOpen = (world) => world.week >= preContractWeek(world); // v7.0.6: from the winter break on
 export function canPreContract(world, p) {
   return preContractOpen(world) && p.clubId && p.clubId !== world.userClubId && p.contract === 1 && !p.preContract && !p.loan;
 }

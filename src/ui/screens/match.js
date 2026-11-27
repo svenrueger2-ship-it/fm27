@@ -29,6 +29,7 @@ import { recordFriendly } from '../../manager/preseason.js';
 import { derbyName, choreoActive, headToHead } from '../../manager/derby.js';
 import { refFor, REF_STYLE } from '../../manager/referees.js';
 import { canKonferenz } from './konferenz.js';
+import { preKickoff } from '../reminders.js';
 import { conditions, WEATHER_NAME, TOD_NAME, renderWeather, matchFactors, ensurePitch, pitchLabel } from '../../manager/weather.js';
 import { crest, esc, shortName, ratingClass, toast, bar, flag, modal, portrait } from '../dom.js';
 
@@ -95,9 +96,10 @@ export function matchdayScreen(app, el, params = {}) {
     ${simAheadButton()}
   </div>`;
   bindSimAhead(app, el);
-  el.querySelector('#play3d').onclick = () => app.go('match', { mode: IS_MOBILE ? '3d' : app.settings.engine3d === 'unity' ? 'unity' : app.settings.engine3d === 'unreal' && window.bakusa?.unrealPlay ? 'unreal' : '3d' });
-  el.querySelector('#instant').onclick = () => app.go('match', { mode: 'instant' });
-  el.querySelector('#konf')?.addEventListener('click', () => app.go('konferenz'));
+  const kick = (fn) => () => preKickoff(app, fx, fn, el); // v7.0.6: reminder popup before kickoff
+  el.querySelector('#play3d').onclick = kick(() => app.go('match', { mode: IS_MOBILE ? '3d' : app.settings.engine3d === 'unity' ? 'unity' : app.settings.engine3d === 'unreal' && window.bakusa?.unrealPlay ? 'unreal' : '3d' }));
+  el.querySelector('#instant').onclick = kick(() => app.go('match', { mode: 'instant' }));
+  el.querySelector('#konf')?.addEventListener('click', kick(() => app.go('konferenz')));
   el.querySelector('#tac').onclick = () => app.go('tactics');
   el.querySelector('#scoutopp').onclick = () => {
     const oppId = fx.h === w.userClubId ? fx.a : fx.h;

@@ -52,8 +52,10 @@ function skinFor(rng, nat) {
 
 export function marketValue(ovr, age, pot) {
   let v = Math.pow(10, (ovr - 45) / 11.5) * 20000;
-  if (age < 24) v *= 1 + Math.max(0, pot - ovr) * 0.035;
+  if (age < 24) v *= 1 + Math.min(12, Math.max(0, pot - ovr)) * 0.03;
   if (age > 29) v *= Math.max(0.15, 1 - (age - 29) * 0.14);
+  // v7.0.6 economy patch: the top of the market saturates – no player is worth much more than ~€200m
+  if (v > 6e7) v = 6e7 + 1.5e8 * (1 - Math.exp(-(v - 6e7) / 1.5e8));
   if (v > 1e6) return Math.round(v / 1e5) * 1e5;
   return Math.round(v / 1e4) * 1e4;
 }
@@ -89,7 +91,10 @@ export function generatePlayer(rng, id, pos, targetOvr, age, country, clubRep = 
   for (const k in attrs) attrs[k] = clamp(Math.round(attrs[k]), 5, 99);
   const ovr = computeOverall(attrs, pos);
   let pot = ovr;
-  if (age < 25) pot = clamp(Math.round(ovr + rng.range(2, 6) * (25 - age) * 0.8 + rng.normal(0, 3)), ovr, 96);
+  if (age < 25) { // v7.0.6: fewer wonderkids – potential grows less and is compressed above 86
+    pot = clamp(Math.round(ovr + rng.range(0.8, 3.4) * (25 - age) * 0.75 + rng.normal(0, 2.5)), ovr, Math.min(95, ovr + 16));
+    if (pot > 86) pot = Math.max(ovr, Math.round(86 + (pot - 86) * 0.5));
+  }
   else if (age < 28) pot = ovr + rng.int(0, 3);
   const [personality, professionalism] = rng.pick(PERSONALITIES);
   const value = marketValue(ovr, age, pot);
