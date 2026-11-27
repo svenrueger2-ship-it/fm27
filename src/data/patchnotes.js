@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.8', date: '27.11.2026', title: 'Kein zweites Manager-Erstellen mehr',
+    neu: [],
+    verbessert: ['Wer seinen Manager schon im Menü angelegt hat, wird beim Karrierestart nicht noch einmal gefragt: Nach der Vereinswahl geht es direkt los – mit Name, Aussehen, Werdegang und Spezialisierung aus „👔 Mein Manager“. Auch alte Spielstände ohne Manager übernehmen ihn automatisch'],
+    behoben: [],
+    geplant: ['Echte Geburtsdaten auch für England, Spanien, Italien, Frankreich und die weiteren Ligen'],
+  },
+  {
     version: '7.0.7', date: '27.11.2026', title: 'Mein Manager, Verlassen-Knopf & „Zum Spieltag“-Fix',
     neu: [
       '👔 „Mein Manager“: Beim ersten Start legst du im Menü einmal deinen Manager an (vorausgefüllt mit Sven Rüger) – er wird bei jeder neuen Karriere automatisch übernommen. Beim Karrierestart reicht ein Klick auf „▶ Mit Sven Rüger starten“, anpassen geht weiterhin. Ändern jederzeit im Menü unter „👔 Mein Manager“',

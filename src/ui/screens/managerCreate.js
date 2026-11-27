@@ -93,22 +93,36 @@ export function managerCreateScreen(app, el) {
     q('#mc-go').onclick = async () => {
       if (!valid()) return;
       const first = st.first.trim(), last = st.last.trim();
-      w.manager = { ...old, name: `${first} ${last}`, first, last, age: st.age, nat: st.nat, looks: { face: st.face, outfit: st.outfit } };
       if (!editing) {
         if (!loadMyManager()) saveMyManager({ first, last, age: st.age, nat: st.nat, face: st.face, outfit: st.outfit, bg: st.bg, spec: st.spec });
-        w.manager.background = st.bg; w.manager.spec = st.spec; w.manager.bornSeason = w.season - st.age;
-        const M = ensureMgr(w), mood = ensureMood(w);
-        M.skills[st.spec] = Math.max(1, M.skills[st.spec] || 0);
-        if (st.bg === 'nat') mood.fans = Math.min(100, mood.fans + 8);
-        if (st.bg === 'profi') { mood.fans = Math.min(100, mood.fans + 4); mood.board = Math.min(100, mood.board + 3); }
-        if (st.bg === 'akademie') mood.board = Math.min(100, mood.board + 8);
-        if (st.bg === 'quer') M.points += 1;
-        (w.news ||= []).unshift({ season: w.season, week: w.week, text: `${club ? club.name + ' präsentiert' : 'Vorgestellt:'} ${first} ${last} (${st.age}, ${NATIONS_EXTRA[st.nat]?.name || ''}) als neuen Cheftrainer.` });
-      }
+        applyManager(w, { ...st, first, last }, old);
+      } else w.manager = { ...old, name: `${first} ${last}`, first, last, age: st.age, nat: st.nat, looks: { face: st.face, outfit: st.outfit } };
       await app.save(app.slot || 'slot1', true);
       toast(editing ? 'Manager gespeichert' : `Willkommen, ${first} ${last}!`);
       app.go(editing ? 'profile' : 'home');
     };
   };
   draw();
+}
+
+/** v7.0.6/7.0.7: installs a new manager in a career (name, looks, background bonus, specialty). */
+export function applyManager(w, st, old = w.manager || {}) {
+  const club = w.clubs[w.userClubId];
+  const { first, last } = st;
+  w.manager = { ...old, name: `${first} ${last}`, first, last, age: st.age, nat: st.nat, looks: { face: st.face, outfit: st.outfit } };
+  w.manager.background = st.bg; w.manager.spec = st.spec; w.manager.bornSeason = w.season - st.age;
+  const M = ensureMgr(w), mood = ensureMood(w);
+  M.skills[st.spec] = Math.max(1, M.skills[st.spec] || 0);
+  if (st.bg === 'nat') mood.fans = Math.min(100, mood.fans + 8);
+  if (st.bg === 'profi') { mood.fans = Math.min(100, mood.fans + 4); mood.board = Math.min(100, mood.board + 3); }
+  if (st.bg === 'akademie') mood.board = Math.min(100, mood.board + 8);
+  if (st.bg === 'quer') M.points += 1;
+  (w.news ||= []).unshift({ season: w.season, week: w.week, text: `${club ? club.name + ' präsentiert' : 'Vorgestellt:'} ${first} ${last} (${st.age}, ${NATIONS_EXTRA[st.nat]?.name || ''}) als neuen Cheftrainer.` });
+}
+/** v7.0.7: the manager from the menu is taken over without showing the editor again. Returns true if applied. */
+export function autoApplyMyManager(w) {
+  const my = loadMyManager();
+  if (!my || !mgrNeedsCreation(w)) return false;
+  applyManager(w, { first: my.first, last: my.last, age: my.age ?? 38, nat: my.nat || 'GER', face: my.face ?? 0, outfit: my.outfit || 'anzug', bg: my.bg || 'profi', spec: my.spec || 'taktiker' });
+  return true;
 }

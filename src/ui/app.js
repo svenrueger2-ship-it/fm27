@@ -28,7 +28,7 @@ import { achievementsScreen } from './screens/achievements.js';
 import { analysisScreen } from './screens/analysis.js';
 import { profileScreen } from './screens/profile.js';
 import { calendarScreen } from './screens/calendar.js';
-import { managerCreateScreen, mgrNeedsCreation } from './screens/managerCreate.js';
+import { managerCreateScreen, mgrNeedsCreation, autoApplyMyManager } from './screens/managerCreate.js';
 import { dateOf, fmtDate } from '../manager/calendar.js';
 import { openTasks } from '../manager/progress.js';
 import { navHtml, placeInk, openPalette, icon, parentNav, subnavHtml } from './nav.js';
@@ -74,7 +74,11 @@ export class App {
     // after a sacking the user has to pick a new club first
     if (this.world?.career?.pendingSack && !['career', 'start', 'new', 'founder', 'saves', 'settings'].includes(screen)) screen = 'career';
     // v3.0.4: no career without your own manager – old saves get the editor once too
-    if (this.world?.mode !== 'wm' && mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings', 'hotTurn'].includes(screen)) screen = 'mgrCreate';
+    if (this.world?.mode !== 'wm' && mgrNeedsCreation(this.world) && !['mgrCreate', 'start', 'new', 'founder', 'saves', 'settings', 'hotTurn'].includes(screen)) {
+      // v7.0.7: a manager created in the menu is taken over straight away – no second creation screen
+      if (autoApplyMyManager(this.world)) { const m = this.world.manager; setTimeout(() => toast(`👔 Willkommen, ${m.first} ${m.last}!`), 300); this.save(this.slot || 'slot1', true); }
+      else screen = 'mgrCreate';
+    }
     this.screen = screen; this.params = params;
     if (this.pendingLive && screen !== 'match') setTimeout(() => this.applyLive?.(), 800);
     document.body.classList.toggle('no-anim', this.settings.animations === false);
