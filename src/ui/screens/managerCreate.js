@@ -4,6 +4,7 @@ import { FACE_COUNT } from '../../data/faces.js';
 import { NATIONS_EXTRA } from '../../data/nationsExtra.js';
 import { SKILLS, ensureMgr } from '../../manager/progress.js';
 import { ensureMood } from '../../manager/events.js';
+import { loadMyManager, saveMyManager } from '../myManager.js';
 
 export const OUTFITS = [
   { id: 'anzug', name: 'Schwarzer Anzug', c1: '#1b1b24', c2: '#d9d9e6' },
@@ -13,13 +14,13 @@ export const OUTFITS = [
   { id: 'mantel', name: 'Langer Mantel', c1: '#2b2420', c2: '#c9a27a' },
   { id: 'casual', name: 'Lässig (Pulli)', c1: '#6b2d3c', c2: '#f5d7de' },
 ];
-const BACKGROUNDS = [
+export const BACKGROUNDS = [
   { id: 'nat', icon: '🏅', name: 'Ex-Nationalspieler', desc: 'Die Fans lieben dich von Tag 1.', fx: 'Fans +8' },
   { id: 'profi', icon: '⚽', name: 'Ex-Profi', desc: 'Kennt die Kabine von innen.', fx: 'Fans +4 · Vorstand +3' },
   { id: 'akademie', icon: '🎓', name: 'Trainerakademie', desc: 'Fußballlehrer-Lizenz mit Bestnote.', fx: 'Vorstand +8' },
   { id: 'quer', icon: '💡', name: 'Quereinsteiger', desc: 'Datenanalyst ohne Profikarriere.', fx: '+1 Skillpunkt' },
 ];
-const NATS = Object.entries(NATIONS_EXTRA).sort((a, b) => a[1].name.localeCompare(b[1].name, 'de'));
+export const NATS = Object.entries(NATIONS_EXTRA).sort((a, b) => a[1].name.localeCompare(b[1].name, 'de'));
 
 export const mgrOutfit = (w) => {
   const o = OUTFITS.find((x) => x.id === w.manager?.looks?.outfit) || OUTFITS[0];
@@ -34,7 +35,8 @@ export const mgrNeedsCreation = (w) => w && w.userClubId != null && !w.manager?.
 
 export function managerCreateScreen(app, el) {
   const w = app.world, club = w.clubs[w.userClubId], editing = !!w.manager?.looks;
-  const old = w.manager || {};
+  const my = !editing ? loadMyManager() : null; // v7.0.6: your saved manager from the menu is the default
+  const old = w.manager?.looks ? w.manager : my ? { ...(w.manager || {}), first: my.first, last: my.last, age: my.age, nat: my.nat, looks: { face: my.face, outfit: my.outfit }, background: my.bg, spec: my.spec } : (w.manager || {});
   const [f0, ...l0] = (old.name && old.name !== 'Manager' ? old.name : '').split(' ');
   const st = {
     first: old.first ?? f0 ?? '', last: old.last ?? l0.join(' ') ?? '', age: old.age ?? 38, nat: old.nat ?? 'GER',
@@ -56,6 +58,7 @@ export function managerCreateScreen(app, el) {
   };
   const draw = () => {
     el.innerHTML = `<div class="page mc-page"><div class="page-head"><h2>👔 ${editing ? 'Manager bearbeiten' : 'Erstelle deinen Manager'}</h2>${editing ? '' : '<span class="chip">Schritt 2 von 2</span>'}</div>
+      ${my ? `<div class="card mc-quick"><div><small class="muted">DEIN MANAGER AUS DEM MENÜ</small><h3>👔 ${esc(my.first)} ${esc(my.last)}</h3><p class="muted small">Alles ist schon ausgefüllt – direkt starten oder unten anpassen.</p></div><button class="btn primary lg" id="mc-quick">▶ Mit ${esc(my.first)} ${esc(my.last)} starten</button></div>` : ''}
       <div class="mc-grid"><div class="mc-prev">${preview()}</div>
       <div class="mc-form">
         <div class="card"><h3>Name & Herkunft</h3>
@@ -86,11 +89,13 @@ export function managerCreateScreen(app, el) {
     el.querySelectorAll('[data-bg]').forEach((b) => (b.onclick = () => { st.bg = b.dataset.bg; draw(); }));
     el.querySelectorAll('[data-spec]').forEach((b) => (b.onclick = () => { st.spec = b.dataset.spec; draw(); }));
     q('#mc-cancel')?.addEventListener('click', () => app.go('profile'));
+    q('#mc-quick')?.addEventListener('click', () => q('#mc-go').click());
     q('#mc-go').onclick = async () => {
       if (!valid()) return;
       const first = st.first.trim(), last = st.last.trim();
       w.manager = { ...old, name: `${first} ${last}`, first, last, age: st.age, nat: st.nat, looks: { face: st.face, outfit: st.outfit } };
       if (!editing) {
+        if (!loadMyManager()) saveMyManager({ first, last, age: st.age, nat: st.nat, face: st.face, outfit: st.outfit, bg: st.bg, spec: st.spec });
         w.manager.background = st.bg; w.manager.spec = st.spec; w.manager.bornSeason = w.season - st.age;
         const M = ensureMgr(w), mood = ensureMood(w);
         M.skills[st.spec] = Math.max(1, M.skills[st.spec] || 0);

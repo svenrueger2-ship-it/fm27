@@ -19,7 +19,8 @@ import { crest, esc, money, toast, modal, confirmDialog, flag, nationName } from
 import { CAMERA_MODES } from '../../render/camera.js';
 import { startMenuScene } from '../../render/menuScene.js';
 
-const isDesktop = () => !!window.bakusa;
+import { exitBarHtml, bindExitBar, isDesktop, quitApp } from '../exitbar.js';
+import { loadMyManager, myManagerModal } from '../myManager.js';
 
 function patchHtml() {
   const sec = (title, items, cls, old) => items?.length ? `<h5 class="${cls}">${title}</h5><ul ${old ? 'data-noi18n' : ''}>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
@@ -74,6 +75,7 @@ export function startScreen(app, el) {
           <button data-go="continue" id="m-cont"><i>▶</i>Weiterspielen</button>
           <button data-go="play"><i>✨</i>Neues Spiel</button>
           <button data-go="load"><i>💾</i>Spielstände</button>
+          <button data-go="mymgr"><i>👔</i>Mein Manager${(() => { const m = loadMyManager(); return m ? ` <span class="pn-badge">${esc(m.first)} ${esc(m.last)}</span>` : ''; })()}</button>
           <button data-go="world"><i>🌍</i>Fußballwelt</button>
           <button data-go="notes"><i>📋</i>Patchnotes <span class="pn-badge">v${esc(GAME_VERSION)}</span></button>
           <button data-go="settings"><i>⚙️</i>Einstellungen</button>
@@ -89,7 +91,9 @@ export function startScreen(app, el) {
   const center = el.querySelector('#m-center');
   let latest = null, latestWorld = null;
   el.querySelectorAll('.pn-head').forEach((h) => (h.onclick = () => h.parentElement.classList.toggle('open')));
-  showWhatsNew(() => actions.notes()); // v7.0.5 shared popup
+  // v7.0.6: on the very first start a manager has to be created (prefilled, used for every career)
+  if (!loadMyManager()) myManagerModal(app, { forced: true, onDone: () => app.go('start') });
+  else showWhatsNew(() => actions.notes()); // v7.0.5 shared popup
   bindLang(app, el);
   const showSaves = async () => {
     const saves = await listSaves();
@@ -144,12 +148,16 @@ export function startScreen(app, el) {
       app.go('match', { friendly: true, home: ids[0], away: ids[1] });
     },
     settings: () => settingsModal(app),
+    mymgr: () => myManagerModal(app, { onDone: () => app.go('start') }),
     credits: () => modal(`<h3>Credits</h3><p><b>FUSSBALL MANAGER 2027 © BAKUSA</b></p>
       <p>Spielidee & Leitung: BAKUSA</p><p>Entwicklung: BAKUSA mit Claude (Anthropic)</p>
       <p class="muted">3D-Grafik: three.js · Desktop: Electron · Schriften: Barlow Condensed, Inter<br>Ligen, Kader und Wappen: Stand Saison 2026/27. Ratings und Alter sind Schätzungen des Spiels.</p>`),
-    quit: () => { if (window.bakusa?.close) window.bakusa.close(); else if (window.bakusa?.quit) window.bakusa.quit(); else { try { window.close(); } catch {} toast('Im Browser bitte einfach den Tab schließen.'); } },
+    quit: () => quitApp(),
   };
-  el.querySelectorAll('[data-go]').forEach((b) => (b.onclick = (e) => { e.preventDefault(); actions[b.dataset.go]?.(); }));
+  // v7.0.6: every panel in the centre gets a "Verlassen" bar (back to the menu start page or out to Windows)
+  const withExit = async (fn) => { await fn(); const p = center.querySelector('.sv-panel') || center.firstElementChild; if (p && !center.querySelector('.exit-bar')) { p.insertAdjacentHTML('beforeend', exitBarHtml({ menu: true })); bindExitBar(app, center, { onMenu: () => { center.innerHTML = welcomeHtml(); center.querySelectorAll('[data-go]').forEach((x) => (x.onclick = (e) => { e.preventDefault(); actions[x.dataset.go]?.(); })); } }); } };
+  const PANEL = new Set(['load', 'notes', 'play', 'world', 'scenarios', 'comps', 'stats']);
+  el.querySelectorAll('[data-go]').forEach((b) => (b.onclick = (e) => { e.preventDefault(); const k = b.dataset.go; if (PANEL.has(k)) withExit(() => actions[k]?.()); else actions[k]?.(); }));
   center.addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g && center.contains(g)) actions[g.dataset.go]?.(); });
   // load the most recent save for "Karriere fortsetzen" and the career overview
   (async () => {
@@ -323,10 +331,10 @@ export function savesScreen(app, el) {
       <div class="card"><h3>Speichern</h3><div class="row-actions">${['slot1', 'slot2', 'slot3'].map((s, i) => `<button class="btn" data-save="${s}">In Slot ${i + 1} speichern</button>`).join('')}</div>
       <p class="muted">Nach jedem Spieltag wird automatisch gespeichert (Autosave, abschaltbar in den Einstellungen).</p></div>
       <div class="card"><h3>Vorhandene Spielstände</h3>${saves.length ? `<div class="save-list">${saves.map(saveRow).join('')}</div>` : '<p class="muted">Keine Spielstände.</p>'}</div>
-      <div class="card"><button class="btn ghost" id="to-menu">Zum Hauptmenü</button></div></div>`;
+      ${exitBarHtml()}</div>`;
     el.querySelectorAll('[data-save]').forEach((b) => (b.onclick = async () => { await app.save(b.dataset.save); draw(); }));
     bindSaveRows(app, el, draw);
-    el.querySelector('#to-menu').onclick = async () => { if (await confirmDialog('Zum Hauptmenü? Nicht gespeicherter Fortschritt geht verloren.', 'Zum Hauptmenü')) { app.world = null; app.go('start'); } };
+    bindExitBar(app, el);
   };
   draw();
 }
@@ -423,8 +431,8 @@ export function settingsScreen(app, el) {
   const draw = () => {
     const w = app.world, cur = w?.difficulty || 'normal';
     const diffCard = w && w.mode !== 'wm' ? `<div class="card"><h3>🎚️ Schwierigkeitsgrad</h3><p class="muted small">Gilt ab sofort für Transfers, Vorstand und KI-Stärke. Das Startbudget bleibt unverändert.</p><div class="opt-row">${Object.entries(DIFFICULTIES).map(([k, d]) => `<button class="chip-btn ${cur === k ? 'on' : ''}" data-diff="${k}" title="${esc(d.desc)}">${d.icon} ${d.label}</button>`).join('')}</div></div>` : '';
-    el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2><div class="card"><h3>🌐 Sprache · Language</h3>${langPicker()}</div>${diffCard}<div class="card">${settingsForm(app)}</div></div>`;
-    bindLang(app, el);
+    el.innerHTML = `<div class="page narrow"><h2>⚙️ Einstellungen</h2><div class="card"><h3>🌐 Sprache · Language</h3>${langPicker()}</div>${diffCard}<div class="card">${settingsForm(app)}</div>${exitBarHtml({ menu: !w })}</div>`;
+    bindLang(app, el); bindExitBar(app, el);
     el.querySelectorAll('[data-diff]').forEach((b) => (b.onclick = () => { w.difficulty = b.dataset.diff; toast(`Schwierigkeitsgrad: ${DIFFICULTIES[w.difficulty].label}`); draw(); }));
     bindSettings(app, el, draw);
   };
@@ -433,7 +441,7 @@ export function settingsScreen(app, el) {
 function settingsModal(app) {
   const m = modal('<div class="set-host"></div>');
   const host = m.el.querySelector('.set-host');
-  const draw = () => { host.innerHTML = `<h3>⚙️ Einstellungen</h3><div class="row-between"><b>🌐 Sprache · Language</b>${langPicker()}</div>${settingsForm(app)}`; bindLang(app, host); bindSettings(app, host, draw); };
+  const draw = () => { host.innerHTML = `<h3>⚙️ Einstellungen</h3><div class="row-between"><b>🌐 Sprache · Language</b>${langPicker()}</div>${settingsForm(app)}${exitBarHtml({ menu: !app.world })}`; bindLang(app, host); bindSettings(app, host, draw); bindExitBar(app, host, { close: m.close, onMenu: app.world ? undefined : () => {} }); };
   draw();
 }
 

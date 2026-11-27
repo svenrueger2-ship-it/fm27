@@ -1,3 +1,4 @@
+import { exitBarHtml, bindExitBar } from '../exitbar.js';
 // Manager-Profil (v2.5): level, XP, skill tree, daily & weekly tasks.
 import { esc, money, toast } from '../dom.js';
 import { mgrPortrait } from './managerCreate.js';
@@ -25,6 +26,7 @@ export function profileScreen(app, el) {
       <ul>${s.ranks.map((t, k) => `<li class="${k < r ? 'got' : k === r ? 'next' : ''}">${k < r ? '✓' : k + 1}. ${esc(t)}</li>`).join('')}</ul>
       ${r < 3 ? `<button class="btn sm ${M.points ? 'primary' : ''}" data-skill="${s.id}" ${M.points ? '' : 'disabled'}>Stufe ${r + 1} lernen</button>` : '<span class="chip good">Gemeistert</span>'}</div>`; }).join('')}</div></div>
     <div class="card"><h3>📜 Letzte XP</h3>${M.log.slice(0, 12).map((l) => `<div class="kv"><span>${esc(l.why)}</span><b class="good">+${l.xp} XP</b></div>`).join('') || '<p class="muted">Noch keine Erfahrungspunkte – bestreite dein erstes Spiel!</p>'}</div></div>`;
+  el.querySelector('.page')?.insertAdjacentHTML('beforeend', exitBarHtml()); bindExitBar(app, el); // v7.0.6
   el.querySelector('#mgr-edit')?.addEventListener('click', () => app.go('mgrCreate'));
   el.querySelectorAll('[data-skill]').forEach((b) => (b.onclick = () => { if (buySkill(w, b.dataset.skill)) { toast('Fähigkeit gelernt!'); app.go('profile'); } }));
   el.querySelectorAll('[data-claim]').forEach((b) => (b.onclick = () => { const t = claimTask(w, b.dataset.claim); if (t) { toast(`+${t.xp} XP${t.cash ? ` · ${money(t.cash)}` : ''}`); app.go('profile'); } }));

@@ -162,14 +162,13 @@ export function toast(msg, ms = 2600) {
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, ms);
 }
 
-export function modal(html, { wide = false, onClose } = {}) {
+export function modal(html, { wide = false, onClose, forced = false } = {}) {
   const wrap = document.createElement('div');
-  wrap.className = 'modal-wrap';
-  wrap.innerHTML = `<div class="modal ${wide ? 'wide' : ''}"><button class="modal-x" aria-label="Schließen">✕</button>${html}</div>`;
+  wrap.className = 'modal-wrap' + (forced ? ' forced' : '');
+  wrap.innerHTML = `<div class="modal ${wide ? 'wide' : ''}">${forced ? '' : '<button class="modal-x" aria-label="Schließen">✕</button>'}${html}</div>`;
   document.body.appendChild(wrap);
   const close = () => { wrap.remove(); onClose?.(); };
-  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
-  wrap.querySelector('.modal-x').addEventListener('click', close);
+  if (!forced) { wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); }); wrap.querySelector('.modal-x').addEventListener('click', close); }
   return { el: wrap.querySelector('.modal'), close };
 }
 

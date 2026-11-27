@@ -2,6 +2,16 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.7', date: '27.11.2026', title: 'Mein Manager, Verlassen-Knopf & „Zum Spieltag“-Fix',
+    neu: [
+      '👔 „Mein Manager“: Beim ersten Start legst du im Menü einmal deinen Manager an (vorausgefüllt mit Sven Rüger) – er wird bei jeder neuen Karriere automatisch übernommen. Beim Karrierestart reicht ein Klick auf „▶ Mit Sven Rüger starten“, anpassen geht weiterhin. Ändern jederzeit im Menü unter „👔 Mein Manager“',
+      '🚪 Verlassen-Leiste in Manager-Profil (Level), Einstellungen (alle Reiter inkl. Anzeige), Spielstände und allen Menü-Seiten: „🏠 Zum Hauptmenü“ und „⏻ zu Windows“ – in einer laufenden Karriere wird vorher automatisch gespeichert',
+    ],
+    verbessert: [],
+    behoben: ['„⏭ Bis zum Spieltag“ ließ die Tage bis zum Spiel laufen, öffnete den Spieltag danach aber nicht – jetzt geht es direkt zum Anpfiff-Bildschirm (Windows, Browser und Android)'],
+    geplant: ['Echte Geburtsdaten auch für England, Spanien, Italien, Frankreich und die weiteren Ligen'],
+  },
+  {
     version: '7.0.6', date: '27.11.2026', title: 'Wirtschafts-Patch, TV-Gelder, Ultimate-Team-Karten & echte Geburtsdaten',
     neu: [
       '📺 Fernsehgelder nach Verteilerschlüssel: Sockel 45 %, Leistung (5-Jahres-Wertung) 35 %, Reichweite 15 %, Nachwuchs 5 % – dazu internationale Vermarktung im Europapokal und eine Topspiel-Prämie für das Live-Spiel des Spieltags. Übersicht mit TV-Tabelle unter Finanzen',

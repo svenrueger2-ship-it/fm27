@@ -44,7 +44,8 @@ export function calendarScreen(app, el) {
     return true;
   };
   const auto = () => { clearTimeout(timer); if (!st.auto) return; timer = setTimeout(async () => { if (await step() && st.auto) auto(); }, SPEEDS[st.speed]); };
-  const toNextMatch = async () => { stop(); for (let i = 0; i < 20; i++) if (!(await step())) break; };
+  // v7.0.6: when the match day is reached, open the matchday straight away (also via „⏭ Bis zum Spieltag“)
+  const toNextMatch = async () => { stop(); for (let i = 0; i < 20; i++) if (!(await step())) break; if (el.isConnected && matchToday() && !w.pendingEvent) app.go('matchday'); };
 
   const draw = () => {
     if (!el.isConnected) { stop(); return; }

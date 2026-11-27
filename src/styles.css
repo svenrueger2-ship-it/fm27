@@ -1537,3 +1537,13 @@ html.mobile .cer-glow { animation: none; }
 .tv-table > div { grid-template-columns: 2rem 3.4rem 1fr auto; }
 .tv-row i, .tv-table i { display: block; height: .45rem; border-radius: 4px; background: linear-gradient(90deg, var(--accent, #7c5cff), #4fd1c5); }
 .tv-table > div.me { font-weight: 800; color: var(--accent, #ffd34a); }
+/* v7.0.6 exit bar */
+.exit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: 1rem; padding: .7rem .9rem; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.exit-bar > span { font-weight: 800; margin-right: auto; opacity: .85; }
+.exit-bar .danger { color: #ff8a8a; border-color: rgba(255,120,120,.35); }
+/* v7.0.6 my manager */
+.mym-grid { display: grid; grid-template-columns: 180px 1fr; gap: 1rem; align-items: start; margin: .6rem 0 1rem; }
+.mym-face { display: grid; justify-items: center; gap: .5rem; }
+.mc-quick { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border: 1px solid rgba(255,211,74,.35); }
+.mc-quick h3 { margin: .1rem 0; }
+@media (max-width: 640px) { .mym-grid { grid-template-columns: 1fr; } }
