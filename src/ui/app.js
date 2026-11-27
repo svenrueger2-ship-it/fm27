@@ -38,6 +38,7 @@ import { animateNumbers, runCeremonies } from './fx.js';
 import { mobileFit } from './mobileFit.js';
 import { hotTurnScreen } from './screens/hotseat.js';
 import { tourneyScreen } from './screens/tourney.js';
+import { askRestart, showWhatsNew } from './whatsnew.js';
 import { museumScreen, fansScreen, politicsScreen, pitchScreen, youthScreen } from './screens/club70.js';
 import { konferenzScreen } from './screens/konferenz.js';
 import { wmScreen, wmGroupsScreen, wmKoScreen, wmSquadScreen, confirmQuit } from './screens/wm.js';
@@ -173,29 +174,34 @@ export class App {
       bar.innerHTML = u.state === 'ready'
         ? `⬇ Update <b>v${u.version}</b> ist bereit. <button class="btn small primary" id="upd-go">Jetzt neu starten</button> <span class="muted">(oder beim Beenden)</span>`
         : u.state === 'downloading' ? `⬇ Update wird geladen … ${u.percent ?? 0}%` : `⬇ Neue Version <b>v${u.version}</b> gefunden – wird geladen …`;
-      const go = bar.querySelector('#upd-go'); if (go) go.onclick = () => window.bakusa.installUpdate();
+      const install = async () => { if (this.world) await this.save(this.slot || 'slot1', true); window.bakusa.installUpdate(); };
+      const go = bar.querySelector('#upd-go'); if (go) go.onclick = install;
+      // v7.0.5: ask once with a popup (not during a running 3D match)
+      if (u.state === 'ready' && this.askedUpdate !== u.version && this.screen !== 'match') { this.askedUpdate = u.version; askRestart({ version: u.version, now: install, laterText: 'Sonst wird das Update beim Beenden installiert.' }); }
     } else if (bar) bar.remove();
   }
 
-  // v2.7 live update: new game files were downloaded in the background – reload without reinstalling
+  // v2.7 live update: new game files were downloaded in the background – v7.0.5: the player decides when to restart
   onLive(l) {
     if (l.state !== 'installed' || l.version === GAME_VERSION) return;
     let bar = document.getElementById('update-bar');
     if (!bar) { bar = document.createElement('div'); bar.id = 'update-bar'; document.body.appendChild(bar); }
     this.pendingLive = l;
-    const apply = async () => {
+    const restart = async () => {
       if (this.liveApplying) return;
-      // never interrupt a running 3D match – the update is applied right after it
-      if (this.screen === 'match') { bar.innerHTML = `✨ Version <b>${l.version}</b> wird nach diesem Spiel automatisch installiert.`; return; }
       this.liveApplying = true;
-      let n = 3;
-      const tick = async () => {
-        bar.innerHTML = `✨ Update auf Version <b>${l.version}</b> – Spielstand wird gesichert, Neustart in ${n} …`;
-        if (n-- > 0) return setTimeout(tick, 1000);
-        if (this.world) await this.save(this.slot || 'slot1', true);
-        window.bakusa.reloadGame(this.world ? this.slot || 'slot1' : null);
-      };
-      tick();
+      bar.innerHTML = `✨ Update auf Version <b>${l.version}</b> – Spielstand wird gesichert …`;
+      if (this.world) await this.save(this.slot || 'slot1', true);
+      window.bakusa.reloadGame(this.world ? this.slot || 'slot1' : null);
+    };
+    const apply = () => {
+      if (this.liveApplying) return;
+      bar.innerHTML = `✨ Version <b>${l.version}</b> ist bereit. <button class="btn small primary" id="upd-go">🔄 Jetzt neu starten</button> <span class="muted">(oder beim nächsten Start)</span>`;
+      bar.querySelector('#upd-go').onclick = restart;
+      // never interrupt a running 3D match – the popup comes right after it
+      if (this.screen === 'match' || this.askedLive === l.version) return;
+      this.askedLive = l.version;
+      askRestart({ version: l.version, now: restart, laterText: 'Du kannst jederzeit über die Leiste unten neu starten – sonst gilt das Update beim nächsten Spielstart.' });
     };
     this.applyLive = apply;
     apply();

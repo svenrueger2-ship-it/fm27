@@ -10,6 +10,7 @@ import { CLUB_FOUNDED } from '../data/clubInfoExtra.js';
 export const WORLD_VERSION = 3;
 
 export function migrateWorld(world) {
+  for (const p of Object.values(world.players || {})) if (p.photo) delete p.photo; // v7.0.5: own uploaded photos removed – only the built-in real photos are shown
   registerCustomClubs(world);
   const rng = new RNG((world.seed || 1) + 99);
   for (const club of Object.values(world.clubs)) {

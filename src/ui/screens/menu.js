@@ -13,6 +13,7 @@ import { applyTheme } from '../theme.js';
 import { SCENARIOS, scenarioRecords, buildScenario, evaluateScenario } from '../../manager/scenarios.js';
 import { gainXp } from '../../manager/progress.js';
 import { PATCHNOTES, GAME_VERSION } from '../../data/patchnotes.js';
+import { showWhatsNew } from '../whatsnew.js';
 import { ensureCoach, coachDecides } from '../../manager/director.js';
 import { crest, esc, money, toast, modal, confirmDialog, flag, nationName } from '../dom.js';
 import { CAMERA_MODES } from '../../render/camera.js';
@@ -88,15 +89,7 @@ export function startScreen(app, el) {
   const center = el.querySelector('#m-center');
   let latest = null, latestWorld = null;
   el.querySelectorAll('.pn-head').forEach((h) => (h.onclick = () => h.parentElement.classList.toggle('open')));
-  try { // v7.0.1: show what's new once after every update (the side panel is hidden on phones)
-    if (localStorage.getItem('fm27-seen-version') !== GAME_VERSION) {
-      localStorage.setItem('fm27-seen-version', GAME_VERSION);
-      const p = PATCHNOTES[0];
-      const m = modal(`<div class="pn-new"><small>Neu in Version ${esc(p.version)}</small><h2>${esc(p.title)}</h2><ul>${[...(p.neu || []), ...(p.verbessert || []), ...(p.behoben || [])].slice(0, 8).map((x) => `<li>${esc(x)}</li>`).join('')}</ul><div class="row-actions"><button class="btn primary" id="pn-ok">Los geht's</button><button class="btn ghost" id="pn-all">Alle Patchnotes</button></div></div>`);
-      m.el.querySelector('#pn-ok').onclick = () => m.close();
-      m.el.querySelector('#pn-all').onclick = () => { m.close(); actions.notes(); };
-    }
-  } catch { /* storage blocked */ }
+  showWhatsNew(() => actions.notes()); // v7.0.5 shared popup
   bindLang(app, el);
   const showSaves = async () => {
     const saves = await listSaves();

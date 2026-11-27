@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.5', date: '27.11.2026', title: 'Update-Popup & Spielerfotos im Profil',
+    neu: ['Update-Hinweis als Popup im Spiel: „🔄 Jetzt neu starten“ oder „Später“ – der Spielstand wird vorher automatisch gesichert, während eines 3D-Spiels kommt die Frage erst danach', 'Nach dem Neustart zeigt ein Popup im Spiel, was neu ist – auch wenn das Spiel direkt in den Spielstand startet'],
+    verbessert: ['Eigene Fotos hochladen entfernt (📷 im Profil, „📷 Fotos“ im Kader, Fotopakete) – es werden nur noch die echten Spielerfotos aus dem Spiel gezeigt'],
+    behoben: ['Im Spielerprofil wurde das echte Foto nicht angezeigt – jetzt groß oben links im Profil'],
+    geplant: [],
+  },
+  {
     version: '7.0.4', date: '27.11.2026', title: 'Echte Transferbudgets (FM26)',
     neu: ['Transferbudgets aller 183 Vereine aus den Männerligen nach den Startbudgets von Football Manager 2026 – Brighton, Sporting und Barça haben am meisten, Celtic, Lyon oder Rangers starten ohne Transfergeld', 'Transferbudget vom Vorstand: getrennt vom Kontostand, oben in der Leiste, bei Finanzen und im Transfermarkt sichtbar – Verkäufe füllen es zur Hälfte wieder auf, zur neuen Saison gibt es ein neues Budget'],
     verbessert: ['Gehaltsbudgets orientieren sich an den FM26-Werten (bis maximal 10 % über den aktuellen Gehältern)', 'Auch die KI-Vereine kaufen nur noch im Rahmen ihres Transferbudgets'],

@@ -21,6 +21,8 @@ if (IS_MOBILE) {
   document.body.appendChild(hint);
 }
 const app = new App(root);
+// v7.0.5: after an update show what's new – also when the game restarts straight into a save
+setTimeout(() => import('./ui/whatsnew.js').then((m) => m.showWhatsNew(null)).catch(() => {}), 1500);
 window.ufm = app; // handy for debugging in the console
 import('./manager/tourney.js').then((m) => { window.ufmDev = { startTourney: m.startTourney }; }).catch(() => {});
 preloadCrests().finally(async () => {

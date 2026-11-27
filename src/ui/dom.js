@@ -82,7 +82,7 @@ let faceCssReady = false;
 export function faceIndex(p) { let x = ((p.id + 1) * 2654435761) >>> 0; x ^= x >>> 13; x = Math.imul(x, 1274126177) >>> 0; x ^= x >>> 16; return (x >>> 0) % FACE_COUNT; }
 const photoKey = (p) => `${p.firstName}${p.lastName}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 export function portrait(p, club, size = 64) {
-  const ph = p.photo || PLAYER_PHOTOS[photoKey(p)];
+  const ph = PLAYER_PHOTOS[photoKey(p)]; // real photos shipped with the game
   if (ph) { const c1 = club?.colors?.primary || '#3a3358'; return `<span class="portrait pphoto" aria-hidden="true" style="width:${size}px;height:${size}px;--c1:${c1};background-image:url(${ph}),linear-gradient(160deg,color-mix(in srgb,var(--c1) 70%,#1a1530),#120d24 85%)"></span>`; } // v6.0 own photo
   if (p.women) return svgPortrait(p, club, size); // v6.0: drawn portraits with long hair / ponytails for women
   if (!faceCssReady) { const b64 = FACE_ATLAS.slice(FACE_ATLAS.indexOf(',') + 1), bin = atob(b64), u8 = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);

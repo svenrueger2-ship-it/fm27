@@ -1501,3 +1501,4 @@ html.mobile .cer-glow { animation: none; }
 .pn-center .pn-list{max-height:70vh;overflow:auto}
 .pn-new small{opacity:.7;text-transform:uppercase;letter-spacing:.1em}.pn-new h2{margin:.3rem 0 .6rem}.pn-new ul{margin:0 0 1rem;padding-left:1.2rem;line-height:1.5}
 .pn-list{grid-auto-rows:max-content;min-height:0}.pn{min-height:max-content}
+.portrait.pphoto{display:inline-block;flex-shrink:0;border-radius:16px;vertical-align:middle}.pp-face .pphoto{border-radius:22px;box-shadow:0 0 0 3px var(--c2,#fff),0 0 0 6px color-mix(in srgb,var(--c1,#3a3358) 60%,transparent),0 20px 40px rgba(0,0,0,.5)}html.mobile .pp-face .pphoto{width:72px!important;height:72px!important;border-radius:14px}
