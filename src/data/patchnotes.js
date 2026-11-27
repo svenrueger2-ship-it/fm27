@@ -2,6 +2,13 @@
 // Newest version first. Shown in the right sidebar of the start screen.
 export const PATCHNOTES = [
   {
+    version: '7.0.9', date: '27.11.2026', title: 'Echte Vereinskanäle & Navigationsleiste stabil',
+    neu: ['📱 Social Media mit echten Vereinskanälen: Die offiziellen Instagram-Accounts der deutschen Klubs (z. B. @fcbayern, @bvb09, @fckoeln, @hsv, @1.fcunion, @werderbremen, @karlsruhersc, @1fcm1965) posten nach dem Spiel – mit dem offiziellen Spiel-Hashtag (Heim + Gast, z. B. #FCBBVB) und dem typischen Fan-Hashtag des Vereins (#MiaSanMia, #effzeh, #nurderHSV, #EINMALIMMER, #KSCmeineHeimat …)'],
+    verbessert: [],
+    behoben: ['Beim Öffnen von Fenstern konnte die linke Navigationsleiste verrutschen (vor allem unter Windows): Die Seite wird nicht mehr seitlich verschoben, die Leiste bleibt beim offenen Fenster fest an ihrem Platz'],
+    geplant: ['Echte Geburtsdaten auch für England, Spanien, Italien, Frankreich und die weiteren Ligen'],
+  },
+  {
     version: '7.0.8', date: '27.11.2026', title: 'Kein zweites Manager-Erstellen mehr',
     neu: [],
     verbessert: ['Wer seinen Manager schon im Menü angelegt hat, wird beim Karrierestart nicht noch einmal gefragt: Nach der Vereinswahl geht es direkt los – mit Name, Aussehen, Werdegang und Spezialisierung aus „👔 Mein Manager“. Auch alte Spielstände ohne Manager übernehmen ihn automatisch'],

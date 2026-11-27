@@ -2,6 +2,7 @@
 // weekly features (league round-up, column, interview, talent portrait, boulevard, fan poll, team of the week,
 // rumour mill), season review, plus Social Media 2.0 (club/player accounts, replies, hashtags, followers,
 // manager posts with consequences).
+import { socialOf } from '../data/socialHandles.js';
 import { clamp } from '../core/rng.js';
 import { computeTable } from './season.js';
 import { moodChange } from './events.js';
@@ -226,7 +227,7 @@ const HANDLE_PRE = ['', 'echter_', 'immer_', 'ultra_', 'nordkurve_', 'suedtribue
 const HANDLE_POST = ['fan', '_ultra', '_forever', '1904', '_block', '_jung', '_mama', 'liebe', '_ffm', '_ruhrpott', '_kurve'];
 const FIRST = ['Ben', 'Lena', 'Kevin', 'Tom', 'Sarah', 'Mehmet', 'Lukas', 'Jana', 'Dennis', 'Nico', 'Anna', 'Marco', 'Paul', 'Sven', 'Elif', 'Jonas', 'Chiara', 'Felix', 'Hannah', 'Can'];
 const handleFor = (rng, club) => `${pick(rng, HANDLE_PRE)}${club.short.toLowerCase().replace(/[^a-z0-9äöü]/g, '')}${pick(rng, HANDLE_POST)}${rng.int(1, 99)}`;
-const clubHandle = (club) => `@${club.short.toLowerCase().replace(/[^a-z0-9]/g, '')}_official`;
+const clubHandle = (club) => (socialOf(club)?.ig ? `@${socialOf(club).ig}` : `@${club.short.toLowerCase().replace(/[^a-z0-9]/g, '')}_official`); // v7.0.9: real accounts
 const playerHandle = (p) => `@${(p.firstName[0] || '').toLowerCase()}${p.lastName.toLowerCase().replace(/[^a-z0-9]/g, '')}${p.number || ''}`;
 const fan = (world, rng, M, club, text, kind = 'fan', extra = {}) => ({ season: world.season, week: world.week, user: `@${handleFor(rng, club)}`, name: pick(rng, FIRST), text, likes: scaleLikes(M, rng, 10, 1800), kind, club: club.id, ...extra });
 
@@ -235,7 +236,7 @@ export function socialAfterMatch(world, m, rng, art) {
   const me = world.clubs[world.userClubId], home = m.h === me.id, opp = world.clubs[home ? m.a : m.h];
   const gf = home ? m.hg : m.ag, ga = home ? m.ag : m.hg, d = gf - ga;
   const side = home ? 'h' : 'a';
-  const tag = `#${me.short.replace(/\W/g, '')}${opp.short.replace(/\W/g, '')}`;
+  const tag = `#${world.clubs[m.h].short.replace(/\W/g, '')}${world.clubs[m.a].short.replace(/\W/g, '')}${socialOf(me)?.tag ? ' ' + socialOf(me).tag : ''}`; // v7.0.9: official match hashtag (home+away) + club hashtag
   const tl = goalTimeline(m);
   // followers
   const big = opp.rep >= me.rep + 6;

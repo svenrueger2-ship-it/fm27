@@ -162,11 +162,18 @@ export function toast(msg, ms = 2600) {
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, ms);
 }
 
+let modalObs = null;
+function watchModals() {
+  const sync = () => document.body.classList.toggle('modal-open', !!document.querySelector('.modal-wrap'));
+  if (!modalObs) { modalObs = new MutationObserver(sync); modalObs.observe(document.body, { childList: true }); }
+  queueMicrotask(sync);
+}
 export function modal(html, { wide = false, onClose, forced = false } = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'modal-wrap' + (forced ? ' forced' : '');
   wrap.innerHTML = `<div class="modal ${wide ? 'wide' : ''}">${forced ? '' : '<button class="modal-x" aria-label="Schließen">✕</button>'}${html}</div>`;
   document.body.appendChild(wrap);
+  watchModals(); // v7.0.9: freezes the nav bar while a window is open
   const close = () => { wrap.remove(); onClose?.(); };
   if (!forced) { wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); }); wrap.querySelector('.modal-x').addEventListener('click', close); }
   return { el: wrap.querySelector('.modal'), close };

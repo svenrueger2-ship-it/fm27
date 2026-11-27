@@ -1547,3 +1547,9 @@ html.mobile .cer-glow { animation: none; }
 .mc-quick { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border: 1px solid rgba(255,211,74,.35); }
 .mc-quick h3 { margin: .1rem 0; }
 @media (max-width: 640px) { .mym-grid { grid-template-columns: 1fr; } }
+/* v7.0.9: no sideways page scrolling (Windows scrollbars + focus/scrollIntoView shifted the nav bar) */
+html, body { overflow-x: clip; }
+html { scrollbar-gutter: stable; }
+body.modal-open .rail { transition: none !important; pointer-events: none; }
+body.modal-open .rail:not(.pinned) { width: 84px; box-shadow: none; }
+.modal { max-width: min(var(--modal-max, 1100px), calc(100% - 1rem)); }

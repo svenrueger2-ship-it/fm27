@@ -69,7 +69,9 @@ export function placeInk(root) {
   if (!ink) return;
   if (!act) { ink.style.opacity = '0'; return; }
   const top = act.getBoundingClientRect().top - rail.getBoundingClientRect().top + rail.scrollTop, h = act.offsetHeight;
-  if (!rail.dataset.bound) { rail.dataset.bound = '1'; const nav = rail.closest('.rail'); const re = () => setTimeout(() => placeInk(root), 290); nav.addEventListener('mouseenter', re); nav.addEventListener('mouseleave', re); act.scrollIntoView({ block: 'nearest' }); }
+  if (!rail.dataset.bound) { rail.dataset.bound = '1'; const nav = rail.closest('.rail'); const re = () => setTimeout(() => placeInk(root), 290); nav.addEventListener('mouseenter', re); nav.addEventListener('mouseleave', re);
+    // v7.0.9: scroll only the nav list – scrollIntoView also scrolled the whole page (sideways on Windows) and shifted the bar
+    const ar = act.getBoundingClientRect(), rr = rail.getBoundingClientRect(); if (ar.top < rr.top) rail.scrollTop -= rr.top - ar.top; else if (ar.bottom > rr.bottom) rail.scrollTop += ar.bottom - rr.bottom; }
   ink.style.transition = 'none'; ink.style.height = `${h}px`; ink.style.transform = `translateY(${lastInk ?? top}px)`; ink.style.opacity = '1';
   requestAnimationFrame(() => { ink.style.transition = ''; ink.style.transform = `translateY(${top}px)`; lastInk = top; });
 }
@@ -96,7 +98,7 @@ export function openPalette(app) {
     shown = (q ? items.filter((i) => norm(i.label).includes(q) || norm(i.kind).includes(q)) : items.slice(0, 22)).slice(0, 40);
     sel = Math.min(sel, Math.max(0, shown.length - 1));
     list.innerHTML = shown.map((i, k) => `<button class="pal-it ${k === sel ? 'on' : ''}" data-k="${k}">${icon(i.ico, 18)}<span>${esc(i.label)}</span><small>${esc(i.kind)}</small></button>`).join('') || '<p class="pal-empty">Nichts gefunden</p>';
-    list.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+    { const on = list.querySelector('.on'); if (on) { const a = on.getBoundingClientRect(), r = list.getBoundingClientRect(); if (a.top < r.top) list.scrollTop -= r.top - a.top; else if (a.bottom > r.bottom) list.scrollTop += a.bottom - r.bottom; } } // v7.0.9: no page scroll
     list.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => pick(+b.dataset.k)));
   };
   const close = () => { host.classList.add('out'); setTimeout(() => host.remove(), 160); };
